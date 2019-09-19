@@ -1,7 +1,7 @@
-package cellologger
+package logger
 
 import (
-	"GraphQL_Cello/cellocheckroot"
+	"hcloud-violin/checkroot"
 	"testing"
 )
 
@@ -12,8 +12,8 @@ func Test_CreateDirIfNotExist(t *testing.T) {
 	}
 }
 
-func Test_Logger_Prepare(t *testing.T) {
-	if !cellocheckroot.CheckRoot() {
+func Test_Log_Prepare(t *testing.T) {
+	if !checkroot.CheckRoot() {
 		t.Fatal("Failed to get root permission!")
 	}
 

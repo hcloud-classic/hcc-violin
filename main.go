@@ -1,35 +1,34 @@
 package main
 
 import (
-	"GraphQL_violin/violincheckroot"
-	"GraphQL_violin/violinconfig"
-	"GraphQL_violin/violingraphql"
-	"GraphQL_violin/violinlogger"
-	"GraphQL_violin/violinmysql"
+	"hcloud-violin/config"
+	"hcloud-violin/graphql"
+	"hcloud-violin/logger"
+	"hcloud-violin/mysql"
 	"net/http"
 )
 
 func main() {
-	if !violincheckroot.CheckRoot() {
+	// if !checkroot.CheckRoot() {
+	// 	return
+	// }
+
+	if !logger.Prepare() {
 		return
 	}
+	defer logger.FpLog.Close()
 
-	if !violinlogger.Prepare() {
-		return
-	}
-	defer violinlogger.FpLog.Close()
-
-	err := violinmysql.Prepare()
+	err := mysql.Prepare()
 	if err != nil {
 		return
 	}
-	defer violinmysql.Db.Close()
+	defer mysql.Db.Close()
 
-	http.Handle("/graphql", violingraphql.GraphqlHandler)
+	http.Handle("/graphql", graphql.GraphqlHandler)
 
-	violinlogger.Logger.Println("Server is running on port " + violinconfig.HTTPPort)
-	err = http.ListenAndServe(":"+violinconfig.HTTPPort, nil)
+	logger.Log.Println("Server is running on port " + config.HTTPPort)
+	err = http.ListenAndServe(":"+config.HTTPPort, nil)
 	if err != nil {
-		violinlogger.Logger.Println("Failed to prepare http server!")
+		logger.Log.Println("Failed to prepare http server!")
 	}
 }

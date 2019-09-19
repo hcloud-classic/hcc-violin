@@ -1,20 +1,20 @@
-package cellomysql
+package mysql
 
 import (
-	"GraphQL_Cello/cellocheckroot"
-	"GraphQL_Cello/cellologger"
+	"hcloud-violin/checkroot"
+	"hcloud-violin/logger"
 	"testing"
 )
 
 func Test_DB_Prepare(t *testing.T) {
-	if !cellocheckroot.CheckRoot() {
+	if !checkroot.CheckRoot() {
 		t.Fatal("Failed to get root permission!")
 	}
 
-	if !cellologger.Prepare() {
+	if !logger.Prepare() {
 		t.Fatal("Failed to prepare logger!")
 	}
-	defer cellologger.FpLog.Close()
+	defer logger.FpLog.Close()
 
 	err := Prepare()
 	if err != nil {

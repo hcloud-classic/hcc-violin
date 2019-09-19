@@ -49,8 +49,8 @@ build:
   stage: build
   script:
     - gmake
-    - if pgrep GraphQL_Cello; then killall GraphQL_Cello; fi
-    - nohup sudo $PWD/GraphQL_Cello &
+    - if pgrep hcloud-violin; then killall hcloud-violin; fi
+    - nohup sudo $PWD/hcloud-violin &
     - echo "Finished"
   only:
   - master

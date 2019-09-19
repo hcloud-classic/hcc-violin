@@ -1,4 +1,4 @@
-package celloconfig
+package config
 
 // ViolinHTTPPort : Violin module listening port number
-var ViolinHTTPPort = "8002"
+var ViolinHTTPPort = "7501"

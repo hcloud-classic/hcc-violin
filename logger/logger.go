@@ -1,4 +1,4 @@
-package cellologger
+package logger
 
 import (
 	"fmt"
@@ -10,10 +10,10 @@ import (
 )
 
 // LogName : Log folder name. Also used as log prefix.
-var LogName = "cello"
+var LogName = "violin"
 
-// Logger : Pointer of logger
-var Logger *log.Logger
+// Log : Pointer of logger
+var Log *log.Logger
 var once sync.Once
 
 // FpLog : File pointer of logger
@@ -59,7 +59,7 @@ func Prepare() bool {
 			panic(err)
 		}
 
-		Logger = log.New(io.MultiWriter(FpLog, os.Stdout), LogName+"_logger: ", log.Ldate|log.Ltime)
+		Log = log.New(io.MultiWriter(FpLog, os.Stdout), LogName+"_logger: ", log.Ldate|log.Ltime)
 
 		returnValue = true
 	})

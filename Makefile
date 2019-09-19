@@ -1,4 +1,4 @@
-PROJECT_NAME := "GraphQL_violin"
+PROJECT_NAME := "hcloud-violin"
 PKG_LIST := $(shell go list ${PROJECT_NAME}/...)
 
 .PHONY: all dep build docker clean gofmt goreport goreport_deb test coverage coverhtml lint
