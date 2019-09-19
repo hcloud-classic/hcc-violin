@@ -48,9 +48,11 @@ lint_code:
 build:
   stage: build
   script:
-    - gmake
-    - if pgrep hcloud-violin; then killall hcloud-violin; fi
-    - nohup sudo $PWD/hcloud-violin &
+    - gmake    
+    - sudo cp $PWD/hcloud-violin /usr/jails/violin/bin/
+    - sudo chmod 755 $PWD/hcloud-violin /usr/jails/violin/bin/hcloud-violin
+    - sudo ezjail-admin stop violin
+    - sudo ezjail-admin start violin &
     - echo "Finished"
   only:
   - master
