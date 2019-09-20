@@ -41,19 +41,14 @@ gofmt: ## Run gofmt for go files
 goreport_dep: ## Get the dependencies for goreport
 	@$(GOROOT)/bin/go get -u github.com/gojp/goreportcard/cmd/goreportcard-cli
 	@$(GOROOT)/bin/go install github.com/gojp/goreportcard/cmd/goreportcard-cli
-	@$(GOROOT)/bin/go get -u github.com/alecthomas/gometalinter
-	@$(GOROOT)/bin/go install github.com/alecthomas/gometalinter
-	@$(GOROOT)/bin/go get -u github.com/fzipp/gocyclo
-	@$(GOROOT)/bin/go install github.com/fzipp/gocyclo
-	@$(GOROOT)/bin/go get -u github.com/gordonklaus/ineffassign
-	@$(GOROOT)/bin/go install github.com/gordonklaus/ineffassign
-	@$(GOROOT)/bin/go get -u github.com/client9/misspell/cmd/misspell
-	@$(GOROOT)/bin/go install github.com/client9/misspell/cmd/misspell
 
 goreport: goreport_dep ## Make goreport
 	@git submodule sync --recursive
 	@git submodule update --init --recursive
-	@./hcloud-badge/hcloud_badge.sh violin
+	@git --git-dir=$(PWD)/hcloud-badge/.git fetch --all
+	@git --git-dir=$(PWD)/hcloud-badge/.git checkout feature/dev
+	@git --git-dir=$(PWD)/hcloud-badge/.git pull origin feature/dev
+	@./hcloud-badge/hcloud_badge.sh $(PROJECT_NAME)
 
 build: ## Build the binary file
 	@$(GOROOT)/bin/go build -o $(PROJECT_NAME) main.go
