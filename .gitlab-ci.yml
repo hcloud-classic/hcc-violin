@@ -8,7 +8,6 @@ before_script:
     - export GOROOT="/opt/go"
     - export GOPATH="/home/gitlab-runner/go"
     - export PATH="$PATH:$GOROOT/bin:$GOPATH/bin"
-    - gmake dep
 
 copy_dir:
     stage: init
@@ -39,21 +38,20 @@ go_report:
   only:
   - master
 
-lint_code:
-  stage: test
-  script:
-    - gmake lint_dep
-    - gmake lint
+#lint_code:
+#  stage: test
+#  script:
+#    - gmake lint_dep
+#    - gmake lint
 
 build:
   stage: build
   script:
-    - gmake    
-    - sudo cp $PWD/violin /usr/jails/violin/bin/
-    - sudo chmod 755 $PWD/violin /usr/jails/violin/bin/violin
+    - gmake
     - sudo ezjail-admin stop violin
+    - sudo cp $PWD/violin /usr/jails/basejail/bin/
+    - sudo chmod 755 /usr/jails/basejail/bin/violin
     - sudo ezjail-admin start violin &
     - echo "Finished"
   only:
   - master
-
