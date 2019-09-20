@@ -2,8 +2,8 @@ package mysql
 
 import (
 	"database/sql"
-	"hcloud-violin/config"
-	"hcloud-violin/logger"
+	"hcc/violin/config"
+	"hcc/violin/logger"
 
 	_ "github.com/go-sql-driver/mysql" // Needed for connect mysql
 )

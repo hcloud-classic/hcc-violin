@@ -1,10 +1,10 @@
 package main
 
 import (
-	"hcloud-violin/config"
-	"hcloud-violin/graphql"
-	"hcloud-violin/logger"
-	"hcloud-violin/mysql"
+	"hcc/violin/config"
+	"hcc/violin/graphql"
+	"hcc/violin/logger"
+	"hcc/violin/mysql"
 	"net/http"
 )
 

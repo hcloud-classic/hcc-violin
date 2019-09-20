@@ -1,4 +1,4 @@
-PROJECT_NAME := "hcloud-violin"
+PROJECT_NAME := "violin"
 PKG_LIST := $(shell go list ${PROJECT_NAME}/...)
 
 .PHONY: all dep build docker clean gofmt goreport goreport_deb test coverage coverhtml lint
@@ -53,7 +53,7 @@ goreport_dep: ## Get the dependencies for goreport
 goreport: goreport_dep ## Make goreport
 	@git submodule sync --recursive
 	@git submodule update --init --recursive
-	@./graphql_violin_badge/update_goreport_grade.sh
+	@./hcloud-badge/hcloud_badge.sh violin
 
 build: ## Build the binary file
 	@$(GOROOT)/bin/go build -o $(PROJECT_NAME) main.go

@@ -1,10 +1,10 @@
 package graphql
 
 import (
-	"hcloud-violin/logger"
-	"hcloud-violin/mysql"
-	"hcloud-violin/types"
-	"hcloud-violin/uuidgen"
+	"hcc/violin/logger"
+	"hcc/violin/mysql"
+	"hcc/violin/types"
+	"hcc/violin/uuidgen"
 
 	"github.com/graphql-go/graphql"
 )

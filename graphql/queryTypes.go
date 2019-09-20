@@ -1,9 +1,9 @@
 package graphql
 
 import (
-	"hcloud-violin/logger"
-	"hcloud-violin/mysql"
-	"hcloud-violin/types"
+	"hcc/violin/logger"
+	"hcc/violin/mysql"
+	"hcc/violin/types"
 	"time"
 
 	"github.com/graphql-go/graphql"

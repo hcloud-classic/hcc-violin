@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"hcloud-violin/checkroot"
+	"hcc/violin/checkroot"
 	"testing"
 )
 

@@ -49,8 +49,8 @@ build:
   stage: build
   script:
     - gmake    
-    - sudo cp $PWD/hcloud-violin /usr/jails/violin/bin/
-    - sudo chmod 755 $PWD/hcloud-violin /usr/jails/violin/bin/hcloud-violin
+    - sudo cp $PWD/violin /usr/jails/violin/bin/
+    - sudo chmod 755 $PWD/violin /usr/jails/violin/bin/violin
     - sudo ezjail-admin stop violin
     - sudo ezjail-admin start violin &
     - echo "Finished"

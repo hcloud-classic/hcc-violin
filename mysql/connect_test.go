@@ -1,8 +1,8 @@
 package mysql
 
 import (
-	"hcloud-violin/checkroot"
-	"hcloud-violin/logger"
+	"hcc/violin/checkroot"
+	"hcc/violin/logger"
 	"testing"
 )
 

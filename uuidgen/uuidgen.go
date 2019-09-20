@@ -1,7 +1,7 @@
 package uuidgen
 
 import (
-	"hcloud-violin/logger"
+	"hcc/violin/logger"
 
 	uuid "github.com/nu7hatch/gouuid"
 )
