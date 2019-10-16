@@ -1,48 +1,58 @@
-//// volume
-// list
-query List_Volume {
-  list_volume {
+//// server
+
+// url
+http://localhost:7500/graphql
+http://192.168.110.240:7500/graphql
+
+// create
+mutation _ {
+  create_server(subnet_uuid: "1234", os: "ubuntu", server_name: "server1", server_desc: "test server", cpu: 1, memory: 4, disk_size: 20, status: "running", user_uuid: "1234") {
     uuid
-    size
-    type
-    server_uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
   }
 }
 
 // read
-query Select_Volume {
-  volume(uuid: "7284772e-3811-4030-a311-2da8ff705850") {
+query {
+  server(uuid: "37b50a05-ed0c-4a76-7f4b-39b02e066e65") {
     uuid
-    size
-    type
-    server_uuid
-  }
-}
-
-// create
-mutation Create_Volume {
-  create_volume(size: 1024000, type: "ext4", server_uuid: "7284772e-3811-4030-a311-2da8ff705850") {
-    size
-    type
-    server_uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
   }
 }
 
 // update
-mutation Update_Volume {
-  update_volume(uuid: "1dad3b09-acaf-44fe-9fdd-5d3a1323e5a2", size: 1024, type: "zfs", server_uuid: "7284772e-3811-4030-a311-2da8ff705850") {
+mutation _ {
+  update_server(uuid: "813966ad-6c41-47fe-4f7c-ba59608d3f9a", subnet_uuid: "1234", os: "centos", server_name: "server1", server_desc: "test server", cpu: 1, memory: 4, disk_size: 20, status: "stop", user_uuid: "1234") {
     uuid
-    size
-    type
-    server_uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
   }
 }
 
 // delete
 mutation _ {
-  delete_volume(uuid: "05333605-561d-4e8c-b566-07c92d915657") {
-    uuid
-  }
+  delete_server(uuid:"75149b85-61a2-4008-5766-10bdc3514641"){uuid}
 }
-
-// test
