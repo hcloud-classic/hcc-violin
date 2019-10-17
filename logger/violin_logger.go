@@ -12,8 +12,8 @@ import (
 // LogName : Log folder name. Also used as log prefix.
 var LogName = "violin"
 
-// Log : Pointer of logger
-var Log *log.Logger
+// Logger : Pointer of logger
+var Logger *log.Logger
 var once sync.Once
 
 // FpLog : File pointer of logger
@@ -59,7 +59,7 @@ func Prepare() bool {
 			panic(err)
 		}
 
-		Log = log.New(io.MultiWriter(FpLog, os.Stdout), LogName+"_logger: ", log.Ldate|log.Ltime)
+		Logger = log.New(io.MultiWriter(FpLog, os.Stdout), LogName+"_logger: ", log.Ldate|log.Ltime)
 
 		returnValue = true
 	})

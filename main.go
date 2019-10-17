@@ -1,17 +1,19 @@
 package main
 
 import (
+	"hcc/violin/checkroot"
 	"hcc/violin/config"
 	"hcc/violin/graphql"
 	"hcc/violin/logger"
 	"hcc/violin/mysql"
 	"net/http"
+	"strconv"
 )
 
 func main() {
-	// if !checkroot.CheckRoot() {
-	// 	return
-	// }
+	if !checkroot.CheckRoot() {
+		return
+	}
 
 	if !logger.Prepare() {
 		return
@@ -26,9 +28,9 @@ func main() {
 
 	http.Handle("/graphql", graphql.GraphqlHandler)
 
-	logger.Log.Println("Server is running on port " + config.HTTPPort)
-	err = http.ListenAndServe(":"+config.HTTPPort, nil)
+	logger.Logger.Println("Server is running on port " + strconv.Itoa(int(config.HTTP.Port)))
+	err = http.ListenAndServe(":"+strconv.Itoa(int(config.HTTP.Port)), nil)
 	if err != nil {
-		logger.Log.Println("Failed to prepare http server!")
+		logger.Logger.Println("Failed to prepare http server!")
 	}
 }

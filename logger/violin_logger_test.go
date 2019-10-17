@@ -12,7 +12,7 @@ func Test_CreateDirIfNotExist(t *testing.T) {
 	}
 }
 
-func Test_Log_Prepare(t *testing.T) {
+func Test_Logger_Prepare(t *testing.T) {
 	if !checkroot.CheckRoot() {
 		t.Fatal("Failed to get root permission!")
 	}
@@ -20,5 +20,7 @@ func Test_Log_Prepare(t *testing.T) {
 	if !Prepare() {
 		t.Fatal("Failed to prepare logger!")
 	}
-	defer FpLog.Close()
+	defer func() {
+		_ = FpLog.Close()
+	}()
 }

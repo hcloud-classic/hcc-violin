@@ -1,8 +1,9 @@
 package mysql
 
 import (
-	"hcc/violin/checkroot"
-	"hcc/violin/logger"
+	"hcc/harp/checkroot"
+	"hcc/harp/config"
+	"hcc/harp/logger"
 	"testing"
 )
 
@@ -14,11 +15,17 @@ func Test_DB_Prepare(t *testing.T) {
 	if !logger.Prepare() {
 		t.Fatal("Failed to prepare logger!")
 	}
-	defer logger.FpLog.Close()
+	defer func() {
+		_ = logger.FpLog.Close()
+	}()
+
+	config.Parser()
 
 	err := Prepare()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer Db.Close()
+	defer func() {
+		_ = Db.Close()
+	}()
 }
