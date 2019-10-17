@@ -5,8 +5,8 @@ import "github.com/Terry-Mao/goconf"
 var configLocation = "/etc/violin/violin.conf"
 
 type violinConfig struct {
-	MysqlConfig    *goconf.Section
-	HTTPConfig     *goconf.Section
+	MysqlConfig *goconf.Section
+	HTTPConfig  *goconf.Section
 }
 
 /*-----------------------------------
