@@ -21,7 +21,7 @@ var queryTypes = graphql.NewObject(
 					},
 				},
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					logger.Log.Println("Resolving: server")
+					logger.Logger.Println("Resolving: server")
 
 					requestedUUID, ok := p.Args["uuid"].(string)
 					if ok {
@@ -42,7 +42,7 @@ var queryTypes = graphql.NewObject(
 						sql := "select * from server where uuid = ?"
 						err := mysql.Db.QueryRow(sql, requestedUUID).Scan(&uuid, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
 						if err != nil {
-							logger.Log.Println(err)
+							logger.Logger.Println(err)
 							return nil, nil
 						}
 
@@ -76,7 +76,7 @@ var queryTypes = graphql.NewObject(
 				},
 
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					logger.Log.Println("Resolving: list_server")
+					logger.Logger.Println("Resolving: list_server")
 
 					var servers []types.Server
 					var uuid string
@@ -98,18 +98,20 @@ var queryTypes = graphql.NewObject(
 					sql := "select * from server order by created_at desc limit ? offset ?"
 					stmt, err := mysql.Db.Query(sql, row, row*(page-1))
 					if err != nil {
-						logger.Log.Println(err.Error())
+						logger.Logger.Println(err.Error())
 						return nil, nil
 					}
-					defer stmt.Close()
+					defer func() {
+						_ = stmt.Close()
+					}()
 
 					for stmt.Next() {
 						err := stmt.Scan(&uuid, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
 						if err != nil {
-							logger.Log.Println(err)
+							logger.Logger.Println(err)
 						}
 						server := types.Server{UUID: uuid, SubnetUUID: subnetUUID, OS: os, ServerName: serverName, ServerDesc: serverDesc, CPU: cpu, Memory: memory, DiskSize: diskSize, Status: status, UserUUID: userUUID, CreatedAt: createdAt}
-						logger.Log.Println(server)
+						logger.Logger.Println(server)
 						servers = append(servers, server)
 					}
 					return servers, nil
@@ -119,7 +121,7 @@ var queryTypes = graphql.NewObject(
 				Type:        serverNum,
 				Description: "Get the number of server",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					logger.Log.Println("Resolving: list_server")
+					logger.Logger.Println("Resolving: list_server")
 
 					var serverNum types.ServerNum
 					var serverNr int
@@ -127,10 +129,10 @@ var queryTypes = graphql.NewObject(
 					sql := "select count(*) from server"
 					err := mysql.Db.QueryRow(sql).Scan(&serverNr)
 					if err != nil {
-						logger.Log.Println(err)
+						logger.Logger.Println(err)
 						return nil, nil
 					}
-					logger.Log.Println("Count: ", serverNr)
+					logger.Logger.Println("Count: ", serverNr)
 					serverNum.Number = serverNr
 
 					return serverNum, nil

@@ -49,10 +49,10 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-				logger.Log.Println("Resolving: create_server")
-				uuid, err := uuidgen.Uuidgen()
+				logger.Logger.Println("Resolving: create_server")
+				uuid, err := uuidgen.UUIDgen()
 				if err != nil {
-					logger.Log.Println("Failed to generate uuid!")
+					logger.Logger.Println("Failed to generate uuid!")
 					return nil, nil
 				}
 
@@ -72,16 +72,18 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				sql := "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 				stmt, err := mysql.Db.Prepare(sql)
 				if err != nil {
-					logger.Log.Println(err.Error())
+					logger.Logger.Println(err.Error())
 					return nil, nil
 				}
-				defer stmt.Close()
+				defer func() {
+					_ = stmt.Close()
+				}()
 				result, err := stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.CPU, server.Memory, server.DiskSize, server.Status, server.UserUUID)
 				if err != nil {
-					logger.Log.Println(err)
+					logger.Logger.Println(err)
 					return nil, nil
 				}
-				logger.Log.Println(result.LastInsertId())
+				logger.Logger.Println(result.LastInsertId())
 
 				return server, nil
 			},
@@ -126,7 +128,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-				logger.Log.Println("Resolving: update_server")
+				logger.Logger.Println("Resolving: update_server")
 
 				requestedUUID, _ := params.Args["uuid"].(string)
 				subnetUUID, subnetUUIDOK := params.Args["subnet_uuid"].(string)
@@ -156,16 +158,18 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					sql := "update server set subnet_uuid = ?, os = ?, server_name = ?, server_desc= ?, cpu=?, memory=?, disk_size=?, status=?, user_uuid=?  where uuid = ?"
 					stmt, err := mysql.Db.Prepare(sql)
 					if err != nil {
-						logger.Log.Println(err.Error())
+						logger.Logger.Println(err.Error())
 						return nil, nil
 					}
-					defer stmt.Close()
+					defer func() {
+						_ = stmt.Close()
+					}()
 					result, err2 := stmt.Exec(server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.CPU, server.Memory, server.DiskSize, server.Status, server.UserUUID, server.UUID)
 					if err2 != nil {
-						logger.Log.Println(err2)
+						logger.Logger.Println(err2)
 						return nil, nil
 					}
-					logger.Log.Println(result.LastInsertId())
+					logger.Logger.Println(result.LastInsertId())
 
 					return server, nil
 				}
@@ -185,23 +189,25 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-				logger.Log.Println("Resolving: delete_volume")
+				logger.Logger.Println("Resolving: delete_volume")
 
 				requestedUUID, ok := params.Args["uuid"].(string)
 				if ok {
 					sql := "delete from server where uuid = ?"
 					stmt, err := mysql.Db.Prepare(sql)
 					if err != nil {
-						logger.Log.Println(err.Error())
+						logger.Logger.Println(err.Error())
 						return nil, nil
 					}
-					defer stmt.Close()
+					defer func() {
+						_ = stmt.Close()
+					}()
 					result, err2 := stmt.Exec(requestedUUID)
 					if err2 != nil {
-						logger.Log.Println(err2)
+						logger.Logger.Println(err2)
 						return nil, nil
 					}
-					logger.Log.Println(result.RowsAffected())
+					logger.Logger.Println(result.RowsAffected())
 
 					return requestedUUID, nil
 				}

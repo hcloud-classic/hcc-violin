@@ -18,13 +18,17 @@ func main() {
 	if !logger.Prepare() {
 		return
 	}
-	defer logger.FpLog.Close()
+	defer func() {
+		_ = logger.FpLog.Close()
+	}()
 
 	err := mysql.Prepare()
 	if err != nil {
 		return
 	}
-	defer mysql.Db.Close()
+	defer func() {
+		_ = mysql.Db.Close()
+	}()
 
 	http.Handle("/graphql", graphql.GraphqlHandler)
 

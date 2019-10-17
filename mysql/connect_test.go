@@ -1,9 +1,9 @@
 package mysql
 
 import (
-	"hcc/harp/checkroot"
-	"hcc/harp/config"
-	"hcc/harp/logger"
+	"hcc/violin/checkroot"
+	"hcc/violin/config"
+	"hcc/violin/logger"
 	"testing"
 )
 
