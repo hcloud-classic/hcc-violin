@@ -22,6 +22,7 @@ type Servers struct {
 	Server []Server `json:"server"`
 }
 
+// ServerNum : Store number of servers
 type ServerNum struct {
 	Number int `json:"number"`
 }
