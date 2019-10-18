@@ -1,15 +1,15 @@
 package uuidgen
 
 import (
-	"hcc/violin/checkroot"
-	"hcc/violin/config"
-	"hcc/violin/logger"
-	"hcc/violin/mysql"
+	"hcc/violin/lib/config"
+	"hcc/violin/lib/logger"
+	"hcc/violin/lib/mysql"
+	"hcc/violin/lib/syscheck"
 	"testing"
 )
 
 func Test_UUIDgen(t *testing.T) {
-	if !checkroot.CheckRoot() {
+	if !syscheck.CheckRoot() {
 		t.Fatal("Failed to get root permission!")
 	}
 

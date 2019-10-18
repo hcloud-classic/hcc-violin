@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"hcc/violin/checkroot"
+	"hcc/violin/lib/syscheck"
 	"testing"
 )
 
@@ -13,7 +13,7 @@ func Test_CreateDirIfNotExist(t *testing.T) {
 }
 
 func Test_Logger_Prepare(t *testing.T) {
-	if !checkroot.CheckRoot() {
+	if !syscheck.CheckRoot() {
 		t.Fatal("Failed to get root permission!")
 	}
 

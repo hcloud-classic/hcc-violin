@@ -2,10 +2,10 @@ package graphql
 
 import (
 	"github.com/graphql-go/graphql"
-	"hcc/violin/logger"
-	"hcc/violin/mysql"
-	"hcc/violin/types"
-	"hcc/violin/uuidgen"
+	"hcc/violin/lib/logger"
+	"hcc/violin/lib/mysql"
+	"hcc/violin/lib/uuidgen"
+	"hcc/violin/model"
 	"strconv"
 )
 
@@ -52,7 +52,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					return nil, nil
 				}
 
-				server := types.Server{
+				server := model.Server{
 					UUID:       uuid,
 					SubnetUUID: params.Args["subnet_uuid"].(string),
 					OS:         params.Args["os"].(string),
@@ -143,7 +143,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				status, statusOk := params.Args["status"].(string)
 				userUUID, userUUIDOk := params.Args["user_uuid"].(string)
 
-				server := new(types.Server)
+				server := new(model.Server)
 				server.UUID = requestedUUID
 				server.SubnetUUID = subnetUUID
 				server.OS = os

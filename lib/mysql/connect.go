@@ -3,8 +3,8 @@ package mysql
 import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql" // Needed for connect mysql
-	"hcc/violin/config"
-	"hcc/violin/logger"
+	"hcc/violin/lib/config"
+	"hcc/violin/lib/logger"
 	"strconv"
 )
 

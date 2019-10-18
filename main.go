@@ -1,17 +1,18 @@
 package main
 
 import (
-	"hcc/violin/checkroot"
-	"hcc/violin/config"
-	"hcc/violin/graphql"
-	"hcc/violin/logger"
-	"hcc/violin/mysql"
+	"hcc/violin/action/graphql"
+	"hcc/violin/action/rabbitmq"
+	"hcc/violin/lib/config"
+	"hcc/violin/lib/logger"
+	"hcc/violin/lib/mysql"
+	"hcc/violin/lib/syscheck"
 	"net/http"
 	"strconv"
 )
 
 func main() {
-	if !checkroot.CheckRoot() {
+	if !syscheck.CheckRoot() {
 		return
 	}
 
@@ -28,6 +29,17 @@ func main() {
 	}
 	defer func() {
 		_ = mysql.Db.Close()
+	}()
+
+	err = rabbitmq.PrepareChannel()
+	if err != nil {
+		logger.Logger.Panic(err)
+	}
+	defer func() {
+		_ = rabbitmq.Channel.Close()
+	}()
+	defer func() {
+		_ = rabbitmq.Connection.Close()
 	}()
 
 	http.Handle("/graphql", graphql.GraphqlHandler)

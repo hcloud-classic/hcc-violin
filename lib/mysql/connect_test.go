@@ -1,14 +1,14 @@
 package mysql
 
 import (
-	"hcc/violin/checkroot"
-	"hcc/violin/config"
-	"hcc/violin/logger"
+	"hcc/violin/lib/config"
+	"hcc/violin/lib/logger"
+	"hcc/violin/lib/syscheck"
 	"testing"
 )
 
 func Test_DB_Prepare(t *testing.T) {
-	if !checkroot.CheckRoot() {
+	if !syscheck.CheckRoot() {
 		t.Fatal("Failed to get root permission!")
 	}
 

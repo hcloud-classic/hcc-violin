@@ -2,9 +2,9 @@ package graphql
 
 import (
 	"github.com/graphql-go/graphql"
-	"hcc/violin/logger"
-	"hcc/violin/mysql"
-	"hcc/violin/types"
+	"hcc/violin/lib/logger"
+	"hcc/violin/lib/mysql"
+	"hcc/violin/model"
 	"strconv"
 	"time"
 )
@@ -26,7 +26,7 @@ var queryTypes = graphql.NewObject(
 
 					requestedUUID, ok := p.Args["uuid"].(string)
 					if ok {
-						server := new(types.Server)
+						server := new(model.Server)
 
 						var uuid string
 						var subnetUUID string
@@ -105,7 +105,7 @@ var queryTypes = graphql.NewObject(
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					logger.Logger.Println("Resolving: list_server")
 
-					var servers []types.Server
+					var servers []model.Server
 					var rxUUID string
 					var createdAt time.Time
 

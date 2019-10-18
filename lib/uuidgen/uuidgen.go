@@ -2,8 +2,8 @@ package uuidgen
 
 import (
 	"github.com/nu7hatch/gouuid"
-	"hcc/violin/logger"
-	"hcc/violin/mysql"
+	"hcc/violin/lib/logger"
+	"hcc/violin/lib/mysql"
 )
 
 func checkDuplicateUUID(uuid string) (bool, error) {
