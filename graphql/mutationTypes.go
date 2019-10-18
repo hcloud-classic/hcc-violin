@@ -94,7 +94,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 		},
 		"update_server": &graphql.Field{
 			Type:        serverType,
-			Description: "Update server by uuid",
+			Description: "Update server",
 			Args: graphql.FieldConfigArgument{
 				"uuid": &graphql.ArgumentConfig{
 					Type: graphql.NewNonNull(graphql.String),
