@@ -2,7 +2,6 @@ package types
 
 import "time"
 
-// Server : Struct of server
 type Server struct {
 	UUID       string    `json:"uuid"`
 	SubnetUUID string    `json:"subnet_uuid"`
@@ -17,7 +16,6 @@ type Server struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
-// Servers : Array struct of Servers
 type Servers struct {
 	Server []Server `json:"server"`
 }
