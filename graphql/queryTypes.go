@@ -123,7 +123,6 @@ var queryTypes = graphql.NewObject(
 					}
 					row, rowOk := params.Args["row"].(int)
 					page, pageOk := params.Args["page"].(int)
-
 					if !rowOk || !pageOk {
 						return nil, nil
 					}
@@ -200,7 +199,7 @@ var queryTypes = graphql.NewObject(
 			},
 			"all_server": &graphql.Field{
 				Type:        graphql.NewList(serverType),
-				Description: "Get server list",
+				Description: "Get all server list",
 				Args: graphql.FieldConfigArgument{
 					"row": &graphql.ArgumentConfig{
 						Type: graphql.Int,
@@ -210,7 +209,7 @@ var queryTypes = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					logger.Log.Println("Resolving: list_server")
+					logger.Log.Println("Resolving: all_server")
 
 					var servers []types.Server
 					var uuid string
@@ -226,7 +225,6 @@ var queryTypes = graphql.NewObject(
 					var createdAt time.Time
 					row, rowOk := params.Args["row"].(int)
 					page, pageOk := params.Args["page"].(int)
-
 					if !rowOk || !pageOk {
 						return nil, nil
 					}
@@ -247,7 +245,6 @@ var queryTypes = graphql.NewObject(
 							logger.Log.Println(err)
 						}
 						server := types.Server{UUID: uuid, SubnetUUID: subnetUUID, OS: os, ServerName: serverName, ServerDesc: serverDesc, CPU: cpu, Memory: memory, DiskSize: diskSize, Status: status, UserUUID: userUUID, CreatedAt: createdAt}
-						logger.Log.Println(server)
 						servers = append(servers, server)
 					}
 					return servers, nil
@@ -257,7 +254,7 @@ var queryTypes = graphql.NewObject(
 				Type:        serverNum,
 				Description: "Get the number of server",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					logger.Log.Println("Resolving: list_server")
+					logger.Log.Println("Resolving: num_server")
 
 					var serverNum types.ServerNum
 					var serverNr int
