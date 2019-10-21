@@ -1,8 +1,7 @@
-//// server
-
 // url
 http://localhost:7500/graphql
-http://192.168.110.240:7500/graphql
+
+//// server
 
 // create
 mutation _ {
@@ -93,4 +92,38 @@ mutation _ {
 // delete
 mutation _ {
   delete_server(uuid:"75149b85-61a2-4008-5766-10bdc3514641"){uuid}
+}
+
+//// server_node
+
+// create
+
+mutation _ {
+  create_server_node(server_uuid: "1111", node_uuid: "2222") {
+    uuid
+    server_uuid
+    node_uuid
+    created_at
+  }
+}
+
+// read
+
+// read
+query {
+  server_node(uuid: "8e792a64-eb1d-44f4-470c-ac870f4e48d8") {
+    uuid
+    server_uuid
+    node_uuid
+    created_at
+  }
+}
+
+// update
+
+// delete
+
+// delete
+mutation _ {
+  delete_server_node(uuid:"8e792a64-eb1d-44f4-470c-ac870f4e48d8"){uuid}
 }
