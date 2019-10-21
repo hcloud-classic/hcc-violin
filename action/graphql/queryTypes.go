@@ -2,17 +2,16 @@ package graphql
 
 import (
 	"github.com/graphql-go/graphql"
+	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
-	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
-	"strconv"
-	"time"
 )
 
 var queryTypes = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "Query",
 		Fields: graphql.Fields{
+			// server DB
 			"server": &graphql.Field{
 				Type:        serverType,
 				Description: "Get server by uuid",
@@ -21,47 +20,10 @@ var queryTypes = graphql.NewObject(
 						Type: graphql.String,
 					},
 				},
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					logger.Logger.Println("Resolving: server")
-
-					requestedUUID, ok := p.Args["uuid"].(string)
-					if ok {
-						server := new(model.Server)
-
-						var uuid string
-						var subnetUUID string
-						var os string
-						var serverName string
-						var serverDesc string
-						var cpu int
-						var memory int
-						var diskSize int
-						var status string
-						var userUUID string
-						var createdAt time.Time
-
-						sql := "select * from server where uuid = ?"
-						err := mysql.Db.QueryRow(sql, requestedUUID).Scan(&uuid, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
-						if err != nil {
-							logger.Logger.Println(err)
-							return nil, nil
-						}
-
-						server.UUID = uuid
-						server.SubnetUUID = subnetUUID
-						server.OS = os
-						server.ServerName = serverName
-						server.ServerDesc = serverDesc
-						server.CPU = cpu
-						server.Memory = memory
-						server.DiskSize = diskSize
-						server.Status = status
-						server.UserUUID = userUUID
-						server.CreatedAt = createdAt
-
-						return server, nil
-					}
-					return nil, nil
+					return dao.ReadServer(params.Args)
 				},
 			},
 			"list_server": &graphql.Field{
@@ -103,100 +65,9 @@ var queryTypes = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+
 					logger.Logger.Println("Resolving: list_server")
-
-					var servers []model.Server
-					var rxUUID string
-					var createdAt time.Time
-
-					subnetUUID, subnetUUIDOk := params.Args["subnet_uuid"].(string)
-					os, osOk := params.Args["os"].(string)
-					serverName, serverNameOk := params.Args["server_name"].(string)
-					serverDesc, serverDescOk := params.Args["server_desc"].(string)
-					cpu, cpuOk := params.Args["cpu"].(int)
-					memory, memoryOk := params.Args["memory"].(int)
-					diskSize, diskSizeOk := params.Args["disk_size"].(int)
-					status, statusOk := params.Args["status"].(string)
-					userUUID, userUUIDOk := params.Args["user_uuid"].(string)
-					if !userUUIDOk {
-						return nil, nil
-					}
-					row, rowOk := params.Args["row"].(int)
-					page, pageOk := params.Args["page"].(int)
-					if !rowOk || !pageOk {
-						return nil, nil
-					}
-
-					sql := "select * from server where"
-					if subnetUUIDOk {
-						sql += " subnet_uuid = '" + subnetUUID + "'"
-						if osOk || serverNameOk || serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-							sql += " and"
-						}
-					}
-					if osOk {
-						sql += " os = '" + os + "'"
-						if serverNameOk || serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-							sql += " and"
-						}
-					}
-					if serverNameOk {
-						sql += " server_name = '" + serverName + "'"
-						if serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-							sql += " and"
-						}
-					}
-					if serverDescOk {
-						sql += " server_desc = '" + serverDesc + "'"
-						if cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-							sql += " and"
-						}
-					}
-					if cpuOk {
-						sql += " cpu = " + strconv.Itoa(cpu)
-						if memoryOk || diskSizeOk || statusOk || userUUIDOk {
-							sql += " and"
-						}
-					}
-					if memoryOk {
-						sql += " memory = " + strconv.Itoa(memory)
-						if diskSizeOk || statusOk || userUUIDOk {
-							sql += " and"
-						}
-					}
-					if diskSizeOk {
-						sql += " disk_size = " + strconv.Itoa(diskSize)
-						if statusOk || userUUIDOk {
-							sql += " and"
-						}
-					}
-					if statusOk {
-						sql += " status = '" + status + "' and"
-					}
-
-					sql += " user_uuid = ? order by created_at desc limit ? offset ?"
-
-					logger.Logger.Println("list_server sql  : ", sql)
-
-					stmt, err := mysql.Db.Query(sql, userUUID, row, row*(page-1))
-					if err != nil {
-						logger.Logger.Println(err.Error())
-						return nil, nil
-					}
-					defer func() {
-						_ = stmt.Close()
-					}()
-
-					for stmt.Next() {
-						err := stmt.Scan(&rxUUID, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
-						if err != nil {
-							logger.Logger.Println(err)
-						}
-						server := types.Server{UUID: rxUUID, SubnetUUID: subnetUUID, OS: os, ServerName: serverName, ServerDesc: serverDesc, CPU: cpu, Memory: memory, DiskSize: diskSize, Status: status, UserUUID: userUUID, CreatedAt: createdAt}
-						logger.Logger.Println(server)
-						servers = append(servers, server)
-					}
-					return servers, nil
+					return dao.ReadServerList(params.Args)
 				},
 			},
 			"all_server": &graphql.Field{
@@ -212,46 +83,7 @@ var queryTypes = graphql.NewObject(
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					logger.Logger.Println("Resolving: all_server")
-
-					var servers []types.Server
-					var uuid string
-					var subnetUUID string
-					var os string
-					var serverName string
-					var serverDesc string
-					var cpu int
-					var memory int
-					var diskSize int
-					var status string
-					var userUUID string
-					var createdAt time.Time
-					row, rowOk := params.Args["row"].(int)
-					page, pageOk := params.Args["page"].(int)
-					if !rowOk || !pageOk {
-						return nil, nil
-					}
-
-					sql := "select * from server order by created_at desc limit ? offset ?"
-					logger.Logger.Println("list_server sql  : ", sql)
-
-					stmt, err := mysql.Db.Query(sql, row, row*(page-1))
-					if err != nil {
-						logger.Logger.Println(err.Error())
-						return nil, nil
-					}
-					defer func() {
-						_ = stmt.Close()
-					}()
-
-					for stmt.Next() {
-						err := stmt.Scan(&uuid, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
-						if err != nil {
-							logger.Logger.Println(err)
-						}
-						server := types.Server{UUID: uuid, SubnetUUID: subnetUUID, OS: os, ServerName: serverName, ServerDesc: serverDesc, CPU: cpu, Memory: memory, DiskSize: diskSize, Status: status, UserUUID: userUUID, CreatedAt: createdAt}
-						servers = append(servers, server)
-					}
-					return servers, nil
+					return dao.ReadServerAll(params.Args)
 				},
 			},
 			"num_server": &graphql.Field{
@@ -259,20 +91,50 @@ var queryTypes = graphql.NewObject(
 				Description: "Get the number of server",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					logger.Logger.Println("Resolving: num_server")
+					var serverNum model.ServerNum
+					var err error
+					serverNum, err = dao.ReadServerNum()
 
-					var serverNum types.ServerNum
-					var serverNr int
-
-					sql := "select count(*) from server"
-					err := mysql.Db.QueryRow(sql).Scan(&serverNr)
-					if err != nil {
-						logger.Logger.Println(err)
-						return nil, nil
-					}
-					logger.Logger.Println("Count: ", serverNr)
-					serverNum.Number = serverNr
-
-					return serverNum, nil
+					return serverNum, err
+				},
+			},
+			// server_node DB
+			"server_node": &graphql.Field{
+				Type:        serverNodeType,
+				Description: "Get server_node by uuid",
+				Args: graphql.FieldConfigArgument{
+					"uuid": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					logger.Logger.Println("Resolving: server_node")
+					return dao.ReadServerNode(params.Args)
+				},
+			},
+			"list_server_node": &graphql.Field{
+				Type:        graphql.NewList(serverNodeType),
+				Description: "Get server_node list",
+				Args: graphql.FieldConfigArgument{
+					"server_uuid": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+					"node_uuid": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					logger.Logger.Println("Resolving: list_server_node")
+					return dao.ReadServerNodeList(params.Args)
+				},
+			},
+			"all_server_node": &graphql.Field{
+				Type:        graphql.NewList(serverNodeType),
+				Description: "Get all server_node list",
+				Args:        graphql.FieldConfigArgument{},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					logger.Logger.Println("Resolving: all_server_node")
+					return dao.ReadServerNodeAll(params.Args)
 				},
 			},
 		},
