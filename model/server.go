@@ -14,6 +14,7 @@ type Server struct {
 	DiskSize   int       `json:"disk_size"`
 	Status     string    `json:"status"`
 	UserUUID   string    `json:"user_uuid"`
+	NodeNr     int       `json:"node_nr"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
