@@ -1,15 +1,15 @@
 package main
 
 import (
-	"hcc/violin/config"
-	"hcc/violin/graphql"
-	"hcc/violin/logger"
-	"hcc/violin/mysql"
+	"hcc/violin/action/graphql"
+	"hcc/violin/lib/config"
+	"hcc/violin/lib/logger"
+	"hcc/violin/lib/mysql"
 	"net/http"
 )
 
 func main() {
-	// if !checkroot.CheckRoot() {
+	// if !syscheck.CheckRoot() {
 	// 	return
 	// }
 
