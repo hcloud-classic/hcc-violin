@@ -8,8 +8,7 @@ import (
 	"time"
 )
 
-// Read
-
+// ReadServerNode :
 func ReadServerNode(args map[string]interface{}) (interface{}, error) {
 	var serverNode model.ServerNode
 	var err error
@@ -37,6 +36,7 @@ func ReadServerNode(args map[string]interface{}) (interface{}, error) {
 	return serverNode, nil
 }
 
+// ReadServerNodeList :
 func ReadServerNodeList(args map[string]interface{}) (interface{}, error) {
 	var err error
 	var serverNodes []model.ServerNode
@@ -71,6 +71,7 @@ func ReadServerNodeList(args map[string]interface{}) (interface{}, error) {
 	return serverNodes, nil
 }
 
+// ReadServerNodeAll :
 func ReadServerNodeAll(args map[string]interface{}) (interface{}, error) {
 	var err error
 	var serverNodes []model.ServerNode
@@ -102,8 +103,7 @@ func ReadServerNodeAll(args map[string]interface{}) (interface{}, error) {
 	return serverNodes, nil
 }
 
-// Create
-
+// CreateServerNode :
 func CreateServerNode(args map[string]interface{}) (interface{}, error) {
 	uuid, err := uuidgen.UUIDgen()
 	if err != nil {
@@ -134,10 +134,7 @@ func CreateServerNode(args map[string]interface{}) (interface{}, error) {
 	return serverNode, nil
 }
 
-// Update
-
-// Delete
-
+// DeleteServerNode :
 func DeleteServerNode(args map[string]interface{}) (interface{}, error) {
 	var err error
 

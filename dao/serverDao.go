@@ -9,8 +9,7 @@ import (
 	"time"
 )
 
-// Read
-
+// ReadServer :
 func ReadServer(args map[string]interface{}) (interface{}, error) {
 	var server model.Server
 	var err error
@@ -59,6 +58,7 @@ func ReadServer(args map[string]interface{}) (interface{}, error) {
 	return server, nil
 }
 
+// ReadServerList :
 func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	var err error
 	var servers []model.Server
@@ -156,6 +156,7 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	return servers, nil
 }
 
+// ReadServerAll :
 func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	var err error
 	var servers []model.Server
@@ -201,6 +202,7 @@ func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	return servers, nil
 }
 
+// ReadServerNum :
 func ReadServerNum() (model.ServerNum, error) {
 	logger.Logger.Println("serverDao: ReadServerNum")
 	var serverNum model.ServerNum
@@ -218,8 +220,7 @@ func ReadServerNum() (model.ServerNum, error) {
 	return serverNum, nil
 }
 
-// Create
-
+// CreateServer :
 func CreateServer(args map[string]interface{}) (interface{}, error) {
 	uuid, err := uuidgen.UUIDgen()
 	if err != nil {
@@ -259,8 +260,7 @@ func CreateServer(args map[string]interface{}) (interface{}, error) {
 	return server, nil
 }
 
-// Update
-
+// UpdateServer :
 func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	var err error
 
@@ -368,8 +368,7 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	return nil, err
 }
 
-// Delete
-
+// DeleteServer :
 func DeleteServer(args map[string]interface{}) (interface{}, error) {
 	var err error
 

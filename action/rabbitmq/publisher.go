@@ -31,7 +31,7 @@ func GetNodes(nodeNr int, serverUUID string) error {
 		qCreate.Name,
 		false,
 		false,
-		amqp.Publishing {
+		amqp.Publishing{
 			ContentType:     "text/plain",
 			ContentEncoding: "utf-8",
 			Body:            body,
@@ -59,7 +59,7 @@ func UpdateSubnet(subnet model.Subnet) error {
 	}
 
 	body, _ := json.Marshal(subnet)
-	err = Channel.Publish(                                                                     
+	err = Channel.Publish(
 		"",
 		qCreate.Name,
 		false,
