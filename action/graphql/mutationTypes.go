@@ -43,8 +43,6 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-				logger.Logger.Println("Resolving: create_server")
-
 				// stage 1. select node - reader, compute
 				// stage 2. create volume - os, data
 				// stage 3. create subnet
@@ -89,7 +87,6 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-
 				logger.Logger.Println("Resolving: update_server")
 				return dao.UpdateServer(params.Args)
 			},
@@ -103,7 +100,6 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-
 				logger.Logger.Println("Resolving: delete_volume")
 				return dao.DeleteServer(params.Args)
 			},

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// ReadServer :
+// ReadServer - cgs
 func ReadServer(args map[string]interface{}) (interface{}, error) {
 	var server model.Server
 	var err error
@@ -58,7 +58,7 @@ func ReadServer(args map[string]interface{}) (interface{}, error) {
 	return server, nil
 }
 
-// ReadServerList :
+// ReadServerList - cgs
 func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	var err error
 	var servers []model.Server
@@ -139,9 +139,7 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 		logger.Logger.Println(err.Error())
 		return nil, err
 	}
-	defer func() {
-		_ = stmt.Close()
-	}()
+	defer stmt.Close()
 
 	for stmt.Next() {
 		err := stmt.Scan(&rxUUID, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
@@ -156,7 +154,7 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	return servers, nil
 }
 
-// ReadServerAll :
+// ReadServerAll - cgs
 func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	var err error
 	var servers []model.Server
@@ -185,9 +183,7 @@ func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 		logger.Logger.Println(err.Error())
 		return nil, err
 	}
-	defer func() {
-		_ = stmt.Close()
-	}()
+	defer stmt.Close()
 
 	for stmt.Next() {
 		err := stmt.Scan(&uuid, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
@@ -202,7 +198,7 @@ func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	return servers, nil
 }
 
-// ReadServerNum :
+// ReadServerNum - cgs
 func ReadServerNum() (model.ServerNum, error) {
 	logger.Logger.Println("serverDao: ReadServerNum")
 	var serverNum model.ServerNum
@@ -220,7 +216,7 @@ func ReadServerNum() (model.ServerNum, error) {
 	return serverNum, nil
 }
 
-// CreateServer :
+// CreateServer - cgs
 func CreateServer(args map[string]interface{}) (interface{}, error) {
 	uuid, err := uuidgen.UUIDgen()
 	if err != nil {
@@ -244,12 +240,10 @@ func CreateServer(args map[string]interface{}) (interface{}, error) {
 	sql := "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		logger.Logger.Println(err)
+		logger.Logger.Println(err.Error())
 		return nil, err
 	}
-	defer func() {
-		_ = stmt.Close()
-	}()
+	defer stmt.Close()
 	result, err := stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.CPU, server.Memory, server.DiskSize, server.Status, server.UserUUID)
 	if err != nil {
 		logger.Logger.Println(err)
@@ -260,7 +254,7 @@ func CreateServer(args map[string]interface{}) (interface{}, error) {
 	return server, nil
 }
 
-// UpdateServer :
+// UpdateServer - cgs
 func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	var err error
 
@@ -352,9 +346,7 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 			logger.Logger.Println(err.Error())
 			return nil, err
 		}
-		defer func() {
-			_ = stmt.Close()
-		}()
+		defer stmt.Close()
 
 		result, err2 := stmt.Exec(server.UUID)
 		if err2 != nil {
@@ -368,7 +360,7 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	return nil, err
 }
 
-// DeleteServer :
+// DeleteServer - cgs
 func DeleteServer(args map[string]interface{}) (interface{}, error) {
 	var err error
 
@@ -380,9 +372,7 @@ func DeleteServer(args map[string]interface{}) (interface{}, error) {
 			logger.Logger.Println(err.Error())
 			return nil, err
 		}
-		defer func() {
-			_ = stmt.Close()
-		}()
+		defer stmt.Close()
 		result, err2 := stmt.Exec(requestedUUID)
 		if err2 != nil {
 			logger.Logger.Println(err2)
