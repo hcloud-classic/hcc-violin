@@ -11,6 +11,7 @@ var queryTypes = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "Query",
 		Fields: graphql.Fields{
+			// server DB
 			"server": &graphql.Field{
 				Type:        serverType,
 				Description: "Get server by uuid",
@@ -19,8 +20,9 @@ var queryTypes = graphql.NewObject(
 						Type: graphql.String,
 					},
 				},
+
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					logger.Log.Println("Resolving: server")
+					logger.Logger.Println("Resolving: server")
 					return dao.ReadServer(params.Args)
 				},
 			},
@@ -63,7 +65,8 @@ var queryTypes = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					logger.Log.Println("Resolving: list_server")
+
+					logger.Logger.Println("Resolving: list_server")
 					return dao.ReadServerList(params.Args)
 				},
 			},
@@ -79,7 +82,7 @@ var queryTypes = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					logger.Log.Println("Resolving: all_server")
+					logger.Logger.Println("Resolving: all_server")
 					return dao.ReadServerAll(params.Args)
 				},
 			},
@@ -87,12 +90,51 @@ var queryTypes = graphql.NewObject(
 				Type:        serverNum,
 				Description: "Get the number of server",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					logger.Log.Println("Resolving: num_server")
+					logger.Logger.Println("Resolving: num_server")
 					var serverNum model.ServerNum
 					var err error
 					serverNum, err = dao.ReadServerNum()
 
 					return serverNum, err
+				},
+			},
+			// server_node DB
+			"server_node": &graphql.Field{
+				Type:        serverNodeType,
+				Description: "Get server_node by uuid",
+				Args: graphql.FieldConfigArgument{
+					"uuid": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					logger.Logger.Println("Resolving: server_node")
+					return dao.ReadServerNode(params.Args)
+				},
+			},
+			"list_server_node": &graphql.Field{
+				Type:        graphql.NewList(serverNodeType),
+				Description: "Get server_node list",
+				Args: graphql.FieldConfigArgument{
+					"server_uuid": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+					"node_uuid": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					logger.Logger.Println("Resolving: list_server_node")
+					return dao.ReadServerNodeList(params.Args)
+				},
+			},
+			"all_server_node": &graphql.Field{
+				Type:        graphql.NewList(serverNodeType),
+				Description: "Get all server_node list",
+				Args:        graphql.FieldConfigArgument{},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					logger.Logger.Println("Resolving: all_server_node")
+					return dao.ReadServerNodeAll(params.Args)
 				},
 			},
 		},

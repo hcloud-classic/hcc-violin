@@ -9,8 +9,7 @@ import (
 	"time"
 )
 
-// Read
-
+// ReadServer :
 func ReadServer(args map[string]interface{}) (interface{}, error) {
 	var server model.Server
 	var err error
@@ -40,7 +39,7 @@ func ReadServer(args map[string]interface{}) (interface{}, error) {
 		&userUUID,
 		&createdAt)
 	if err != nil {
-		logger.Log.Println(err)
+		logger.Logger.Println(err)
 		return nil, err
 	}
 
@@ -59,6 +58,7 @@ func ReadServer(args map[string]interface{}) (interface{}, error) {
 	return server, nil
 }
 
+// ReadServerList :
 func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	var err error
 	var servers []model.Server
@@ -132,28 +132,31 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	}
 
 	sql += " user_uuid = ? order by created_at desc limit ? offset ?"
-	logger.Log.Println("list_server sql  : ", sql)
+	logger.Logger.Println("list_server sql  : ", sql)
 
 	stmt, err := mysql.Db.Query(sql, userUUID, row, row*(page-1))
 	if err != nil {
-		logger.Log.Println(err.Error())
+		logger.Logger.Println(err.Error())
 		return nil, err
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
 
 	for stmt.Next() {
 		err := stmt.Scan(&rxUUID, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
 		if err != nil {
-			logger.Log.Println(err.Error())
+			logger.Logger.Println(err.Error())
 			return nil, err
 		}
 		server := model.Server{UUID: rxUUID, SubnetUUID: subnetUUID, OS: os, ServerName: serverName, ServerDesc: serverDesc, CPU: cpu, Memory: memory, DiskSize: diskSize, Status: status, UserUUID: userUUID, CreatedAt: createdAt}
-		logger.Log.Println(server)
+		logger.Logger.Println(server)
 		servers = append(servers, server)
 	}
 	return servers, nil
 }
 
+// ReadServerAll :
 func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	var err error
 	var servers []model.Server
@@ -175,19 +178,21 @@ func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	}
 
 	sql := "select * from server order by created_at desc limit ? offset ?"
-	logger.Log.Println("list_server sql  : ", sql)
+	logger.Logger.Println("list_server sql  : ", sql)
 
 	stmt, err := mysql.Db.Query(sql, row, row*(page-1))
 	if err != nil {
-		logger.Log.Println(err.Error())
+		logger.Logger.Println(err.Error())
 		return nil, err
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
 
 	for stmt.Next() {
 		err := stmt.Scan(&uuid, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
 		if err != nil {
-			logger.Log.Println(err)
+			logger.Logger.Println(err)
 			return nil, err
 		}
 		server := model.Server{UUID: uuid, SubnetUUID: subnetUUID, OS: os, ServerName: serverName, ServerDesc: serverDesc, CPU: cpu, Memory: memory, DiskSize: diskSize, Status: status, UserUUID: userUUID, CreatedAt: createdAt}
@@ -197,8 +202,9 @@ func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	return servers, nil
 }
 
+// ReadServerNum :
 func ReadServerNum() (model.ServerNum, error) {
-	logger.Log.Println("serverDao: ReadServerNum")
+	logger.Logger.Println("serverDao: ReadServerNum")
 	var serverNum model.ServerNum
 	var serverNr int
 	var err error
@@ -206,7 +212,7 @@ func ReadServerNum() (model.ServerNum, error) {
 	sql := "select count(*) from server"
 	err = mysql.Db.QueryRow(sql).Scan(&serverNr)
 	if err != nil {
-		logger.Log.Println(err)
+		logger.Logger.Println(err)
 		return serverNum, err
 	}
 	serverNum.Number = serverNr
@@ -214,12 +220,11 @@ func ReadServerNum() (model.ServerNum, error) {
 	return serverNum, nil
 }
 
-// Create
-
+// CreateServer :
 func CreateServer(args map[string]interface{}) (interface{}, error) {
-	uuid, err := uuidgen.Uuidgen()
+	uuid, err := uuidgen.UUIDgen()
 	if err != nil {
-		logger.Log.Println("Failed to generate uuid!")
+		logger.Logger.Println("Failed to generate uuid!")
 		return nil, err
 	}
 
@@ -239,22 +244,23 @@ func CreateServer(args map[string]interface{}) (interface{}, error) {
 	sql := "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		logger.Log.Println(err.Error())
+		logger.Logger.Println(err)
 		return nil, err
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
 	result, err := stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.CPU, server.Memory, server.DiskSize, server.Status, server.UserUUID)
 	if err != nil {
-		logger.Log.Println(err)
+		logger.Logger.Println(err)
 		return nil, err
 	}
-	logger.Log.Println(result.LastInsertId())
+	logger.Logger.Println(result.LastInsertId())
 
 	return server, nil
 }
 
-// Update
-
+// UpdateServer :
 func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	var err error
 
@@ -339,29 +345,30 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 		}
 		sql += " where uuid = ?"
 
-		logger.Log.Println("update_server sql : ", sql)
+		logger.Logger.Println("update_server sql : ", sql)
 
 		stmt, err := mysql.Db.Prepare(sql)
 		if err != nil {
-			logger.Log.Println(err.Error())
+			logger.Logger.Println(err.Error())
 			return nil, err
 		}
-		defer stmt.Close()
+		defer func() {
+			_ = stmt.Close()
+		}()
 
 		result, err2 := stmt.Exec(server.UUID)
 		if err2 != nil {
-			logger.Log.Println(err2)
+			logger.Logger.Println(err2)
 			return nil, err
 		}
-		logger.Log.Println(result.LastInsertId())
+		logger.Logger.Println(result.LastInsertId())
 		return server, nil
 	}
 
 	return nil, err
 }
 
-// Delete
-
+// DeleteServer :
 func DeleteServer(args map[string]interface{}) (interface{}, error) {
 	var err error
 
@@ -370,16 +377,18 @@ func DeleteServer(args map[string]interface{}) (interface{}, error) {
 		sql := "delete from server where uuid = ?"
 		stmt, err := mysql.Db.Prepare(sql)
 		if err != nil {
-			logger.Log.Println(err.Error())
+			logger.Logger.Println(err.Error())
 			return nil, err
 		}
-		defer stmt.Close()
+		defer func() {
+			_ = stmt.Close()
+		}()
 		result, err2 := stmt.Exec(requestedUUID)
 		if err2 != nil {
-			logger.Log.Println(err2)
+			logger.Logger.Println(err2)
 			return nil, err
 		}
-		logger.Log.Println(result.RowsAffected())
+		logger.Logger.Println(result.RowsAffected())
 
 		return requestedUUID, nil
 	}
