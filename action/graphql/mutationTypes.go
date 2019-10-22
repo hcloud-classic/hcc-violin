@@ -9,6 +9,7 @@ import (
 var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 	Name: "Mutation",
 	Fields: graphql.Fields{
+		// server DB
 		"create_server": &graphql.Field{
 			Type:        serverType,
 			Description: "Create new server",
@@ -42,6 +43,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				logger.Logger.Println("Resolving: create_server")
+
 				// stage 1. select node - reader, compute
 				// stage 2. create volume - os, data
 				// stage 3. create subnet
@@ -86,7 +89,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-				logger.Log.Println("Resolving: update_server")
+
+				logger.Logger.Println("Resolving: update_server")
 				return dao.UpdateServer(params.Args)
 			},
 		},
@@ -99,8 +103,38 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-				logger.Log.Println("Resolving: delete_volume")
+
+				logger.Logger.Println("Resolving: delete_volume")
 				return dao.DeleteServer(params.Args)
+			},
+		},
+		// server_node DB
+		"create_server_node": &graphql.Field{
+			Type:        serverNodeType,
+			Description: "Create new server_node",
+			Args: graphql.FieldConfigArgument{
+				"server_uuid": &graphql.ArgumentConfig{
+					Type: graphql.String,
+				},
+				"node_uuid": &graphql.ArgumentConfig{
+					Type: graphql.String,
+				},
+			},
+			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				return dao.CreateServerNode(params.Args)
+			},
+		},
+		"delete_server_node": &graphql.Field{
+			Type:        serverNodeType,
+			Description: "Delete server_node by uuid",
+			Args: graphql.FieldConfigArgument{
+				"uuid": &graphql.ArgumentConfig{
+					Type: graphql.NewNonNull(graphql.String),
+				},
+			},
+			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				logger.Logger.Println("Resolving: delete server_node")
+				return dao.DeleteServerNode(params.Args)
 			},
 		},
 	},

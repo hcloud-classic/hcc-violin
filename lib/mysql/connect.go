@@ -2,10 +2,10 @@ package mysql
 
 import (
 	"database/sql"
+	_ "github.com/go-sql-driver/mysql" // Needed for connect mysql
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
-
-	_ "github.com/go-sql-driver/mysql" // Needed for connect mysql
+	"strconv"
 )
 
 // Db : Pointer of mysql connection
@@ -14,20 +14,22 @@ var Db *sql.DB
 // Prepare : Connect to mysql and prepare pointer of mysql connection
 func Prepare() error {
 	var err error
-	Db, err = sql.Open("mysql", config.MysqlID+":"+config.MysqlPassword+"@tcp("+
-		config.MysqlAddress+":"+config.MysqlPort+")/"+config.MysqlDatabase+"?parseTime=true")
+	Db, err = sql.Open("mysql",
+		config.Mysql.ID+":"+config.Mysql.Password+"@tcp("+
+			config.Mysql.Address+":"+strconv.Itoa(int(config.Mysql.Port))+")/"+
+			config.Mysql.Database+"?parseTime=true")
 	if err != nil {
-		logger.Log.Println(err)
+		logger.Logger.Println(err)
 		return err
 	}
-
-	logger.Log.Println("db is connected")
 
 	err = Db.Ping()
 	if err != nil {
-		logger.Log.Println(err.Error())
+		logger.Logger.Println(err)
 		return err
 	}
+
+	logger.Logger.Println("db is connected")
 
 	return nil
 }
