@@ -88,6 +88,75 @@ func parseRabbitMQ() {
 	}
 }
 
+func parseFlute() {
+	config.FluteConfig = conf.Get("flute")
+	if config.FluteConfig == nil {
+		logger.Logger.Panicln("no flute section")
+	}
+
+	Flute = flute{}
+	Flute.ServerAddress, err = config.FluteConfig.String("flute_server_address")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Flute.ServerPort, err = config.FluteConfig.Int("flute_server_port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Flute.RequestTimeoutMs, err = config.FluteConfig.Int("flute_request_timeout_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+}
+
+func parseCello() {
+	config.CelloConfig = conf.Get("cello")
+	if config.CelloConfig == nil {
+		logger.Logger.Panicln("no cello section")
+	}
+
+	Cello = cello{}
+	Cello.ServerAddress, err = config.CelloConfig.String("cello_server_address")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Cello.ServerPort, err = config.CelloConfig.Int("cello_server_port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Cello.RequestTimeoutMs, err = config.CelloConfig.Int("cello_request_timeout_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+}
+
+func parseHarp() {
+	config.HarpConfig = conf.Get("harp")
+	if config.HarpConfig == nil {
+		logger.Logger.Panicln("no harp section")
+	}
+
+	Harp = harp{}
+	Harp.ServerAddress, err = config.HarpConfig.String("harp_server_address")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Harp.ServerPort, err = config.HarpConfig.Int("harp_server_port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Harp.RequestTimeoutMs, err = config.HarpConfig.Int("harp_request_timeout_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+}
+
 // Parser : Parse config file
 func Parser() {
 	if err = conf.Parse(configLocation); err != nil {
@@ -97,4 +166,7 @@ func Parser() {
 	parseMysql()
 	parseHTTP()
 	parseRabbitMQ()
+	parseFlute()
+	parseCello()
+	parseHarp()
 }

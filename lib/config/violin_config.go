@@ -8,6 +8,9 @@ type violinConfig struct {
 	MysqlConfig    *goconf.Section
 	HTTPConfig     *goconf.Section
 	RabbitMQConfig *goconf.Section
+	FluteConfig    *goconf.Section
+	CelloConfig    *goconf.Section
+	HarpConfig     *goconf.Section
 }
 
 /*-----------------------------------
@@ -30,4 +33,19 @@ rabbitmq_id user
 rabbitmq_password pass
 rabbitmq_address 555.555.555.555
 rabbitmq_port 15672
+
+[flute]
+flute_server_address 222.222.222.222
+flute_server_port 3333
+flute_request_timeout_ms 5000
+
+[cello]
+cello_server_address 222.222.222.222
+cello_server_port 3333
+cello_request_timeout_ms 5000
+
+[harp]
+harp_server_address 222.222.222.222
+harp_server_port 3333
+harp_request_timeout_ms 5000
 -----------------------------------*/

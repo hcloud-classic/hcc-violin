@@ -46,8 +46,8 @@ type nodesInfo struct {
 	NodeNr     int    `json:"node_nr"`
 }
 
-// TODO: oboe 로 부터 온 create_server 요청에 대응 필요
 // GetNodes : Publish 'get_nodes' queues to RabbitMQ channel
+// TODO: oboe 로 부터 온 create_server 요청에 대응 필요
 func GetNodes(nodeNr int, serverUUID string) error {
 	qCreate, err := Channel.QueueDeclare(
 		"get_nodes",

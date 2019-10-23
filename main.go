@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"hcc/violin/action/graphql"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
@@ -33,12 +32,12 @@ func main() {
 		_ = mysql.Db.Close()
 	}()
 
-	var listNodeData graphql.ListNodeData
-	listNodeData, err = graphql.GetNodes()
-	if err != nil {
-		logger.Logger.Panic(err)
-	}
-	fmt.Println(listNodeData.Data.ListNode[0].UUID)
+	//var listNodeData graphql.ListNodeData
+	//listNodeData, err = graphql.GetNodes()
+	//if err != nil {
+	//	logger.Logger.Panic(err)
+	//}
+	//fmt.Println(listNodeData.Data.ListNode[0].UUID)
 
 	http.Handle("/graphql", graphql.GraphqlHandler)
 
