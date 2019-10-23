@@ -4,12 +4,7 @@ import (
 	"hcc/violin/model"
 )
 
-// UpdateNodeData : Data structure of update_node
-type UpdateNodeData struct {
-	Data struct {
-		Node model.Node `json:"update_node"`
-	} `json:"data"`
-}
+// Flute
 
 // ListNodeData : Data structure of list_node
 type ListNodeData struct {
@@ -17,3 +12,4 @@ type ListNodeData struct {
 		ListNode []model.Node `json:"list_node"`
 	} `json:"data"`
 }
+

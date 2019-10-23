@@ -1,11 +1,11 @@
 package graphql
 
 import (
+	"github.com/graphql-go/graphql"
 	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/uuidgen"
-
-	"github.com/graphql-go/graphql"
+	"hcc/violin/model"
 )
 
 var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
@@ -51,6 +51,9 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					return "", err
 				}
 
+				userUUID := params.Args["user_uuid"].(string)
+				diskSize := params.Args["disk_size"].(int)
+
 				// stage 1. select node - reader, compute
 				listNodeData, err := GetNodes()
 				if err != nil {
@@ -65,6 +68,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					err = UpdateNode(node, serverUUID)
 					if err != nil {
 						logger.Logger.Println(err)
+						return "", err
 					}
 
 					args := make(map[string]interface{})
@@ -73,11 +77,36 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					_, err = dao.CreateServerNode(args)
 					if err != nil {
 						logger.Logger.Println(err)
+						return "", err
 					}
 				}
 
 				// stage 2. create volume - os, data
+				var volumeOS = model.Volume{
+					Size:       model.OSDiskSize,
+					Filesystem: model.DefaultPXEdir,
+					ServerUUID: serverUUID,
+					UseType:    "os",
+					UserUUID:   userUUID,
+				}
+				err = CreateDisk(volumeOS, serverUUID)
+				if err != nil {
+					logger.Logger.Println(err)
+					return "", err
+				}
 
+				var volumeData = model.Volume{
+					Size:       diskSize,
+					Filesystem: model.DefaultPXEdir,
+					ServerUUID: serverUUID,
+					UseType:    "data",
+					UserUUID:   userUUID,
+				}
+				err = CreateDisk(volumeData, serverUUID)
+				if err != nil {
+					logger.Logger.Println(err)
+					return "", err
+				}
 
 				// stage 3. create subnet
 
