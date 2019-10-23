@@ -53,6 +53,11 @@ func parseHTTP() {
 	if err != nil {
 		logger.Logger.Panicln(err)
 	}
+
+	HTTP.Port, err = config.HTTPConfig.Int("port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
 }
 
 func parseRabbitMQ() {

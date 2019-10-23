@@ -23,6 +23,7 @@ database db_name
 
 [http]
 port 8888
+RequestTimeoutMs 5000
 
 [rabbitmq]
 rabbitmq_id user

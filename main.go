@@ -1,8 +1,8 @@
 package main
 
 import (
+	"fmt"
 	"hcc/violin/action/graphql"
-	"hcc/violin/action/rabbitmq"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
@@ -23,6 +23,8 @@ func main() {
 		_ = logger.FpLog.Close()
 	}()
 
+	config.Parser()
+
 	err := mysql.Prepare()
 	if err != nil {
 		return
@@ -31,21 +33,12 @@ func main() {
 		_ = mysql.Db.Close()
 	}()
 
-	err = rabbitmq.PrepareChannel()
+	var listNodeData graphql.ListNodeData
+	listNodeData, err = graphql.GetNodes()
 	if err != nil {
 		logger.Logger.Panic(err)
 	}
-	defer func() {
-		_ = rabbitmq.Channel.Close()
-	}()
-	defer func() {
-		_ = rabbitmq.Connection.Close()
-	}()
-
-	err = rabbitmq.ReturnNodes()
-	if err != nil {
-		logger.Logger.Panic(err)
-	}
+	fmt.Println(listNodeData.Data.ListNode[0].UUID)
 
 	http.Handle("/graphql", graphql.GraphqlHandler)
 

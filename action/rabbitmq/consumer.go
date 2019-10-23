@@ -37,7 +37,7 @@ func ReturnNodes() error {
 		for d := range msgsCreate {
 			log.Printf("return_nodes: Received a create message: %s", d.Body)
 
-			CreateVolume()
+			//CreateVolume()
 		}
 	}()
 

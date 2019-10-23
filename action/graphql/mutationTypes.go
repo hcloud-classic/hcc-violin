@@ -11,7 +11,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 	Fields: graphql.Fields{
 		// server DB
 		"create_server": &graphql.Field{
-			Type:        serverType,
+			Type:        graphql.String,
 			Description: "Create new server",
 			Args: graphql.FieldConfigArgument{
 				"subnet_uuid": &graphql.ArgumentConfig{
@@ -44,10 +44,20 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 				// stage 1. select node - reader, compute
+				//nodes, err := GetNodes()
+				//if err != nil {
+				//	logger.Logger.Print(err)
+				//	return "", err
+				//}
+
 				// stage 2. create volume - os, data
+
 				// stage 3. create subnet
+
 				// stage 4. node power on
+
 				// stage 5. viola install
+
 				return dao.CreateServer(params.Args)
 			},
 		},
