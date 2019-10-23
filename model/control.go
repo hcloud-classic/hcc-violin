@@ -2,8 +2,8 @@ package model
 
 // Control : Struct of Control
 type Control struct {
-	HccIPRange string `json:"iprange"`
 	HccCommand string `json:"action"`
+	HccIPRange string `json:"iprange"`
 }
 
 // Controls : Array struct of Control

@@ -32,6 +32,24 @@ func main() {
 		_ = mysql.Db.Close()
 	}()
 
+	//RabbitMQ Section
+	// err = rabbitmq.PrepareChannel()
+	// if err != nil {
+	// 	logger.Logger.Panic(err)
+	// }
+	// defer func() {
+	// 	_ = rabbitmq.Channel.Close()
+	// }()
+	// defer func() {
+	// 	_ = rabbitmq.Connection.Close()
+	// }()
+
+	// Viola Section
+	// err = rabbitmq.ConsumeViola()
+	// if err != nil {
+	// 	logger.Logger.Panic(err)
+	// }
+
 	//var listNodeData graphql.ListNodeData
 	//listNodeData, err = graphql.GetNodes()
 	//if err != nil {
