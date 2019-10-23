@@ -44,7 +44,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 				// stage 1. select node - reader, compute
-				//nodes, err := GetNodes()
+				//listNodeData, err := GetNodes()
 				//if err != nil {
 				//	logger.Logger.Print(err)
 				//	return "", err
