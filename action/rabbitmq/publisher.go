@@ -9,7 +9,7 @@ import (
 )
 
 // RunHccCLI : Publish 'run_hcc_cli' queues to RabbitMQ channel
-func RunHccCLI(action []model.Control) error {
+func RunHccCLI(action []model.Controls) error {
 	qCreate, err := Channel.QueueDeclare(
 		"run_hcc_cli",
 		false,
