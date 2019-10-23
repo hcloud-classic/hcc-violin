@@ -30,7 +30,12 @@ func Test_UUIDgen(t *testing.T) {
 		_ = mysql.Db.Close()
 	}()
 
-	_, err = UUIDgen()
+	_, err = UUIDgen(true)
+	if err != nil {
+		t.Fatal("Failed to generate uuid!")
+	}
+
+	_, err = UUIDgen(false)
 	if err != nil {
 		t.Fatal("Failed to generate uuid!")
 	}

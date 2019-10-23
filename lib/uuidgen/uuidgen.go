@@ -57,7 +57,7 @@ func UUIDgen(isServerNode bool) (string, error) {
 		logger.Logger.Println("UUIDgen(): Checking duplicated UUID")
 
 		var found = false
-		if is_server_node {
+		if isServerNode {
 			found, err = checkDuplicateUUID(true, out.String())
 		} else {
 			found, err = checkDuplicateUUID(false, out.String())

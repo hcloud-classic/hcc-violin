@@ -12,4 +12,3 @@ type ListNodeData struct {
 		ListNode []model.Node `json:"list_node"`
 	} `json:"data"`
 }
-
