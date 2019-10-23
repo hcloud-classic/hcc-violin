@@ -84,7 +84,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				// stage 2. create volume - os, data
 				var volumeOS = model.Volume{
 					Size:       model.OSDiskSize,
-					Filesystem: model.DefaultPXEdir,
+					Filesystem: model.DefaultPXEdir + "/" + serverUUID,
 					ServerUUID: serverUUID,
 					UseType:    "os",
 					UserUUID:   userUUID,
@@ -97,7 +97,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 				var volumeData = model.Volume{
 					Size:       diskSize,
-					Filesystem: model.DefaultPXEdir,
+					Filesystem: model.DefaultPXEdir + "/" + serverUUID,
 					ServerUUID: serverUUID,
 					UseType:    "data",
 					UserUUID:   userUUID,
