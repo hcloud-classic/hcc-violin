@@ -41,6 +41,12 @@ func RunHccCLI(action []model.Control) error {
 	return nil
 }
 
+type nodesInfo struct {
+	ServerUUID string `json:"server_uuid"`
+	NodeNr     int    `json:"node_nr"`
+}
+
+// TODO: oboe 로 부터 온 create_server 요청에 대응 필요
 // GetNodes : Publish 'get_nodes' queues to RabbitMQ channel
 func GetNodes(nodeNr int, serverUUID string) error {
 	qCreate, err := Channel.QueueDeclare(
@@ -55,11 +61,11 @@ func GetNodes(nodeNr int, serverUUID string) error {
 		return err
 	}
 
-	var server model.Server
-	server.UUID = serverUUID
-	server.NodeNr = nodeNr
+	var nodesinfo nodesInfo
+	nodesinfo.ServerUUID = serverUUID
+	nodesinfo.NodeNr = nodeNr
 
-	body, _ := json.Marshal(server)
+	body, _ := json.Marshal(nodesinfo)
 	err = Channel.Publish(
 		"",
 		qCreate.Name,
@@ -72,6 +78,39 @@ func GetNodes(nodeNr int, serverUUID string) error {
 		})
 	if err != nil {
 		logger.Logger.Println("get_nodes: Failed to register publisher")
+		return err
+	}
+
+	return nil
+}
+
+// CreateVolume : Publish 'create_volume' queues to RabbitMQ channel
+func CreateVolume(volume model.Volume) error {
+	qCreate, err := Channel.QueueDeclare(
+		"create_volume",
+		false,
+		false,
+		false,
+		false,
+		nil)
+	if err != nil {
+		logger.Logger.Println("create_volume: Failed to declare a create queue")
+		return err
+	}
+
+	body, _ := json.Marshal(volume)
+	err = Channel.Publish(
+		"",
+		qCreate.Name,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:     "text/plain",
+			ContentEncoding: "utf-8",
+			Body:            body,
+		})
+	if err != nil {
+		logger.Logger.Println("create_volume: Failed to register publisher")
 		return err
 	}
 

@@ -42,6 +42,11 @@ func main() {
 		_ = rabbitmq.Connection.Close()
 	}()
 
+	err = rabbitmq.ReturnNodes()
+	if err != nil {
+		logger.Logger.Panic(err)
+	}
+
 	http.Handle("/graphql", graphql.GraphqlHandler)
 
 	logger.Logger.Println("Server is running on port " + strconv.Itoa(int(config.HTTP.Port)))
