@@ -56,7 +56,9 @@ func ReadServerNodeList(args map[string]interface{}) (interface{}, error) {
 		logger.Logger.Println(err.Error())
 		return nil, err
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
 
 	for stmt.Next() {
 		err := stmt.Scan(&uuid, &serverUUID, &nodeUUID, &createdAt)
@@ -86,7 +88,9 @@ func ReadServerNodeAll(args map[string]interface{}) (interface{}, error) {
 		logger.Logger.Println(err.Error())
 		return nil, err
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
 
 	for stmt.Next() {
 		err := stmt.Scan(&uuid, &serverUUID, &nodeUUID, &createdAt)
@@ -121,7 +125,10 @@ func CreateServerNode(args map[string]interface{}) (interface{}, error) {
 		logger.Logger.Println(err)
 		return nil, err
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
+
 	result, err := stmt.Exec(serverNode.UUID, serverNode.ServerUUID, serverNode.NodeUUID)
 	if err != nil {
 		logger.Logger.Println(err)
@@ -144,7 +151,9 @@ func DeleteServerNode(args map[string]interface{}) (interface{}, error) {
 			logger.Logger.Println(err.Error())
 			return nil, err
 		}
-		defer stmt.Close()
+		defer func() {
+			_ = stmt.Close()
+		}()
 		result, err2 := stmt.Exec(requestedUUID)
 		if err2 != nil {
 			logger.Logger.Println(err2)

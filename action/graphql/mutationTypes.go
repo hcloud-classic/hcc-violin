@@ -75,13 +75,10 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					}
 				}
 
-
-
-
 				// stage 2. create volume - os, data
 
-				// stage 3. create subnet
 
+				// stage 3. create subnet
 
 				// stage 4. node power on
 
