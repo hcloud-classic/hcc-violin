@@ -3,7 +3,6 @@ package dao
 import (
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
-	"hcc/violin/lib/uuidgen"
 	"hcc/violin/model"
 	"strconv"
 	"time"
@@ -217,15 +216,9 @@ func ReadServerNum() (model.ServerNum, error) {
 }
 
 // CreateServer - cgs
-func CreateServer(args map[string]interface{}) (interface{}, error) {
-	uuid, err := uuidgen.UUIDgen()
-	if err != nil {
-		logger.Logger.Println("Failed to generate uuid!")
-		return nil, err
-	}
-
+func CreateServer(serverUUID string, args map[string]interface{}) (interface{}, error) {
 	server := model.Server{
-		UUID:       uuid,
+		UUID:       serverUUID,
 		SubnetUUID: args["subnet_uuid"].(string),
 		OS:         args["os"].(string),
 		ServerName: args["server_name"].(string),

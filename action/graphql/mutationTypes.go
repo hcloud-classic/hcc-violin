@@ -4,6 +4,7 @@ import (
 	"github.com/graphql-go/graphql"
 	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
+	"hcc/violin/lib/uuidgen"
 )
 
 var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
@@ -43,12 +44,29 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				serverUUID, err := uuidgen.UUIDgen()
+				if err != nil {
+					logger.Logger.Println("Failed to generate uuid!")
+					return "", err
+				}
+
 				// stage 1. select node - reader, compute
-				//listNodeData, err := GetNodes()
-				//if err != nil {
-				//	logger.Logger.Print(err)
-				//	return "", err
-				//}
+				listNodeData, err := GetNodes()
+				if err != nil {
+					logger.Logger.Print(err)
+					return "", err
+				}
+
+				// stage 1.1 update nodes info (server_uuid)
+				var nodes = listNodeData.Data.ListNode
+				for _, node := range nodes {
+					err = UpdateNode(node, serverUUID)
+					if err != nil {
+						logger.Logger.Println(err)
+					}
+				}
+
+				// stage
 
 				// stage 2. create volume - os, data
 
@@ -58,7 +76,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 				// stage 5. viola install
 
-				return dao.CreateServer(params.Args)
+				return dao.CreateServer(serverUUID, params.Args)
 			},
 		},
 		"update_server": &graphql.Field{
