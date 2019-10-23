@@ -1,9 +1,10 @@
 package graphql
 
 import (
-	"github.com/graphql-go/graphql"
 	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
+
+	"github.com/graphql-go/graphql"
 )
 
 var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
@@ -57,7 +58,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				// stage 4. node power on
 
 				// stage 5. viola install
-
+				// RunHccCLI(xxx)
+				// while checking Cello DB cluster status is runnig in N times, until retry is expired
 				return dao.CreateServer(params.Args)
 			},
 		},
