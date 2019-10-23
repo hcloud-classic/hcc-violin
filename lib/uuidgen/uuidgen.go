@@ -6,8 +6,14 @@ import (
 	"hcc/violin/lib/mysql"
 )
 
-func checkDuplicateUUID(uuid string) (bool, error) {
-	sql := "select uuid from server"
+func checkDuplicateUUID(isServerNode bool, uuid string) (bool, error) {
+	var sql string
+
+	if isServerNode {
+		sql = "select uuid from server"
+	} else {
+		sql = "select uuid from server_node"
+	}
 	stmt, err := mysql.Db.Query(sql)
 	if err != nil {
 		logger.Logger.Println(err)
@@ -39,7 +45,7 @@ func checkDuplicateUUID(uuid string) (bool, error) {
 }
 
 // UUIDgen : Generate uuid
-func UUIDgen() (string, error) {
+func UUIDgen(isServerNode bool) (string, error) {
 	var UUID string
 	for {
 		out, err := uuid.NewV4()
@@ -50,7 +56,12 @@ func UUIDgen() (string, error) {
 
 		logger.Logger.Println("UUIDgen(): Checking duplicated UUID")
 
-		found, err := checkDuplicateUUID(out.String())
+		var found = false
+		if is_server_node {
+			found, err = checkDuplicateUUID(true, out.String())
+		} else {
+			found, err = checkDuplicateUUID(false, out.String())
+		}
 		if err != nil {
 			logger.Logger.Println(err)
 			return "", err

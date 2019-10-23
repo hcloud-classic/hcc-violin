@@ -44,7 +44,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-				serverUUID, err := uuidgen.UUIDgen()
+				serverUUID, err := uuidgen.UUIDgen(false)
 				if err != nil {
 					logger.Logger.Println("Failed to generate uuid!")
 					return "", err
@@ -58,19 +58,30 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				}
 
 				// stage 1.1 update nodes info (server_uuid)
+				// stage 1.2 insert nodes to server_node table
 				var nodes = listNodeData.Data.ListNode
 				for _, node := range nodes {
 					err = UpdateNode(node, serverUUID)
 					if err != nil {
 						logger.Logger.Println(err)
 					}
+
+					args := make(map[string]interface{})
+					args["server_uuid"] = serverUUID
+					args["node_uuid"] = node.UUID
+					_, err = dao.CreateServerNode(args)
+					if err != nil {
+						logger.Logger.Println(err)
+					}
 				}
 
-				// stage
+
+
 
 				// stage 2. create volume - os, data
 
 				// stage 3. create subnet
+
 
 				// stage 4. node power on
 

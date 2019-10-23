@@ -103,7 +103,7 @@ func ReadServerNodeAll(args map[string]interface{}) (interface{}, error) {
 
 // CreateServerNode - cgs
 func CreateServerNode(args map[string]interface{}) (interface{}, error) {
-	uuid, err := uuidgen.UUIDgen()
+	uuid, err := uuidgen.UUIDgen(true)
 	if err != nil {
 		logger.Logger.Println("Failed to generate uuid!")
 		return nil, err
