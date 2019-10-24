@@ -1,14 +1,13 @@
 package graphql
 
 import (
+	"github.com/graphql-go/graphql"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/uuidgen"
 	"hcc/violin/model"
 	"time"
-
-	"github.com/graphql-go/graphql"
 )
 
 var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
@@ -142,32 +141,38 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						}
 					}
 
-					// Wail for leader node to turn on for 100secs
-					time.Sleep(40 * time.Second)
+					go func() {
+						// Wail for leader node to turn on for 100secs
+						time.Sleep(40 * time.Second)
 
-					for _, node := range nodes {
-						if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
-							continue
+						for _, node := range nodes {
+							if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
+								continue
+							}
+
+							result, err := OnNode(node.PXEMacAddr)
+							if err != nil {
+								logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+								return
+							}
+
+							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + node.PXEMacAddr + result)
 						}
 
-						result, err := OnNode(node.PXEMacAddr)
+						var controlAction = model.Control{
+							HccCommand: "hcc nodes add -n 0",
+							HccIPRange: subnet.Data.Subnet.NetworkIP,
+							ServerUUID: serverUUID,
+						}
+
+						// stage 5. viola install
+						err =rabbitmq.RunHccCLI(controlAction)
 						if err != nil {
 							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 							return
 						}
-
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + node.PXEMacAddr + result)
-					}
-					var controlAction = model.Control{
-
-						HccCommand: "hcc nodes add -n 0",
-						HccIPRange: subnet.Data.Subnet.NetworkIP,
-						ServerUUID: serverUUID,
-					}
-					// stage 5. viola install
-					rabbitmq.RunHccCLI(controlAction)
-					// while checking Cello DB cluster status is runnig in N times, until retry is expired
-
+						// while checking Cello DB cluster status is runnig in N times, until retry is expired
+					}()
 				}()
 
 				return dao.CreateServer(serverUUID, params.Args)
