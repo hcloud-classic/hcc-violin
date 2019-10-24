@@ -14,7 +14,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 	Fields: graphql.Fields{
 		// server DB
 		"create_server": &graphql.Field{
-			Type:        graphql.String,
+			Type:        serverType,
 			Description: "Create new server",
 			Args: graphql.FieldConfigArgument{
 				"subnet_uuid": &graphql.ArgumentConfig{
@@ -49,7 +49,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				serverUUID, err := uuidgen.UUIDgen(false)
 				if err != nil {
 					logger.Logger.Println("Failed to generate uuid!")
-					return "", err
+					return nil, err
 				}
 
 				userUUID := params.Args["user_uuid"].(string)
@@ -60,7 +60,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				listNodeData, err := GetNodes()
 				if err != nil {
 					logger.Logger.Print(err)
-					return "", err
+					return nil, err
 				}
 
 				// stage 1.1 update nodes info (server_uuid)
@@ -70,7 +70,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					err = UpdateNode(node, serverUUID)
 					if err != nil {
 						logger.Logger.Println(err)
-						return "", err
+						return nil, err
 					}
 
 					args := make(map[string]interface{})
@@ -79,7 +79,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					_, err = dao.CreateServerNode(args)
 					if err != nil {
 						logger.Logger.Println(err)
-						return "", err
+						return nil, err
 					}
 				}
 
