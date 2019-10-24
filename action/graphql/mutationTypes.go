@@ -160,7 +160,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					}
 					var controlAction = model.Control{
 
-						HccCommand: "hcc nodes add -n 0",
+						HccCommand: "hcc nodes add -n 2",
 						HccIPRange: subnet.Data.Subnet.NetworkIP,
 						ServerUUID: serverUUID,
 					}
