@@ -238,7 +238,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
 
 						var controlAction = model.Control{
-							HccCommand: "hcc nodes add -n 0",
+							HccCommand: "hcc nodes add -n 2",
 							HccIPRange: "range " + firstIP.String() + " " + lastIP.String(),
 							ServerUUID: serverUUID,
 						}
