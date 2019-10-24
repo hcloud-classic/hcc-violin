@@ -173,16 +173,10 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 					// stage 4. node power on
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
-					result, err := OnNode("d0-50-99-aa-e5-7b")
-					result, err = OnNode("d0-50-99-aa-e5-7b")
-					result, err = OnNode("d0-50-99-aa-e5-7b")
-					result, err = OnNode("d0-50-99-aa-e5-7b")
-					result, err = OnNode("d0-50-99-aa-e5-7b")
-					result, err = OnNode("d0-50-99-aa-e5-7b")
-					result, err = OnNode("d0-50-99-aa-e5-7b")
-					result, err = OnNode("d0-50-99-aa-e5-7b")
-					result, err = OnNode("d0-50-99-aa-e5-7b")
-					result, err = OnNode("d0-50-99-aa-e5-7b")
+					for i:= 0; i < 100; i++ {
+						_, _ = OnNode("d0-50-99-aa-e5-7b")
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + "d0-50-99-aa-e5-7b")
+					}
 					//fmt.Println("leader: " + subnet.Data.Subnet.LeaderNodeUUID)
 					//for _, node := range nodes {
 					//	fmt.Println("node: " + node.UUID)
@@ -193,74 +187,63 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					//			return
 					//		}
 					//
-							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + "d0-50-99-aa-e5-7b" + result)
 					//	}
 					//}
 
 					// Wail for leader node to turn on for 40secs
-					done := make(chan bool)
-					go func() {
-
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
-						for _, node := range nodes {
-							if "d0-50-99-aa-e5-7b" == node.UUID {
-								continue
-							}
-
-							result, err := OnNode(node.PXEMacAddr)
-							if err != nil {
-								logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
-								return
-							}
-
-							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode compute MAC Addr: " + node.PXEMacAddr + result)
-						}
-
-						netIPnetworkIP := net.ParseIP(subnet.Data.Subnet.NetworkIP).To4()
-						if netIPnetworkIP == nil {
-							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "got wrong network IP")
-							return
-						}
-
-						subnet, err := checkNetmask(subnet.Data.Subnet.Netmask)
-						if err != nil {
-							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "got wrong subnet mask")
-							return
-						}
-
-						ipNet := net.IPNet{
-							IP:   netIPnetworkIP,
-							Mask: subnet,
-						}
-
-						firstIP, _ := cidr.AddressRange(&ipNet)
-						firstIP = cidr.Inc(firstIP)
-						lastIP := firstIP
-
-						for i := 0; i < len(nodes)-1; i++ {
-							lastIP = cidr.Inc(lastIP)
-						}
-
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
-
-						var controlAction = model.Control{
-							HccCommand: "hcc nodes add -n 2",
-							HccIPRange: "range " + firstIP.String() + " " + lastIP.String(),
-							ServerUUID: serverUUID,
-						}
-
-						// stage 5. viola install
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Running HccCLI")
-
-						err = rabbitmq.RunHccCLI(controlAction)
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
+					for _, node := range nodes {
+						result, err := OnNode(node.PXEMacAddr)
 						if err != nil {
 							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 							return
 						}
-						// while checking Cello DB cluster status is runnig in N times, until retry is expired
 
-						done <- true
-					}()
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode compute MAC Addr: " + node.PXEMacAddr + result)
+					}
+
+					netIPnetworkIP := net.ParseIP(subnet.Data.Subnet.NetworkIP).To4()
+					if netIPnetworkIP == nil {
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "got wrong network IP")
+						return
+					}
+
+					mask, err := checkNetmask(subnet.Data.Subnet.Netmask)
+					if err != nil {
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "got wrong subnet mask")
+						return
+					}
+
+					ipNet := net.IPNet{
+						IP:   netIPnetworkIP,
+						Mask: mask,
+					}
+
+					firstIP, _ := cidr.AddressRange(&ipNet)
+					firstIP = cidr.Inc(firstIP)
+					lastIP := firstIP
+
+					for i := 0; i < len(nodes)-1; i++ {
+						lastIP = cidr.Inc(lastIP)
+					}
+
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
+
+					var controlAction = model.Control{
+						HccCommand: "hcc nodes add -n 2",
+						HccIPRange: "range " + firstIP.String() + " " + lastIP.String(),
+						ServerUUID: serverUUID,
+					}
+
+					// stage 5. viola install
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Running HccCLI")
+
+					err = rabbitmq.RunHccCLI(controlAction)
+					if err != nil {
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+						return
+					}
+					// while checking Cello DB cluster status is runnig in N times, until retry is expired
 				}()
 
 				return dao.CreateServer(serverUUID, params.Args)
