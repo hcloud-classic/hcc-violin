@@ -4,6 +4,7 @@ package model
 type Control struct {
 	HccCommand string `json:"action"`
 	HccIPRange string `json:"iprange"`
+	ServerUUID string `json:"server_uuid"`
 }
 
 // Controls : Array struct of Control

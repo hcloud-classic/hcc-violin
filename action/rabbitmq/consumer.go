@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"encoding/json"
 	"fmt"
+	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
 	"log"
@@ -79,26 +80,30 @@ func ConsumeViola() error {
 		for d := range msgsCreate {
 			log.Printf("ConsumeViola: Received a create message: %s", d.Body)
 
-			var controls model.Controls
-			err = json.Unmarshal(d.Body, &controls)
+			var control model.Control
+			err = json.Unmarshal(d.Body, &control)
 			if err != nil {
 				logger.Logger.Println("ConsumeViola: Failed to unmarshal consume_viola data")
 				// return
 			}
-			fmt.Println("RabbitmQ : ", controls)
+			fmt.Println("RabbitmQ : ", control)
 			//To-Do******************************/
-			// Violin receive cluster verufied message, will handle message within graphql
+			// Violin receive cluster veryfied message, will handle message within graphql
 			// update cluster status at cello DB's status
 			//*************************** */
-			// status, err := controlcli.HccCli(controls.Controls.HccCommand, controls.Controls.HccIPRange)
+			// status, err := controlcli.HccCli(control.HccCommand, control.HccIPRange)
 			// if !status && err != nil {
-			// 	logger.Logger.Println("ConsumeViola: Faild execution command [", controls.Controls.HccCommand, "]")
+			// 	logger.Logger.Println("ConsumeViola: Faild execution command [", control.HccCommand, "]")
 			// } else {
-			// 	logger.Logger.Println("ConsumeViola: Success execution command [", controls.Controls.HccCommand, "]")
+			// 	logger.Logger.Println("ConsumeViola: Success execution command [", control.HccCommand, "]")
 
 			// }
+			//
+			args := make(map[string]interface{})
+			args["uuid"] = control.ServerUUID
+			args["status"] = control.HccCommand
 			//TODO: queue get_nodes to flute module
-
+			_, err = dao.UpdateServer(args)
 			//logger.Logger.Println("update_subnet: UUID = " + subnet.UUID + ": " + result)
 		}
 	}()

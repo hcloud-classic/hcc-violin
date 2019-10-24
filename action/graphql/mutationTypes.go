@@ -1,12 +1,14 @@
 package graphql
 
 import (
-	"github.com/graphql-go/graphql"
+	"hcc/violin/action/rabbitmq"
 	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/uuidgen"
 	"hcc/violin/model"
 	"time"
+
+	"github.com/graphql-go/graphql"
 )
 
 var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
@@ -156,10 +158,16 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + node.PXEMacAddr + result)
 					}
+					var controlAction = model.Control{
 
+						HccCommand: "hcc nodes add -n 0",
+						HccIPRange: subnet.Data.Subnet.NetworkIP,
+						ServerUUID: serverUUID,
+					}
 					// stage 5. viola install
-					// RunHccCLI(xxx)
+					rabbitmq.RunHccCLI(controlAction)
 					// while checking Cello DB cluster status is runnig in N times, until retry is expired
+
 				}()
 
 				return dao.CreateServer(serverUUID, params.Args)
