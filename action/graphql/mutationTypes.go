@@ -1,6 +1,7 @@
 package graphql
 
 import (
+	"fmt"
 	"github.com/graphql-go/graphql"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/dao"
@@ -135,7 +136,9 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 					// stage 4. node power on
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
+					fmt.Println("leader: " + subnet.Data.Subnet.LeaderNodeUUID)
 					for _, node := range nodes {
+						fmt.Println("node: " + node.UUID)
 						if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
 							result, err := OnNode(node.PXEMacAddr)
 							if err != nil {
@@ -164,7 +167,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 								return
 							}
 
-							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + node.PXEMacAddr + result)
+							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode compute MAC Addr: " + node.PXEMacAddr + result)
 						}
 
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
