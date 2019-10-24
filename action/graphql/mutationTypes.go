@@ -1,15 +1,54 @@
 package graphql
 
 import (
+	"errors"
 	"fmt"
+	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/graphql-go/graphql"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/uuidgen"
 	"hcc/violin/model"
+	"net"
+	"strconv"
+	"strings"
 	"time"
 )
+
+func checkNetmask(netmask string) (net.IPMask, error) {
+	var err error
+
+	var maskPartsStr = strings.Split(netmask, ".")
+	if len(maskPartsStr) != 4 {
+		return nil, errors.New("netmask should be X.X.X.X form")
+	}
+
+	var maskParts [4]int
+	for i := range maskPartsStr {
+		maskParts[i], err = strconv.Atoi(maskPartsStr[i])
+		if err != nil {
+			return nil, errors.New("netmask contained none integer value")
+		}
+	}
+
+	var mask = net.IPv4Mask(
+		byte(maskParts[0]),
+		byte(maskParts[1]),
+		byte(maskParts[2]),
+		byte(maskParts[3]))
+
+	maskSizeOne, maskSizeBit := mask.Size()
+	if maskSizeOne == 0 && maskSizeBit == 0 {
+		return nil, errors.New("invalid netmask")
+	}
+
+	if maskSizeOne > 30 {
+		return nil, errors.New("netmask bit should be equal or smaller than 30")
+	}
+
+	return mask, err
+}
 
 var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 	Name: "Mutation",
@@ -170,10 +209,36 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode compute MAC Addr: " + node.PXEMacAddr + result)
 						}
 
+						netIPnetworkIP := net.ParseIP(subnet.Data.Subnet.NetworkIP).To4()
+						if netIPnetworkIP == nil {
+							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "got wrong network IP")
+							return
+						}
+
+						subnet, err := checkNetmask(subnet.Data.Subnet.Netmask)
+						if err != nil {
+							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "got wrong subnet mask")
+							return
+						}
+
+						ipNet := net.IPNet{
+							IP:   netIPnetworkIP,
+							Mask: subnet,
+						}
+
+						firstIP, _ := cidr.AddressRange(&ipNet)
+						firstIP = cidr.Inc(firstIP)
+						lastIP := firstIP
+
+						for i := 0; i < len(nodes)-1; i++ {
+							lastIP = cidr.Inc(lastIP)
+						}
+
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
+
 						var controlAction = model.Control{
 							HccCommand: "hcc nodes add -n 0",
-							HccIPRange: subnet.Data.Subnet.NetworkIP,
+							HccIPRange: firstIP.String() + ":" + lastIP.String(),
 							ServerUUID: serverUUID,
 						}
 

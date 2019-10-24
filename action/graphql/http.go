@@ -18,7 +18,7 @@ import (
 func OnNode(macAddr string) (string, error) {
 	client := &http.Client{Timeout: time.Duration(config.Flute.RequestTimeoutMs) * time.Millisecond}
 	req, err := http.NewRequest("GET", "http://"+config.Flute.ServerAddress+":"+strconv.Itoa(int(config.Flute.ServerPort))+
-		"/graphql?operationName=_&query=mutation%20_%20%7B%0A%20%20on_node(mac%3A%20%22" + macAddr + "%22)%0A%7D&variables=%7B%7D", nil)
+		"/graphql?operationName=_&query=mutation%20_%20%7B%0A%20%20on_node(mac%3A%20%22"+macAddr+"%22)%0A%7D&variables=%7B%7D", nil)
 	if err != nil {
 		return "", err
 	}
@@ -196,7 +196,7 @@ func UpdateSubnet(subnetUUID string, serverUUID string) (SubnetData, error) {
 
 	client := &http.Client{Timeout: time.Duration(config.Harp.RequestTimeoutMs) * time.Millisecond}
 	req, err := http.NewRequest("GET", "http://"+config.Harp.ServerAddress+":"+strconv.Itoa(int(config.Harp.ServerPort))+
-		"/graphql?query=mutation%20_%20%7B%0A%20%20update_subnet(uuid%3A%20%22"+subnetUUID+"%22%2C%20server_uuid%3A%20%22" + serverUUID + "%22)%7B%0A%20%20%20%20uuid%0A%20%20%20%20server_uuid%0A%20%20%7D%0A%7D%0A&operationName=_", nil)
+		"/graphql?query=mutation%20_%20%7B%0A%20%20update_subnet(uuid%3A%20%22"+subnetUUID+"%22%2C%20server_uuid%3A%20%22"+serverUUID+"%22)%7B%0A%20%20%20%20uuid%0A%20%20%20%20server_uuid%0A%20%20%7D%0A%7D%0A&operationName=_", nil)
 	if err != nil {
 		return subnetData, err
 	}
