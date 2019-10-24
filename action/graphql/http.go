@@ -123,7 +123,7 @@ func UpdateNode(node model.Node, serverUUID string) error {
 func CreateDisk(volume model.Volume, serverUUID string) error {
 	client := &http.Client{Timeout: time.Duration(config.Cello.RequestTimeoutMs) * time.Millisecond}
 	req, err := http.NewRequest("GET", "http://"+config.Cello.ServerAddress+":"+strconv.Itoa(int(config.Cello.ServerPort))+
-		"graphql?operationName=_&query=mutation%20_%20%7B%0A%20%20create_volume(size%3A"+strconv.Itoa(volume.Size)+"%2C%20filesystem%3A%22"+volume.Filesystem+"%22%2C%20server_uuid%3A%22"+serverUUID+"%22%2C%20use_type%3A%22"+volume.UseType+"%22%2C%20user_uuid%3A%22"+volume.UserUUID+"%22)%20%7B%0A%20%20%20%20uuid%0A%20%20%20%20size%0A%20%20%20%20filesystem%0A%20%20%20%20server_uuid%0A%20%20%20%20use_type%0A%20%20%20%20user_uuid%0A%20%20%20%20created_at%0A%20%20%7D%0A%7D", nil)
+		"/graphql?operationName=_&query=mutation%20_%20%7B%0A%20%20create_volume(size%3A"+strconv.Itoa(volume.Size)+"%2C%20filesystem%3A%22"+volume.Filesystem+"%22%2C%20server_uuid%3A%22"+serverUUID+"%22%2C%20use_type%3A%22"+volume.UseType+"%22%2C%20user_uuid%3A%22"+volume.UserUUID+"%22)%20%7B%0A%20%20%20%20uuid%0A%20%20%20%20size%0A%20%20%20%20filesystem%0A%20%20%20%20server_uuid%0A%20%20%20%20use_type%0A%20%20%20%20user_uuid%0A%20%20%20%20created_at%0A%20%20%7D%0A%7D", nil)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,8 @@ func GetSubnet(subnetUUID string) (SubnetData, error) {
 	var subnetData SubnetData
 
 	client := &http.Client{Timeout: time.Duration(config.Harp.RequestTimeoutMs) * time.Millisecond}
-	req, err := http.NewRequest("GET", "http://"+config.Harp.ServerAddress+":"+strconv.Itoa(int(config.Harp.ServerPort))+"/graphql?query=query%20%7B%0A%20%20subnet(uuid%3A%22"+subnetUUID+"%22)%7B%0A%20%20%20%20uuid%0A%09network_ip%0A%20%20%20%20netmask%0A%20%20%20%20gateway%0A%20%20%20%20next_server%0A%20%20%20%20name_server%0A%20%20%20%20domain_name%0A%20%20%20%20server_uuid%0A%20%20%20%20leader_node_uuid%0A%20%20%20%20os%0A%20%20%20%20subnet_name%0A%20%20%20%20created_at%0A%20%20%7D%0A%7D", nil)
+	req, err := http.NewRequest("GET", "http://"+config.Harp.ServerAddress+":"+strconv.Itoa(int(config.Harp.ServerPort))+
+		"/graphql?query=query%20%7B%0A%20%20subnet(uuid%3A%22"+subnetUUID+"%22)%7B%0A%20%20%20%20uuid%0A%09network_ip%0A%20%20%20%20netmask%0A%20%20%20%20gateway%0A%20%20%20%20next_server%0A%20%20%20%20name_server%0A%20%20%20%20domain_name%0A%20%20%20%20server_uuid%0A%20%20%20%20leader_node_uuid%0A%20%20%20%20os%0A%20%20%20%20subnet_name%0A%20%20%20%20created_at%0A%20%20%7D%0A%7D", nil)
 	if err != nil {
 		return subnetData, err
 	}
@@ -194,7 +195,8 @@ func UpdateSubnet(subnetUUID string, serverUUID string) (SubnetData, error) {
 	var subnetData SubnetData
 
 	client := &http.Client{Timeout: time.Duration(config.Harp.RequestTimeoutMs) * time.Millisecond}
-	req, err := http.NewRequest("GET", "http://"+config.Harp.ServerAddress+":"+strconv.Itoa(int(config.Harp.ServerPort))+"/graphql?query=mutation%20_%20%7B%0A%20%20update_subnet(uuid%3A%20%22"+subnetUUID+"%22%2C%20server_uuid%3A%20%22" + serverUUID + "%22)%7B%0A%20%20%20%20uuid%0A%20%20%20%20server_uuid%0A%20%20%7D%0A%7D%0A&operationName=_", nil)
+	req, err := http.NewRequest("GET", "http://"+config.Harp.ServerAddress+":"+strconv.Itoa(int(config.Harp.ServerPort))+
+		"/graphql?query=mutation%20_%20%7B%0A%20%20update_subnet(uuid%3A%20%22"+subnetUUID+"%22%2C%20server_uuid%3A%20%22" + serverUUID + "%22)%7B%0A%20%20%20%20uuid%0A%20%20%20%20server_uuid%0A%20%20%7D%0A%7D%0A&operationName=_", nil)
 	if err != nil {
 		return subnetData, err
 	}
