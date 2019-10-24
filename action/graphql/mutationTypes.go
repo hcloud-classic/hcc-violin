@@ -6,6 +6,7 @@ import (
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/uuidgen"
 	"hcc/violin/model"
+	"time"
 )
 
 var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
@@ -119,11 +120,42 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						return
 					}
 
-					// stage 3. create dhcpd conf (update_subnet -> get subnet info -> create dhcpd config)
-
-					// stage 3.1 restart dhcpd service
+					// stage 3. UpdateSubnet (get subnet info -> create dhcpd config -> update_subnet)
+					_, err = UpdateSubnet(subnetUUID, serverUUID)
+					if err != nil {
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+						return
+					}
 
 					// stage 4. node power on
+					for _, node := range nodes {
+						if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
+							result, err := OnNode(node.PXEMacAddr)
+							if err != nil {
+								logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+								return
+							}
+
+							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + node.PXEMacAddr + result)
+						}
+					}
+
+					// Wail for leader node to turn on for 100secs
+					time.Sleep(100 * time.Second)
+
+					for _, node := range nodes {
+						if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
+							continue
+						}
+
+						result, err := OnNode(node.PXEMacAddr)
+						if err != nil {
+							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+							return
+						}
+
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + node.PXEMacAddr + result)
+					}
 
 					// stage 5. viola install
 					// RunHccCLI(xxx)

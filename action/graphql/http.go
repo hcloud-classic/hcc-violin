@@ -14,6 +14,37 @@ import (
 
 // Flute
 
+// OnNode : Turn on the node by sending WOL magic packet
+func OnNode(macAddr string) (string, error) {
+	client := &http.Client{Timeout: time.Duration(config.Flute.RequestTimeoutMs) * time.Millisecond}
+	req, err := http.NewRequest("GET", "http://"+config.Flute.ServerAddress+":"+strconv.Itoa(int(config.Flute.ServerPort))+
+		"/graphql?operationName=_&query=mutation%20_%20%7B%0A%20%20on_node(mac%3A%20%22" + macAddr + "%22)%0A%7D&variables=%7B%7D", nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+		// Check response
+		respBody, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			result := string(respBody)
+			return result, nil
+		}
+
+		return "", err
+	}
+
+	return "", errors.New("http response returned error code")
+}
+
 // GetNodes : Get not activated nodes info from flute module
 func GetNodes() (ListNodeData, error) {
 	var listNodeData ListNodeData
@@ -159,11 +190,11 @@ func GetSubnet(subnetUUID string) (SubnetData, error) {
 }
 
 // UpdateSubnet : Add server_uuid to subnet
-func GetSubnet(subnetUUID string) (SubnetData, error) {
+func UpdateSubnet(subnetUUID string, serverUUID string) (SubnetData, error) {
 	var subnetData SubnetData
 
 	client := &http.Client{Timeout: time.Duration(config.Harp.RequestTimeoutMs) * time.Millisecond}
-	req, err := http.NewRequest("GET", "http://"+config.Harp.ServerAddress+":"+strconv.Itoa(int(config.Harp.ServerPort))+"/graphql?query=query%20%7B%0A%20%20subnet(uuid%3A%22"+subnetUUID+"%22)%7B%0A%20%20%20%20uuid%0A%09network_ip%0A%20%20%20%20netmask%0A%20%20%20%20gateway%0A%20%20%20%20next_server%0A%20%20%20%20name_server%0A%20%20%20%20domain_name%0A%20%20%20%20server_uuid%0A%20%20%20%20leader_node_uuid%0A%20%20%20%20os%0A%20%20%20%20subnet_name%0A%20%20%20%20created_at%0A%20%20%7D%0A%7D", nil)
+	req, err := http.NewRequest("GET", "http://"+config.Harp.ServerAddress+":"+strconv.Itoa(int(config.Harp.ServerPort))+"/graphql?query=mutation%20_%20%7B%0A%20%20update_subnet(uuid%3A%20%22"+subnetUUID+"%22%2C%20server_uuid%3A%20%22" + serverUUID + "%22)%7B%0A%20%20%20%20uuid%0A%20%20%20%20server_uuid%0A%20%20%7D%0A%7D%0A&operationName=_", nil)
 	if err != nil {
 		return subnetData, err
 	}
