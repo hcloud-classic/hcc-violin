@@ -143,7 +143,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					}
 
 					// Wail for leader node to turn on for 100secs
-					time.Sleep(100 * time.Second)
+					time.Sleep(40 * time.Second)
 
 					for _, node := range nodes {
 						if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
