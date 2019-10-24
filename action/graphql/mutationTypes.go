@@ -85,6 +85,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				}
 
 				go func() {
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Getting subnet info")
+
 					subnetUUID := params.Args["subnet_uuid"].(string)
 					subnet, err := GetSubnet(subnetUUID)
 					if err != nil {
@@ -93,6 +95,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					}
 
 					// stage 2. create volume - os, data
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Creating os volume")
 					var volumeOS = model.Volume{
 						Size:       model.OSDiskSize,
 						Filesystem: os,
@@ -107,6 +110,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						return
 					}
 
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Creating data volume")
 					var volumeData = model.Volume{
 						Size:       diskSize,
 						Filesystem: os,
@@ -122,6 +126,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					}
 
 					// stage 3. UpdateSubnet (get subnet info -> create dhcpd config -> update_subnet)
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Updating subnet info")
 					_, err = UpdateSubnet(subnetUUID, serverUUID)
 					if err != nil {
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
@@ -129,6 +134,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					}
 
 					// stage 4. node power on
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
 					for _, node := range nodes {
 						if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
 							result, err := OnNode(node.PXEMacAddr)
@@ -141,38 +147,40 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						}
 					}
 
-					go func() {
-						// Wail for leader node to turn on for 100secs
-						time.Sleep(40 * time.Second)
+					// Wail for leader node to turn on for 100secs
+					time.Sleep(40 * time.Second)
 
-						for _, node := range nodes {
-							if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
-								continue
-							}
-
-							result, err := OnNode(node.PXEMacAddr)
-							if err != nil {
-								logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
-								return
-							}
-
-							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + node.PXEMacAddr + result)
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
+					for _, node := range nodes {
+						if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
+							continue
 						}
 
-						var controlAction = model.Control{
-							HccCommand: "hcc nodes add -n 0",
-							HccIPRange: subnet.Data.Subnet.NetworkIP,
-							ServerUUID: serverUUID,
-						}
-
-						// stage 5. viola install
-						err =rabbitmq.RunHccCLI(controlAction)
+						result, err := OnNode(node.PXEMacAddr)
 						if err != nil {
 							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 							return
 						}
-						// while checking Cello DB cluster status is runnig in N times, until retry is expired
-					}()
+
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + node.PXEMacAddr + result)
+					}
+
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
+					var controlAction = model.Control{
+						HccCommand: "hcc nodes add -n 0",
+						HccIPRange: subnet.Data.Subnet.NetworkIP,
+						ServerUUID: serverUUID,
+					}
+
+					// stage 5. viola install
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Running HccCLI")
+
+					err = rabbitmq.RunHccCLI(controlAction)
+					if err != nil {
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+						return
+					}
+					// while checking Cello DB cluster status is runnig in N times, until retry is expired
 				}()
 
 				return dao.CreateServer(serverUUID, params.Args)
