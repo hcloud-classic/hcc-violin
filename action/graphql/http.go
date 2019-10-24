@@ -157,3 +157,41 @@ func GetSubnet(subnetUUID string) (SubnetData, error) {
 
 	return subnetData, errors.New("http response returned error code")
 }
+
+// UpdateSubnet : Add server_uuid to subnet
+func GetSubnet(subnetUUID string) (SubnetData, error) {
+	var subnetData SubnetData
+
+	client := &http.Client{Timeout: time.Duration(config.Harp.RequestTimeoutMs) * time.Millisecond}
+	req, err := http.NewRequest("GET", "http://"+config.Harp.ServerAddress+":"+strconv.Itoa(int(config.Harp.ServerPort))+"/graphql?query=query%20%7B%0A%20%20subnet(uuid%3A%22"+subnetUUID+"%22)%7B%0A%20%20%20%20uuid%0A%09network_ip%0A%20%20%20%20netmask%0A%20%20%20%20gateway%0A%20%20%20%20next_server%0A%20%20%20%20name_server%0A%20%20%20%20domain_name%0A%20%20%20%20server_uuid%0A%20%20%20%20leader_node_uuid%0A%20%20%20%20os%0A%20%20%20%20subnet_name%0A%20%20%20%20created_at%0A%20%20%7D%0A%7D", nil)
+	if err != nil {
+		return subnetData, err
+	}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		return subnetData, err
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+		// Check response
+		respBody, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			str := string(respBody)
+
+			err = json.Unmarshal([]byte(str), &subnetData)
+			if err != nil {
+				return subnetData, err
+			}
+
+			return subnetData, nil
+		}
+
+		return subnetData, err
+	}
+
+	return subnetData, errors.New("http response returned error code")
+}

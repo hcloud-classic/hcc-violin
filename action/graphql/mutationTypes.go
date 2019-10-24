@@ -82,51 +82,54 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					}
 				}
 
-				subnetUUID := params.Args["subnet_uuid"].(string)
-				subnet, err := GetSubnet(subnetUUID)
-				if err != nil {
-					logger.Logger.Println(err)
-					return "", err
-				}
+				go func() {
+					subnetUUID := params.Args["subnet_uuid"].(string)
+					subnet, err := GetSubnet(subnetUUID)
+					if err != nil {
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": "err.Error())
+						return
+					}
 
-				// stage 2. create volume - os, data
-				var volumeOS = model.Volume{
-					Size:       model.OSDiskSize,
-					Filesystem: os,
-					ServerUUID: serverUUID,
-					UseType:    "os",
-					UserUUID:   userUUID,
-					NetworkIP:  subnet.Data.Subnet.NetworkIP,
-				}
-				err = CreateDisk(volumeOS, serverUUID)
-				if err != nil {
-					logger.Logger.Println(err)
-					return "", err
-				}
+					// stage 2. create volume - os, data
+					var volumeOS = model.Volume{
+						Size:       model.OSDiskSize,
+						Filesystem: os,
+						ServerUUID: serverUUID,
+						UseType:    "os",
+						UserUUID:   userUUID,
+						NetworkIP:  subnet.Data.Subnet.NetworkIP,
+					}
+					err = CreateDisk(volumeOS, serverUUID)
+					if err != nil {
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": "err.Error())
+						return
+					}
 
-				var volumeData = model.Volume{
-					Size:       diskSize,
-					Filesystem: os,
-					ServerUUID: serverUUID,
-					UseType:    "data",
-					UserUUID:   userUUID,
-					NetworkIP:  subnet.Data.Subnet.NetworkIP,
-				}
-				err = CreateDisk(volumeData, serverUUID)
-				if err != nil {
-					logger.Logger.Println(err)
-					return "", err
-				}
+					var volumeData = model.Volume{
+						Size:       diskSize,
+						Filesystem: os,
+						ServerUUID: serverUUID,
+						UseType:    "data",
+						UserUUID:   userUUID,
+						NetworkIP:  subnet.Data.Subnet.NetworkIP,
+					}
+					err = CreateDisk(volumeData, serverUUID)
+					if err != nil {
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": "err.Error())
+						return
+					}
 
-				// stage 3. create dhcpd conf (update_subnet -> get subnet info -> create dhcpd config)
+					// stage 3. create dhcpd conf (update_subnet -> get subnet info -> create dhcpd config)
 
-				// stage 3.1 restart dhcpd service
+					// stage 3.1 restart dhcpd service
 
-				// stage 4. node power on
+					// stage 4. node power on
 
-				// stage 5. viola install
-				// RunHccCLI(xxx)
-				// while checking Cello DB cluster status is runnig in N times, until retry is expired
+					// stage 5. viola install
+					// RunHccCLI(xxx)
+					// while checking Cello DB cluster status is runnig in N times, until retry is expired
+				}()
+
 
 				return dao.CreateServer(serverUUID, params.Args)
 			},
