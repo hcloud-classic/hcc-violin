@@ -2,6 +2,8 @@ package graphql
 
 import (
 	"errors"
+	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/graphql-go/graphql"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
@@ -10,10 +12,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/apparentlymart/go-cidr/cidr"
-	"github.com/graphql-go/graphql"
 )
 
 func checkNetmask(netmask string) (net.IPMask, error) {
@@ -176,6 +174,15 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					// stage 4. node power on
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
 					result, err := OnNode("d0-50-99-aa-e5-7b")
+					result, err = OnNode("d0-50-99-aa-e5-7b")
+					result, err = OnNode("d0-50-99-aa-e5-7b")
+					result, err = OnNode("d0-50-99-aa-e5-7b")
+					result, err = OnNode("d0-50-99-aa-e5-7b")
+					result, err = OnNode("d0-50-99-aa-e5-7b")
+					result, err = OnNode("d0-50-99-aa-e5-7b")
+					result, err = OnNode("d0-50-99-aa-e5-7b")
+					result, err = OnNode("d0-50-99-aa-e5-7b")
+					result, err = OnNode("d0-50-99-aa-e5-7b")
 					//fmt.Println("leader: " + subnet.Data.Subnet.LeaderNodeUUID)
 					//for _, node := range nodes {
 					//	fmt.Println("node: " + node.UUID)
@@ -193,7 +200,6 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					// Wail for leader node to turn on for 40secs
 					done := make(chan bool)
 					go func() {
-						time.Sleep(40 * time.Second)
 
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
 						for _, node := range nodes {
