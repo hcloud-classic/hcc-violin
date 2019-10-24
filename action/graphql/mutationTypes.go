@@ -52,6 +52,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				}
 
 				userUUID := params.Args["user_uuid"].(string)
+				os := params.Args["os"].(string)
 				diskSize := params.Args["disk_size"].(int)
 
 				// stage 1. select node - reader, compute
@@ -81,13 +82,21 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					}
 				}
 
+				subnetUUID := params.Args["subnet_uuid"].(string)
+				subnet, err := GetSubnet(subnetUUID)
+				if err != nil {
+					logger.Logger.Println(err)
+					return "", err
+				}
+
 				// stage 2. create volume - os, data
 				var volumeOS = model.Volume{
 					Size:       model.OSDiskSize,
-					Filesystem: model.DefaultPXEdir + "/" + serverUUID,
+					Filesystem: os,
 					ServerUUID: serverUUID,
 					UseType:    "os",
 					UserUUID:   userUUID,
+					NetworkIP:  subnet.Data.Subnet.NetworkIP,
 				}
 				err = CreateDisk(volumeOS, serverUUID)
 				if err != nil {
@@ -97,10 +106,11 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 				var volumeData = model.Volume{
 					Size:       diskSize,
-					Filesystem: model.DefaultPXEdir + "/" + serverUUID,
+					Filesystem: os,
 					ServerUUID: serverUUID,
 					UseType:    "data",
 					UserUUID:   userUUID,
+					NetworkIP:  subnet.Data.Subnet.NetworkIP,
 				}
 				err = CreateDisk(volumeData, serverUUID)
 				if err != nil {
@@ -108,7 +118,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					return "", err
 				}
 
-				// stage 3. create dhcpd conf (get subnet info -> create dhcpd config)
+				// stage 3. create dhcpd conf (update_subnet -> get subnet info -> create dhcpd config)
+
 				// stage 3.1 restart dhcpd service
 
 				// stage 4. node power on

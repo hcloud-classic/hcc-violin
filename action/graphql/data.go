@@ -12,3 +12,10 @@ type ListNodeData struct {
 		ListNode []model.Node `json:"list_node"`
 	} `json:"data"`
 }
+
+// SubnetData : Data structure of subnet
+type SubnetData struct {
+	Data struct {
+		Subnet model.Subnet `json:"subnet"`
+	} `json:"data"`
+}
