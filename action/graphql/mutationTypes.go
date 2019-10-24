@@ -86,7 +86,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					subnetUUID := params.Args["subnet_uuid"].(string)
 					subnet, err := GetSubnet(subnetUUID)
 					if err != nil {
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": "err.Error())
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 						return
 					}
 
@@ -101,7 +101,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					}
 					err = CreateDisk(volumeOS, serverUUID)
 					if err != nil {
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": "err.Error())
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 						return
 					}
 
@@ -115,7 +115,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					}
 					err = CreateDisk(volumeData, serverUUID)
 					if err != nil {
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": "err.Error())
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 						return
 					}
 
@@ -129,7 +129,6 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					// RunHccCLI(xxx)
 					// while checking Cello DB cluster status is runnig in N times, until retry is expired
 				}()
-
 
 				return dao.CreateServer(serverUUID, params.Args)
 			},
