@@ -2,7 +2,6 @@ package graphql
 
 import (
 	"errors"
-	"fmt"
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/graphql-go/graphql"
 	"hcc/violin/action/rabbitmq"
@@ -175,28 +174,29 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 					// stage 4. node power on
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
-					fmt.Println("leader: " + subnet.Data.Subnet.LeaderNodeUUID)
-					for _, node := range nodes {
-						fmt.Println("node: " + node.UUID)
-						if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
-							result, err := OnNode(node.PXEMacAddr)
-							if err != nil {
-								logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
-								return
-							}
+					result, err := OnNode("d0-50-99-aa-e5-7b")
+					//fmt.Println("leader: " + subnet.Data.Subnet.LeaderNodeUUID)
+					//for _, node := range nodes {
+					//	fmt.Println("node: " + node.UUID)
+					//	if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
+					//		result, err := OnNode(node.PXEMacAddr)
+					//		if err != nil {
+					//			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+					//			return
+					//		}
+					//
+							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + "d0-50-99-aa-e5-7b" + result)
+					//	}
+					//}
 
-							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + node.PXEMacAddr + result)
-						}
-					}
-
-					// Wail for leader node to turn on for 100secs
+					// Wail for leader node to turn on for 40secs
 					done := make(chan bool)
 					go func() {
 						time.Sleep(40 * time.Second)
 
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
 						for _, node := range nodes {
-							if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
+							if "d0-50-99-aa-e5-7b" == node.UUID {
 								continue
 							}
 
