@@ -40,7 +40,6 @@ func GetNodes() (ListNodeData, error) {
 			str := string(respBody)
 
 			err = json.Unmarshal([]byte(str), &listNodeData)
-			fmt.Println(str)
 			if err != nil {
 				return listNodeData, err
 			}
@@ -108,11 +107,8 @@ func CreateDisk(volume model.Volume, serverUUID string) error {
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
 		// Check response
-		respBody, err := ioutil.ReadAll(resp.Body)
+		_, err := ioutil.ReadAll(resp.Body)
 		if err == nil {
-			str := string(respBody)
-			fmt.Println(str)
-
 			return nil
 		}
 

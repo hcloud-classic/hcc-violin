@@ -108,11 +108,15 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					return "", err
 				}
 
-				// stage 3. create subnet
+				// stage 3. get subnet info
 
-				// stage 4. node power on
+				// stage 4. create dhcpd conf
+				// stage 4.1 restart dhcpd service
 
-				// stage 5. viola install
+
+				// stage 5. node power on
+
+				// stage 6. viola install
 				// RunHccCLI(xxx)
 				// while checking Cello DB cluster status is runnig in N times, until retry is expired
 
