@@ -37,7 +37,7 @@ func main() {
 		_ = mysql.Db.Close()
 	}()
 
-	//RabbitMQ Section
+	// RabbitMQ Section
 	err = rabbitmq.PrepareChannel()
 	if err != nil {
 		logger.Logger.Panic(err)
@@ -54,13 +54,6 @@ func main() {
 	if err != nil {
 		logger.Logger.Panic(err)
 	}
-
-	//var listNodeData graphql.ListNodeData
-	//listNodeData, err = graphql.GetNodes()
-	//if err != nil {
-	//	logger.Logger.Panic(err)
-	//}
-	//fmt.Println(listNodeData.Data.ListNode[0].UUID)
 
 	http.Handle("/graphql", graphql.GraphqlHandler)
 
