@@ -10,7 +10,7 @@ import (
 )
 
 // ConsumeViola : Consume Viola command
-func ConsumeViola() error {
+func ViolaToViolin() error {
 	qCreate, err := Channel.QueueDeclare(
 		"consume_viola",
 		false,

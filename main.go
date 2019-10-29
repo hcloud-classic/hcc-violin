@@ -50,7 +50,7 @@ func main() {
 	}()
 
 	// Viola Section
-	err = rabbitmq.ConsumeViola()
+	err = rabbitmq.ViolaToViolin()
 	if err != nil {
 		logger.Logger.Panic(err)
 	}
