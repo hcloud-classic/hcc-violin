@@ -9,7 +9,7 @@ import (
 	"log"
 )
 
-// ConsumeViola : Consume Viola command
+// ViolaToViolin : Consume Viola command
 func ViolaToViolin() error {
 	qCreate, err := Channel.QueueDeclare(
 		"consume_viola",
