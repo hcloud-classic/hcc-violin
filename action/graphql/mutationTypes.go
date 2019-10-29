@@ -12,6 +12,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func checkNetmask(netmask string) (net.IPMask, error) {
@@ -102,10 +103,23 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					return nil, err
 				}
 
+				// TODO : Currently nrNodes is hard coded to 2. Will get from Web UI (Oboe) later.
+				var nrNodes = 2
+
 				// stage 1.1 update nodes info (server_uuid)
 				// stage 1.2 insert nodes to server_node table
 				var nodes = listNodeData.Data.ListNode
+
+				if len(nodes) < nrNodes {
+					return nil, errors.New("not enough available nodes")
+				}
+
+				var nodeSelected = 0
 				for _, node := range nodes {
+					if nodeSelected > nrNodes {
+						break
+					}
+
 					err = UpdateNode(node, serverUUID)
 					if err != nil {
 						logger.Logger.Println(err)
@@ -120,6 +134,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						logger.Logger.Println(err)
 						return nil, err
 					}
+
+					nodeSelected++
 				}
 
 				go func() {
@@ -173,10 +189,13 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 					// stage 4. node power on
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
-					for i:= 0; i < 100; i++ {
-						_, _ = OnNode("d0-50-99-aa-e5-7b")
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + "d0-50-99-aa-e5-7b")
+					_, err = OnNode(subnet.Data.Subnet.LeaderNodeUUID)
+					if err != nil {
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
+						return
 					}
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + "d0-50-99-aa-e5-7b")
+
 					//fmt.Println("leader: " + subnet.Data.Subnet.LeaderNodeUUID)
 					//for _, node := range nodes {
 					//	fmt.Println("node: " + node.UUID)
@@ -190,16 +209,22 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					//	}
 					//}
 
-					// Wait for leader node to turn on for 40secs
+					// Wait for leader node to turn on for 30secs
+					time.Sleep(time.Second * 30)
+
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
 					for _, node := range nodes {
-						result, err := OnNode(node.PXEMacAddr)
+						if node.UUID == subnet.Data.Subnet.LeaderNodeUUID {
+							continue
+						}
+
+						_, err := OnNode(node.PXEMacAddr)
 						if err != nil {
-							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
 							return
 						}
 
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode compute MAC Addr: " + node.PXEMacAddr + result)
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode compute MAC Addr: " + node.PXEMacAddr)
 					}
 
 					netIPnetworkIP := net.ParseIP(subnet.Data.Subnet.NetworkIP).To4()
@@ -238,7 +263,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					// stage 5. viola install
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Running HccCLI")
 
-					err = rabbitmq.RunHccCLI(controlAction)
+					err = rabbitmq.ViolinToViola(controlAction)
 					if err != nil {
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 						return
