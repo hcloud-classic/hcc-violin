@@ -12,14 +12,14 @@ import (
 // ViolaToViolin : Consume Viola command
 func ViolaToViolin() error {
 	qCreate, err := Channel.QueueDeclare(
-		"consume_viola",
+		"viola_to_violin",
 		false,
 		false,
 		false,
 		false,
 		nil)
 	if err != nil {
-		logger.Logger.Println("ConsumeViola: Failed to get consume_viola")
+		logger.Logger.Println("ViolaToViolin: Failed to get viola_to_violin")
 		return err
 	}
 
@@ -33,18 +33,18 @@ func ViolaToViolin() error {
 		nil,
 	)
 	if err != nil {
-		logger.Logger.Println("ConsumeViola: Failed to register consume_viola")
+		logger.Logger.Println("ViolaToViolin: Failed to register viola_to_violin")
 		return err
 	}
 
 	go func() {
 		for d := range msgsCreate {
-			log.Printf("ConsumeViola: Received a create message: %s", d.Body)
+			log.Printf("ViolaToViolin: Received a create message: %s", d.Body)
 
 			var control model.Control
 			err = json.Unmarshal(d.Body, &control)
 			if err != nil {
-				logger.Logger.Println("ConsumeViola: Failed to unmarshal consume_viola data")
+				logger.Logger.Println("ViolaToViolin: Failed to unmarshal viola_to_violin data")
 				// return
 			}
 			fmt.Println("RabbitmQ : ", control)
