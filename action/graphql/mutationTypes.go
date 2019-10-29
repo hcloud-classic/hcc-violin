@@ -95,7 +95,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				os := params.Args["os"].(string)
 				diskSize := params.Args["disk_size"].(int)
 
-				// stage 1. select node - reader, compute
+				// stage 1. select node - leader, compute
 				listNodeData, err := GetNodes()
 				if err != nil {
 					logger.Logger.Print(err)
@@ -190,7 +190,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					//	}
 					//}
 
-					// Wail for leader node to turn on for 40secs
+					// Wait for leader node to turn on for 40secs
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
 					for _, node := range nodes {
 						result, err := OnNode(node.PXEMacAddr)
