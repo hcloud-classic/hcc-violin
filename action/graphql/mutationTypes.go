@@ -6,6 +6,7 @@ import (
 	"github.com/graphql-go/graphql"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/dao"
+	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/uuidgen"
 	"hcc/violin/model"
@@ -196,21 +197,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					}
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + "d0-50-99-aa-e5-7b")
 
-					//fmt.Println("leader: " + subnet.Data.Subnet.LeaderNodeUUID)
-					//for _, node := range nodes {
-					//	fmt.Println("node: " + node.UUID)
-					//	if subnet.Data.Subnet.LeaderNodeUUID == node.UUID {
-					//		result, err := OnNode(node.PXEMacAddr)
-					//		if err != nil {
-					//			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
-					//			return
-					//		}
-					//
-					//	}
-					//}
-
-					// Wait for leader node to turn on for 30secs
-					time.Sleep(time.Second * 30)
+					// Wait for leader node to turned on
+					time.Sleep(time.Second * time.Duration(config.Harp.WaitForLeaderNodeTimeoutSec))
 
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
 					for _, node := range nodes {
