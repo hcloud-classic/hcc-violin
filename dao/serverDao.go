@@ -232,6 +232,20 @@ func CreateServer(serverUUID string, args map[string]interface{}) (interface{}, 
 	return server, nil
 }
 
+func checkUpdateServerArgs(args map[string]interface{}) bool {
+	_, subnetUUIDOk := args["subnet_uuid"].(string)
+	_, osOk := args["os"].(string)
+	_, serverNameOk := args["server_name"].(string)
+	_, serverDescOk := args["server_desc"].(string)
+	_, cpuOk := args["cpu"].(int)
+	_, memoryOk := args["memory"].(int)
+	_, diskSizeOk := args["disk_size"].(int)
+	_, statusOk := args["status"].(string)
+	_, userUUIDOk := args["user_uuid"].(string)
+
+	return !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !statusOk && !userUUIDOk
+}
+
 // UpdateServer - cgs
 func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	var err error
@@ -260,9 +274,10 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	server.UserUUID = userUUID
 
 	if requestedUUIDOk {
-		if !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !statusOk && !userUUIDOk {
+		if checkUpdateServerArgs(args) {
 			return nil, nil
 		}
+
 		sql := "update server set"
 		var updateSet = ""
 		if subnetUUIDOk {
