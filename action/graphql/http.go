@@ -231,9 +231,9 @@ func ToHarpUpdateSubnet(subnetUUID string, serverUUID string) (SubnetData, error
 }
 
 // ToHarpCreateDHCPDConfig : Add server_uuid to subnet
-func ToHarpCreateDHCPDConfig(subnetUUID string, nodeUUIDsStr string) (error) {
+func ToHarpCreateDHCPDConfig(subnetUUID string, nodeUUIDsStr string) error {
 	client := &http.Client{Timeout: time.Duration(config.Harp.RequestTimeoutMs) * time.Millisecond}
-	req, err := http.NewRequest("GET", "http://" + config.Harp.ServerAddress + ":" + strconv.Itoa(int(config.Harp.ServerPort)) + "/graphql?query=mutation%20_%20%7B%0A%20%20create_dhcpd_conf(subnet_uuid%3A%20%22" + subnetUUID + "%22%2C%20node_uuids%3A%20%22" + nodeUUIDsStr + "%22)%0A%7D%0A&operationName=_", nil)
+	req, err := http.NewRequest("GET", "http://"+config.Harp.ServerAddress+":"+strconv.Itoa(int(config.Harp.ServerPort))+"/graphql?query=mutation%20_%20%7B%0A%20%20create_dhcpd_conf(subnet_uuid%3A%20%22"+subnetUUID+"%22%2C%20node_uuids%3A%20%22"+nodeUUIDsStr+"%22)%0A%7D%0A&operationName=_", nil)
 	if err != nil {
 		return err
 	}
@@ -252,10 +252,10 @@ func ToHarpCreateDHCPDConfig(subnetUUID string, nodeUUIDsStr string) (error) {
 		if err == nil {
 			logger.Logger.Println("ToHarpCreateDHCPDConfig: Successfully created dhcpd config for subnetUUID=" + subnetUUID)
 
-			return  nil
+			return nil
 		}
 
-		return  err
+		return err
 	}
 
 	return nil

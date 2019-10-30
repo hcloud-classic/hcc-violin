@@ -195,8 +195,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 					var nodeUUIDsStr = ""
 					for i, node := range nodes {
-						nodeUUIDsStr +=  node.UUID
-						if i != len(nodes) - 1 {
+						nodeUUIDsStr += node.UUID
+						if i != len(nodes)-1 {
 							nodeUUIDsStr += ","
 						}
 					}
