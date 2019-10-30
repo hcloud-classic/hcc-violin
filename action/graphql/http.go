@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"hcc/violin/lib/config"
+	"hcc/violin/lib/logger"
 	"hcc/violin/model"
 	"io/ioutil"
 	"net/http"
@@ -227,4 +228,35 @@ func ToHarpUpdateSubnet(subnetUUID string, serverUUID string) (SubnetData, error
 	}
 
 	return subnetData, errors.New("http response returned error code")
+}
+
+// ToHarpCreateDHCPDConfig : Add server_uuid to subnet
+func ToHarpCreateDHCPDConfig(subnetUUID string, nodeUUIDsStr string) (error) {
+	client := &http.Client{Timeout: time.Duration(config.Harp.RequestTimeoutMs) * time.Millisecond}
+	req, err := http.NewRequest("GET", "http://" + config.Harp.ServerAddress + ":" + strconv.Itoa(int(config.Harp.ServerPort)) + "/graphql?query=mutation%20_%20%7B%0A%20%20create_dhcpd_conf(subnet_uuid%3A%20%22" + subnetUUID + "%22%2C%20node_uuids%3A%20%22" + nodeUUIDsStr + "%22)%0A%7D%0A&operationName=_", nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+		// Check response
+		_, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			logger.Logger.Println("ToHarpCreateDHCPDConfig: Successfully created dhcpd config for subnetUUID=" + subnetUUID)
+
+			return  nil
+		}
+
+		return  err
+	}
+
+	return nil
 }

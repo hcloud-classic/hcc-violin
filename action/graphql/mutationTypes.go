@@ -110,6 +110,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				// stage 1.1 update nodes info (server_uuid)
 				// stage 1.2 insert nodes to server_node table
 				var nodes = listNodeData.Data.ListNode
+				var nodeUUIDs []string
 
 				if len(nodes) < nrNodes {
 					return nil, errors.New("not enough available nodes")
@@ -135,6 +136,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						logger.Logger.Println(err)
 						return nil, err
 					}
+
+					nodeUUIDs = append(nodeUUIDs, node.UUID)
 
 					nodeSelected++
 				}
@@ -182,10 +185,24 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 					// stage 3. ToHarpUpdateSubnet (get subnet info -> create dhcpd config -> update_subnet)
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Updating subnet info")
-					// TODO: //////////////////////////////////////////////////////////
 					_, err = ToHarpUpdateSubnet(subnetUUID, serverUUID)
 					if err != nil {
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + " ToHarpUpdateSubnet: " + err.Error())
+						return
+					}
+
+					var nodeUUIDsStr = ""
+					for i, node := range nodes {
+						nodeUUIDsStr +=  node.UUID
+						if i != len(nodes) - 1 {
+							nodeUUIDsStr += ","
+						}
+					}
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + " nodeUUIDsStr: " + nodeUUIDsStr)
+
+					err = ToHarpCreateDHCPDConfig(subnetUUID, nodeUUIDsStr)
+					if err != nil {
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + " ToHarpCreateDHCPDConfig: " + err.Error())
 						return
 					}
 
