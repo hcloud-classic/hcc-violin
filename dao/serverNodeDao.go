@@ -1,9 +1,9 @@
 package dao
 
 import (
+	gouuid "github.com/nu7hatch/gouuid"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
-	"hcc/violin/lib/uuidgen"
 	"hcc/violin/model"
 	"time"
 )
@@ -107,11 +107,12 @@ func ReadServerNodeAll(args map[string]interface{}) (interface{}, error) {
 
 // CreateServerNode - cgs
 func CreateServerNode(args map[string]interface{}) (interface{}, error) {
-	uuid, err := uuidgen.UUIDgen(true)
+	out, err := gouuid.NewV4()
 	if err != nil {
-		logger.Logger.Println("Failed to generate uuid!")
+		logger.Logger.Println(err)
 		return nil, err
 	}
+	uuid := out.String()
 
 	serverNode := model.ServerNode{
 		UUID:       uuid,

@@ -4,11 +4,11 @@ import (
 	"errors"
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/graphql-go/graphql"
+	gouuid "github.com/nu7hatch/gouuid"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/dao"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
-	"hcc/violin/lib/uuidgen"
 	"hcc/violin/model"
 	"net"
 	"strconv"
@@ -87,11 +87,12 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-				serverUUID, err := uuidgen.UUIDgen(false)
+				out, err := gouuid.NewV4()
 				if err != nil {
-					logger.Logger.Println("Failed to generate uuid!")
+					logger.Logger.Println(err)
 					return nil, err
 				}
+				serverUUID := out.String()
 
 				userUUID := params.Args["user_uuid"].(string)
 				os := params.Args["os"].(string)
