@@ -14,8 +14,8 @@ import (
 
 // Flute
 
-// OnNode : Turn on the node by sending WOL magic packet
-func OnNode(macAddr string) (string, error) {
+// ToFluteOnNode : Turn on the node by sending WOL magic packet
+func ToFluteOnNode(macAddr string) (string, error) {
 	client := &http.Client{Timeout: time.Duration(config.Flute.RequestTimeoutMs) * time.Millisecond}
 	req, err := http.NewRequest("GET", "http://"+config.Flute.ServerAddress+":"+strconv.Itoa(int(config.Flute.ServerPort))+
 		"/graphql?operationName=_&query=mutation%20_%20%7B%0A%20%20on_node(mac%3A%20%22"+macAddr+"%22)%0A%7D&variables=%7B%7D", nil)
@@ -45,8 +45,8 @@ func OnNode(macAddr string) (string, error) {
 	return "", errors.New("http response returned error code")
 }
 
-// GetNodes : Get not activated nodes info from flute module
-func GetNodes() (ListNodeData, error) {
+// ToFluteGetNodes : Get not activated nodes info from flute module
+func ToFluteGetNodes() (ListNodeData, error) {
 	var listNodeData ListNodeData
 
 	client := &http.Client{Timeout: time.Duration(config.Flute.RequestTimeoutMs) * time.Millisecond}
@@ -84,8 +84,8 @@ func GetNodes() (ListNodeData, error) {
 	return listNodeData, errors.New("http response returned error code")
 }
 
-// UpdateNode : Add server_uuid information to each nodes
-func UpdateNode(node model.Node, serverUUID string) error {
+// ToFluteUpdateNode : Add server_uuid information to each nodes
+func ToFluteUpdateNode(node model.Node, serverUUID string) error {
 	client := &http.Client{Timeout: time.Duration(config.Flute.RequestTimeoutMs) * time.Millisecond}
 	req, err := http.NewRequest("GET", "http://"+config.Flute.ServerAddress+":"+strconv.Itoa(int(config.Flute.ServerPort))+
 		"/graphql?query=mutation%7B%0A%20%20update_node(uuid%3A%22"+node.UUID+"%22%2C%20server_uuid%3A%22"+serverUUID+"%22%2C%20active%3A%20"+strconv.Itoa(1)+")%7B%0A%20%20%20%20uuid%0A%20%20%7D%0A%7D", nil)
@@ -119,8 +119,8 @@ func UpdateNode(node model.Node, serverUUID string) error {
 
 // Cello
 
-// CreateDisk : Create os or data disk
-func CreateDisk(volume model.Volume, serverUUID string) error {
+// ToCelloCreateDisk : Create os or data disk
+func ToCelloCreateDisk(volume model.Volume, serverUUID string) error {
 	client := &http.Client{Timeout: time.Duration(config.Cello.RequestTimeoutMs) * time.Millisecond}
 	req, err := http.NewRequest("GET", "http://"+config.Cello.ServerAddress+":"+strconv.Itoa(int(config.Cello.ServerPort))+
 		"/graphql?operationName=_&query=mutation%20_%20%7B%0A%20%20create_volume(size%3A"+strconv.Itoa(volume.Size)+"%2C%20filesystem%3A%22"+volume.Filesystem+"%22%2C%20server_uuid%3A%22"+serverUUID+"%22%2C%20use_type%3A%22"+volume.UseType+"%22%2C%20user_uuid%3A%22"+volume.UserUUID+"%22)%20%7B%0A%20%20%20%20uuid%0A%20%20%20%20size%0A%20%20%20%20filesystem%0A%20%20%20%20server_uuid%0A%20%20%20%20use_type%0A%20%20%20%20user_uuid%0A%20%20%20%20created_at%0A%20%20%7D%0A%7D", nil)
@@ -151,8 +151,8 @@ func CreateDisk(volume model.Volume, serverUUID string) error {
 
 // Harp
 
-// GetSubnet : Get subnet info from harp module
-func GetSubnet(subnetUUID string) (SubnetData, error) {
+// ToHarpGetSubnet : Get subnet info from harp module
+func ToHarpGetSubnet(subnetUUID string) (SubnetData, error) {
 	var subnetData SubnetData
 
 	client := &http.Client{Timeout: time.Duration(config.Harp.RequestTimeoutMs) * time.Millisecond}
@@ -190,8 +190,8 @@ func GetSubnet(subnetUUID string) (SubnetData, error) {
 	return subnetData, errors.New("http response returned error code")
 }
 
-// UpdateSubnet : Add server_uuid to subnet
-func UpdateSubnet(subnetUUID string, serverUUID string) (SubnetData, error) {
+// ToHarpUpdateSubnet : Add server_uuid to subnet
+func ToHarpUpdateSubnet(subnetUUID string, serverUUID string) (SubnetData, error) {
 	var subnetData SubnetData
 
 	client := &http.Client{Timeout: time.Duration(config.Harp.RequestTimeoutMs) * time.Millisecond}

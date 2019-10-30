@@ -109,6 +109,11 @@ func parseFlute() {
 	if err != nil {
 		logger.Logger.Panicln(err)
 	}
+
+	Flute.WaitForLeaderNodeTimeoutSec, err = config.FluteConfig.Int("flute_wait_for_leader_node_timeout_sec")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
 }
 
 func parseCello() {

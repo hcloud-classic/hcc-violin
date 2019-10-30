@@ -98,7 +98,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				diskSize := params.Args["disk_size"].(int)
 
 				// stage 1. select node - leader, compute
-				listNodeData, err := GetNodes()
+				listNodeData, err := ToFluteGetNodes()
 				if err != nil {
 					logger.Logger.Print(err)
 					return nil, err
@@ -121,7 +121,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						break
 					}
 
-					err = UpdateNode(node, serverUUID)
+					err = ToFluteUpdateNode(node, serverUUID)
 					if err != nil {
 						logger.Logger.Println(err)
 						return nil, err
@@ -143,7 +143,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Getting subnet info")
 
 					subnetUUID := params.Args["subnet_uuid"].(string)
-					subnet, err := GetSubnet(subnetUUID)
+					subnet, err := ToHarpGetSubnet(subnetUUID)
 					if err != nil {
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 						return
@@ -159,7 +159,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						UserUUID:   userUUID,
 						NetworkIP:  subnet.Data.Subnet.NetworkIP,
 					}
-					err = CreateDisk(volumeOS, serverUUID)
+					err = ToCelloCreateDisk(volumeOS, serverUUID)
 					if err != nil {
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 						return
@@ -174,15 +174,16 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						UserUUID:   userUUID,
 						NetworkIP:  subnet.Data.Subnet.NetworkIP,
 					}
-					err = CreateDisk(volumeData, serverUUID)
+					err = ToCelloCreateDisk(volumeData, serverUUID)
 					if err != nil {
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 						return
 					}
 
-					// stage 3. UpdateSubnet (get subnet info -> create dhcpd config -> update_subnet)
+					// stage 3. ToHarpUpdateSubnet (get subnet info -> create dhcpd config -> update_subnet)
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Updating subnet info")
-					_, err = UpdateSubnet(subnetUUID, serverUUID)
+					// TODO: //////////////////////////////////////////////////////////
+					_, err = ToHarpUpdateSubnet(subnetUUID, serverUUID)
 					if err != nil {
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 						return
@@ -190,15 +191,23 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 					// stage 4. node power on
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
-					_, err = OnNode(subnet.Data.Subnet.LeaderNodeUUID)
-					if err != nil {
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
-						return
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Getting leader node's MAC address")
+					for _, node := range nodes {
+						if node.UUID == subnet.Data.Subnet.LeaderNodeUUID {
+							_, err := ToFluteOnNode(node.PXEMacAddr)
+							if err != nil {
+								logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": ToFluteOnNode error: " + err.Error())
+								return
+							}
+
+							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": ToFluteOnNode: leader MAC Addr: " + node.PXEMacAddr)
+
+							break
+						}
 					}
-					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode leader MAC Addr: " + "d0-50-99-aa-e5-7b")
 
 					// Wait for leader node to turned on
-					time.Sleep(time.Second * time.Duration(config.Harp.WaitForLeaderNodeTimeoutSec))
+					time.Sleep(time.Second * time.Duration(config.Flute.WaitForLeaderNodeTimeoutSec))
 
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
 					for _, node := range nodes {
@@ -206,13 +215,13 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 							continue
 						}
 
-						_, err := OnNode(node.PXEMacAddr)
+						_, err := ToFluteOnNode(node.PXEMacAddr)
 						if err != nil {
-							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
+							logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": ToFluteOnNode error: " + err.Error())
 							return
 						}
 
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": , OnNode compute MAC Addr: " + node.PXEMacAddr)
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": ToFluteOnNode: compute MAC Addr: " + node.PXEMacAddr)
 					}
 
 					netIPnetworkIP := net.ParseIP(subnet.Data.Subnet.NetworkIP).To4()
