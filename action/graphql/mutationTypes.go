@@ -107,6 +107,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				// TODO : Currently nrNodes is hard coded to 2. Will get from Web UI (Oboe) later.
 				var nrNodes = 2
 
+				// TODO : Get leader node's UUID from selected nodes. Currently, leader node's UUID is provided by subnet data.
 				// stage 1.1 update nodes info (server_uuid)
 				// stage 1.2 insert nodes to server_node table
 				var nodes = listNodeData.Data.ListNode
