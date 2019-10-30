@@ -83,54 +83,33 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 		return nil, err
 	}
 
-	sql := "select * from server where"
+	sql := "select * from server where 1=1"
 	if subnetUUIDOk {
-		sql += " subnet_uuid = '" + subnetUUID + "'"
-		if osOk || serverNameOk || serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and subnet_uuid = '" + subnetUUID + "'"
 	}
 	if osOk {
-		sql += " os = '" + os + "'"
-		if serverNameOk || serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and os = '" + os + "'"
 	}
 	if serverNameOk {
-		sql += " server_name = '" + serverName + "'"
-		if serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and server_name = '" + serverName + "'"
 	}
 	if serverDescOk {
-		sql += " server_desc = '" + serverDesc + "'"
-		if cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and server_desc = '" + serverDesc + "'"
 	}
 	if cpuOk {
-		sql += " cpu = " + strconv.Itoa(cpu)
-		if memoryOk || diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and cpu = " + strconv.Itoa(cpu)
 	}
 	if memoryOk {
-		sql += " memory = " + strconv.Itoa(memory)
-		if diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and memory = " + strconv.Itoa(memory)
 	}
 	if diskSizeOk {
-		sql += " disk_size = " + strconv.Itoa(diskSize)
-		if statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and disk_size = " + strconv.Itoa(diskSize)
 	}
 	if statusOk {
-		sql += " status = '" + status + "' and"
+		sql += " and status = '" + status + "'"
 	}
 
-	sql += " user_uuid = ? order by created_at desc limit ? offset ?"
+	sql += " and user_uuid = ? order by created_at desc limit ? offset ?"
 	logger.Logger.Println("list_server sql  : ", sql)
 
 	stmt, err := mysql.Db.Query(sql, userUUID, row, row*(page-1))
@@ -285,58 +264,36 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 			return nil, nil
 		}
 		sql := "update server set"
+		var updateSet = ""
 		if subnetUUIDOk {
-			sql += " subnet_uuid = '" + server.SubnetUUID + "'"
-			if osOk || serverNameOk || serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " subnet_uuid = '" + server.SubnetUUID + "', "
 		}
 		if osOk {
-			sql += " os = '" + server.OS + "'"
-			if serverNameOk || serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " os = '" + server.OS + "', "
 		}
 		if serverNameOk {
-			sql += " server_name = '" + server.ServerName + "'"
-			if serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " server_name = '" + server.ServerName + "', "
 		}
 		if serverDescOk {
-			sql += " server_desc = '" + server.ServerDesc + "'"
-			if cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " server_desc = '" + server.ServerDesc + ", "
 		}
 		if cpuOk {
-			sql += " cpu = " + strconv.Itoa(server.CPU)
-			if memoryOk || diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " cpu = " + strconv.Itoa(server.CPU) + ", "
 		}
 		if memoryOk {
-			sql += " memory = " + strconv.Itoa(server.Memory)
-			if diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " memory = " + strconv.Itoa(server.Memory) + ", "
 		}
 		if diskSizeOk {
-			sql += " disk_size = " + strconv.Itoa(server.DiskSize)
-			if statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " disk_size = " + strconv.Itoa(server.DiskSize) + ", "
 		}
 		if statusOk {
-			sql += " status = '" + server.Status + "'"
-			if userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " status = '" + server.Status + "'" + ", "
 		}
 		if userUUIDOk {
-			sql += " user_uuid = " + server.UserUUID
+			updateSet += " user_uuid = " + server.UserUUID + "'" + ", "
 		}
-		sql += " where uuid = ?"
+
+		sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
 
 		logger.Logger.Println("update_server sql : ", sql)
 
