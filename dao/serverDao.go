@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
@@ -59,7 +60,6 @@ func ReadServer(args map[string]interface{}) (interface{}, error) {
 
 // ReadServerList - cgs
 func ReadServerList(args map[string]interface{}) (interface{}, error) {
-	var err error
 	var servers []model.Server
 	var rxUUID string
 	var createdAt time.Time
@@ -75,12 +75,12 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	userUUID, userUUIDOk := args["user_uuid"].(string)
 
 	if !userUUIDOk {
-		return nil, err
+		return nil, errors.New("need userUUID argument")
 	}
 	row, rowOk := args["row"].(int)
 	page, pageOk := args["page"].(int)
 	if !rowOk || !pageOk {
-		return nil, err
+		return nil, errors.New("need row and page arguments")
 	}
 
 	sql := "select * from server where 1=1"
@@ -275,7 +275,7 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 
 	if requestedUUIDOk {
 		if checkUpdateServerArgs(args) {
-			return nil, nil
+			return nil, errors.New("need some arguments")
 		}
 
 		sql := "update server set"
