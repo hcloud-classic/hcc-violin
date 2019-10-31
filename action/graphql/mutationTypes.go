@@ -133,7 +133,9 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				var nodeUUIDs []string
 
 				if len(nodes) < nrNodes {
-					return nil, errors.New("not enough available nodes")
+					errMsg := "create_server: not enough available nodes"
+					logger.Logger.Println(errMsg)
+					return nil, errors.New(errMsg)
 				}
 
 				var nodeSelected = 0
