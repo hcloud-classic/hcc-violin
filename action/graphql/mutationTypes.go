@@ -87,6 +87,22 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				logger.Logger.Println("create_server: Getting subnet info from harp module")
+
+				subnetUUID := params.Args["subnet_uuid"].(string)
+				subnet, err := ToHarpGetSubnet(subnetUUID)
+				if err != nil {
+					logger.Logger.Println(err)
+					return nil, err
+				}
+
+				if len(subnet.Data.Subnet.ServerUUID) != 0 {
+					errMsg := "create_server: Selected subnet (subnetUUID=" + subnetUUID +
+						") is used by one of server (serverUUID=" + subnet.Data.Subnet.ServerUUID +")"
+					logger.Logger.Println(errMsg)
+					return nil, errors.New(errMsg)
+				}
+
 				out, err := gouuid.NewV4()
 				if err != nil {
 					logger.Logger.Println(err)
@@ -99,6 +115,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				diskSize := params.Args["disk_size"].(int)
 
 				// stage 1. select node - leader, compute
+				logger.Logger.Println("create_server: Getting available nodes from flute module")
+
 				listNodeData, err := ToFluteGetNodes()
 				if err != nil {
 					logger.Logger.Print(err)
@@ -124,6 +142,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						break
 					}
 
+					logger.Logger.Println("create_server: Updating nodes info to flute module")
+
 					err = ToFluteUpdateNode(node, serverUUID)
 					if err != nil {
 						logger.Logger.Println(err)
@@ -145,15 +165,6 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				}
 
 				go func() {
-					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Getting subnet info")
-
-					subnetUUID := params.Args["subnet_uuid"].(string)
-					subnet, err := ToHarpGetSubnet(subnetUUID)
-					if err != nil {
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
-						return
-					}
-
 					// stage 2. create volume - os, data
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Creating os volume")
 					var volumeOS = model.Volume{
