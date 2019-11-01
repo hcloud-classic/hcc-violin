@@ -55,6 +55,11 @@ func main() {
 		logger.Logger.Panic(err)
 	}
 
+	forever := make(chan bool)
+
+	logger.Logger.Println(" [*] Waiting for RabbitMQ messages.")
+	<-forever
+
 	http.Handle("/graphql", graphql.GraphqlHandler)
 
 	logger.Logger.Println("Server is running on port " + strconv.Itoa(int(config.HTTP.Port)))
