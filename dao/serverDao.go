@@ -290,7 +290,7 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 			updateSet += " server_name = '" + server.ServerName + "', "
 		}
 		if serverDescOk {
-			updateSet += " server_desc = '" + server.ServerDesc + ", "
+			updateSet += " server_desc = '" + server.ServerDesc + "', "
 		}
 		if cpuOk {
 			updateSet += " cpu = " + strconv.Itoa(server.CPU) + ", "
@@ -302,10 +302,10 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 			updateSet += " disk_size = " + strconv.Itoa(server.DiskSize) + ", "
 		}
 		if statusOk {
-			updateSet += " status = '" + server.Status + "'" + ", "
+			updateSet += " status = '" + server.Status + "', "
 		}
 		if userUUIDOk {
-			updateSet += " user_uuid = " + server.UserUUID + "'" + ", "
+			updateSet += " user_uuid = " + server.UserUUID + "', "
 		}
 
 		sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
