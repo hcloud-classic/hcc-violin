@@ -55,10 +55,11 @@ func main() {
 		logger.Logger.Panic(err)
 	}
 
-	forever := make(chan bool)
-
-	logger.Logger.Println(" [*] Waiting for RabbitMQ messages.")
-	<-forever
+	go func() {
+		forever := make(chan bool)
+		logger.Logger.Println("RabbitMQ forever channel ready.")
+		<-forever
+	}()
 
 	http.Handle("/graphql", graphql.GraphqlHandler)
 
