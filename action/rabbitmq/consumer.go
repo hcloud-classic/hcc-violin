@@ -2,11 +2,9 @@ package rabbitmq
 
 import (
 	"encoding/json"
-	"fmt"
 	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
-	"log"
 )
 
 // ViolaToViolin : Consume Viola command
@@ -39,7 +37,7 @@ func ViolaToViolin() error {
 
 	go func() {
 		for d := range msgsCreate {
-			log.Printf("ViolaToViolin: Received a create message: %s", d.Body)
+			logger.Logger.Printf("ViolaToViolin: Received a create message: %s\n", d.Body)
 
 			var control model.Control
 			err = json.Unmarshal(d.Body, &control)
@@ -47,7 +45,7 @@ func ViolaToViolin() error {
 				logger.Logger.Println("ViolaToViolin: Failed to unmarshal viola_to_violin data")
 				// return
 			}
-			fmt.Println("RabbitmQ : ", control)
+			logger.Logger.Println("RabbitmQ : ", control)
 			//To-Do******************************/
 			// Violin receive cluster veryfied message, will handle message within graphql
 			// update cluster status at cello DB's status
