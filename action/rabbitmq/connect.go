@@ -2,10 +2,11 @@ package rabbitmq
 
 import (
 	"errors"
-	"github.com/streadway/amqp"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"strconv"
+
+	"github.com/streadway/amqp"
 )
 
 // Connection : RabbitMQ connection variable

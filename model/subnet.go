@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-// Subnet : Struct of Subnet
+// Subnet - cgs
 type Subnet struct {
 	UUID           string    `json:"uuid"`
 	NetworkIP      string    `json:"network_ip"`
@@ -11,15 +11,19 @@ type Subnet struct {
 	NextServer     string    `json:"next_server"`
 	NameServer     string    `json:"name_server"`
 	DomainName     string    `json:"domain_name"`
-	MaxNodes       int       `json:"max_nodes"`
-	NodeUUIDs      []string  `json:"node_uuids"`
+	ServerUUID     string    `json:"server_uuid"`
 	LeaderNodeUUID string    `json:"leader_node_uuid"`
 	OS             string    `json:"os"`
-	Name           string    `json:"name"`
+	SubnetName     string    `json:"subnet_name"`
 	CreatedAt      time.Time `json:"created_at"`
 }
 
-// Subnets : Array struct of subnets
+// Subnets - cgs
 type Subnets struct {
 	Subnets []Subnet `json:"subnet"`
+}
+
+// SubnetNum - cgs
+type SubnetNum struct {
+	Number int `json:"number"`
 }

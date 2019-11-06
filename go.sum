@@ -1,5 +1,7 @@
 github.com/Terry-Mao/goconf v0.0.0-20161115082538-13cb73d70c44 h1:oyRla0cRmia52TlmuLp1lDysM39D0gt5xmoUU6YFfGk=
 github.com/Terry-Mao/goconf v0.0.0-20161115082538-13cb73d70c44/go.mod h1:pLupJNRivwIsgwXOsRfbZyfXLMW9X2Cgp1yshhvG/8A=
+github.com/apparentlymart/go-cidr v1.0.1 h1:NmIwLZ/KdsjIUlhf+/Np40atNXm/+lZ5txfTJ/SpF+U=
+github.com/apparentlymart/go-cidr v1.0.1/go.mod h1:EBcsNrHc3zQeuaeCeCtQruQm+n9/YjEn/vI25Lg7Gwc=
 github.com/go-sql-driver/mysql v1.4.1 h1:g24URVg0OFbNUTx9qqY1IRZ9D9z3iPyi5zKhQZpNwpA=
 github.com/go-sql-driver/mysql v1.4.1/go.mod h1:zAC/RDZ24gD3HViQzih4MyKcchzm+sOG5ZlKdlhCg5w=
 github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=

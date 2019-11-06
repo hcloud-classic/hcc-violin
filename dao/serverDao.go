@@ -1,15 +1,15 @@
 package dao
 
 import (
+	"errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
-	"hcc/violin/lib/uuidgen"
 	"hcc/violin/model"
 	"strconv"
 	"time"
 )
 
-// ReadServer :
+// ReadServer - cgs
 func ReadServer(args map[string]interface{}) (interface{}, error) {
 	var server model.Server
 	var err error
@@ -58,9 +58,8 @@ func ReadServer(args map[string]interface{}) (interface{}, error) {
 	return server, nil
 }
 
-// ReadServerList :
+// ReadServerList - cgs
 func ReadServerList(args map[string]interface{}) (interface{}, error) {
-	var err error
 	var servers []model.Server
 	var rxUUID string
 	var createdAt time.Time
@@ -76,62 +75,41 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	userUUID, userUUIDOk := args["user_uuid"].(string)
 
 	if !userUUIDOk {
-		return nil, err
+		return nil, errors.New("need userUUID argument")
 	}
 	row, rowOk := args["row"].(int)
 	page, pageOk := args["page"].(int)
 	if !rowOk || !pageOk {
-		return nil, err
+		return nil, errors.New("need row and page arguments")
 	}
 
-	sql := "select * from server where"
+	sql := "select * from server where 1=1"
 	if subnetUUIDOk {
-		sql += " subnet_uuid = '" + subnetUUID + "'"
-		if osOk || serverNameOk || serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and subnet_uuid = '" + subnetUUID + "'"
 	}
 	if osOk {
-		sql += " os = '" + os + "'"
-		if serverNameOk || serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and os = '" + os + "'"
 	}
 	if serverNameOk {
-		sql += " server_name = '" + serverName + "'"
-		if serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and server_name = '" + serverName + "'"
 	}
 	if serverDescOk {
-		sql += " server_desc = '" + serverDesc + "'"
-		if cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and server_desc = '" + serverDesc + "'"
 	}
 	if cpuOk {
-		sql += " cpu = " + strconv.Itoa(cpu)
-		if memoryOk || diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and cpu = " + strconv.Itoa(cpu)
 	}
 	if memoryOk {
-		sql += " memory = " + strconv.Itoa(memory)
-		if diskSizeOk || statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and memory = " + strconv.Itoa(memory)
 	}
 	if diskSizeOk {
-		sql += " disk_size = " + strconv.Itoa(diskSize)
-		if statusOk || userUUIDOk {
-			sql += " and"
-		}
+		sql += " and disk_size = " + strconv.Itoa(diskSize)
 	}
 	if statusOk {
-		sql += " status = '" + status + "' and"
+		sql += " and status = '" + status + "'"
 	}
 
-	sql += " user_uuid = ? order by created_at desc limit ? offset ?"
+	sql += " and user_uuid = ? order by created_at desc limit ? offset ?"
 	logger.Logger.Println("list_server sql  : ", sql)
 
 	stmt, err := mysql.Db.Query(sql, userUUID, row, row*(page-1))
@@ -156,7 +134,7 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	return servers, nil
 }
 
-// ReadServerAll :
+// ReadServerAll - cgs
 func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	var err error
 	var servers []model.Server
@@ -202,7 +180,7 @@ func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	return servers, nil
 }
 
-// ReadServerNum :
+// ReadServerNum - cgs
 func ReadServerNum() (model.ServerNum, error) {
 	logger.Logger.Println("serverDao: ReadServerNum")
 	var serverNum model.ServerNum
@@ -220,16 +198,10 @@ func ReadServerNum() (model.ServerNum, error) {
 	return serverNum, nil
 }
 
-// CreateServer :
-func CreateServer(args map[string]interface{}) (interface{}, error) {
-	uuid, err := uuidgen.UUIDgen()
-	if err != nil {
-		logger.Logger.Println("Failed to generate uuid!")
-		return nil, err
-	}
-
+// CreateServer - cgs
+func CreateServer(serverUUID string, args map[string]interface{}) (interface{}, error) {
 	server := model.Server{
-		UUID:       uuid,
+		UUID:       serverUUID,
 		SubnetUUID: args["subnet_uuid"].(string),
 		OS:         args["os"].(string),
 		ServerName: args["server_name"].(string),
@@ -244,7 +216,7 @@ func CreateServer(args map[string]interface{}) (interface{}, error) {
 	sql := "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		logger.Logger.Println(err)
+		logger.Logger.Println(err.Error())
 		return nil, err
 	}
 	defer func() {
@@ -260,7 +232,21 @@ func CreateServer(args map[string]interface{}) (interface{}, error) {
 	return server, nil
 }
 
-// UpdateServer :
+func checkUpdateServerArgs(args map[string]interface{}) bool {
+	_, subnetUUIDOk := args["subnet_uuid"].(string)
+	_, osOk := args["os"].(string)
+	_, serverNameOk := args["server_name"].(string)
+	_, serverDescOk := args["server_desc"].(string)
+	_, cpuOk := args["cpu"].(int)
+	_, memoryOk := args["memory"].(int)
+	_, diskSizeOk := args["disk_size"].(int)
+	_, statusOk := args["status"].(string)
+	_, userUUIDOk := args["user_uuid"].(string)
+
+	return !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !statusOk && !userUUIDOk
+}
+
+// UpdateServer - cgs
 func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	var err error
 
@@ -288,62 +274,41 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	server.UserUUID = userUUID
 
 	if requestedUUIDOk {
-		if !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !statusOk && !userUUIDOk {
-			return nil, nil
+		if checkUpdateServerArgs(args) {
+			return nil, errors.New("need some arguments")
 		}
+
 		sql := "update server set"
+		var updateSet = ""
 		if subnetUUIDOk {
-			sql += " subnet_uuid = '" + server.SubnetUUID + "'"
-			if osOk || serverNameOk || serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " subnet_uuid = '" + server.SubnetUUID + "', "
 		}
 		if osOk {
-			sql += " os = '" + server.OS + "'"
-			if serverNameOk || serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " os = '" + server.OS + "', "
 		}
 		if serverNameOk {
-			sql += " server_name = '" + server.ServerName + "'"
-			if serverDescOk || cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " server_name = '" + server.ServerName + "', "
 		}
 		if serverDescOk {
-			sql += " server_desc = '" + server.ServerDesc + "'"
-			if cpuOk || memoryOk || diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " server_desc = '" + server.ServerDesc + "', "
 		}
 		if cpuOk {
-			sql += " cpu = " + strconv.Itoa(server.CPU)
-			if memoryOk || diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " cpu = " + strconv.Itoa(server.CPU) + ", "
 		}
 		if memoryOk {
-			sql += " memory = " + strconv.Itoa(server.Memory)
-			if diskSizeOk || statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " memory = " + strconv.Itoa(server.Memory) + ", "
 		}
 		if diskSizeOk {
-			sql += " disk_size = " + strconv.Itoa(server.DiskSize)
-			if statusOk || userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " disk_size = " + strconv.Itoa(server.DiskSize) + ", "
 		}
 		if statusOk {
-			sql += " status = '" + server.Status + "'"
-			if userUUIDOk {
-				sql += ", "
-			}
+			updateSet += " status = '" + server.Status + "', "
 		}
 		if userUUIDOk {
-			sql += " user_uuid = " + server.UserUUID
+			updateSet += " user_uuid = " + server.UserUUID + "', "
 		}
-		sql += " where uuid = ?"
+
+		sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
 
 		logger.Logger.Println("update_server sql : ", sql)
 
@@ -368,7 +333,7 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	return nil, err
 }
 
-// DeleteServer :
+// DeleteServer - cgs
 func DeleteServer(args map[string]interface{}) (interface{}, error) {
 	var err error
 

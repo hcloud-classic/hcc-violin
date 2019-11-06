@@ -20,7 +20,6 @@ var queryTypes = graphql.NewObject(
 						Type: graphql.String,
 					},
 				},
-
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					logger.Logger.Println("Resolving: server")
 					return dao.ReadServer(params.Args)
@@ -65,7 +64,6 @@ var queryTypes = graphql.NewObject(
 					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-
 					logger.Logger.Println("Resolving: list_server")
 					return dao.ReadServerList(params.Args)
 				},
