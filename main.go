@@ -8,14 +8,10 @@ import (
 	"hcc/violin/lib/mysql"
 	"hcc/violin/lib/syscheck"
 	"net/http"
-	"runtime"
 	"strconv"
 )
 
 func main() {
-	// Use max CPUs
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
 	if !syscheck.CheckRoot() {
 		return
 	}
