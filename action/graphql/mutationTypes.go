@@ -87,6 +87,44 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				logger.Logger.Println("create_server: Getting subnet info from harp module")
+
+				subnetUUID := params.Args["subnet_uuid"].(string)
+				subnet, err := ToHarpGetSubnet(subnetUUID)
+				if err != nil {
+					logger.Logger.Println(err)
+					return nil, err
+				}
+
+				if len(subnet.Data.Subnet.ServerUUID) != 0 {
+					errMsg := "create_server: Selected subnet (subnetUUID=" + subnetUUID +
+						") is used by one of server (serverUUID=" + subnet.Data.Subnet.ServerUUID +")"
+					logger.Logger.Println(errMsg)
+					return nil, errors.New(errMsg)
+				}
+				logger.Logger.Println("create_server: subnet info: network IP=" + subnet.Data.Subnet.NetworkIP +
+					", netmask=" + subnet.Data.Subnet.Netmask)
+
+				netIPnetworkIP := net.ParseIP(subnet.Data.Subnet.NetworkIP).To4()
+				if netIPnetworkIP == nil {
+					errMsg := "create_server: got wrong network IP"
+					logger.Logger.Println(errMsg)
+					return nil, errors.New(errMsg)
+				}
+
+				mask, err := checkNetmask(subnet.Data.Subnet.Netmask)
+				if err != nil {
+					errMsg := "create_server: got wrong subnet mask"
+					logger.Logger.Println(errMsg)
+					return nil, errors.New(errMsg)
+				}
+
+				ipNet := net.IPNet{
+					IP:   netIPnetworkIP,
+					Mask: mask,
+				}
+
+				logger.Logger.Println("create_server: Generating server UUID")
 				out, err := gouuid.NewV4()
 				if err != nil {
 					logger.Logger.Println(err)
@@ -99,6 +137,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				diskSize := params.Args["disk_size"].(int)
 
 				// stage 1. select node - leader, compute
+				logger.Logger.Println("create_server: Getting available nodes from flute module")
+
 				listNodeData, err := ToFluteGetNodes()
 				if err != nil {
 					logger.Logger.Print(err)
@@ -114,8 +154,10 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				var nodes = listNodeData.Data.ListNode
 				var nodeUUIDs []string
 
-				if len(nodes) < nrNodes {
-					return nil, errors.New("not enough available nodes")
+				if len(nodes) < nrNodes || len(nodes) == 0 {
+					errMsg := "create_server: not enough available nodes"
+					logger.Logger.Println(errMsg)
+					return nil, errors.New(errMsg)
 				}
 
 				var nodeSelected = 0
@@ -123,6 +165,8 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					if nodeSelected > nrNodes {
 						break
 					}
+
+					logger.Logger.Println("create_server: Updating nodes info to flute module")
 
 					err = ToFluteUpdateNode(node, serverUUID)
 					if err != nil {
@@ -144,16 +188,16 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 					nodeSelected++
 				}
 
+				logger.Logger.Println("create_server: Getting IP address range")
+				firstIP, _ := cidr.AddressRange(&ipNet)
+				firstIP = cidr.Inc(firstIP)
+				lastIP := firstIP
+
+				for i := 0; i < len(nodes)-1; i++ {
+					lastIP = cidr.Inc(lastIP)
+				}
+
 				go func() {
-					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Getting subnet info")
-
-					subnetUUID := params.Args["subnet_uuid"].(string)
-					subnet, err := ToHarpGetSubnet(subnetUUID)
-					if err != nil {
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
-						return
-					}
-
 					// stage 2. create volume - os, data
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Creating os volume")
 					var volumeOS = model.Volume{
@@ -210,7 +254,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 					// stage 4. node power on
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
-					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Getting leader node's MAC address")
+					var i = 1
 					for _, node := range nodes {
 						if node.UUID == subnet.Data.Subnet.LeaderNodeUUID {
 							_, err := ToFluteOnNode(node.PXEMacAddr)
@@ -223,6 +267,13 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 							break
 						}
+
+						i++
+					}
+
+					if i > len(nodes) {
+						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Failed to find leader node")
+						return
 					}
 
 					// Wait for leader node to turned on
@@ -241,31 +292,6 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 						}
 
 						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": ToFluteOnNode: compute MAC Addr: " + node.PXEMacAddr)
-					}
-
-					netIPnetworkIP := net.ParseIP(subnet.Data.Subnet.NetworkIP).To4()
-					if netIPnetworkIP == nil {
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "got wrong network IP")
-						return
-					}
-
-					mask, err := checkNetmask(subnet.Data.Subnet.Netmask)
-					if err != nil {
-						logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "got wrong subnet mask")
-						return
-					}
-
-					ipNet := net.IPNet{
-						IP:   netIPnetworkIP,
-						Mask: mask,
-					}
-
-					firstIP, _ := cidr.AddressRange(&ipNet)
-					firstIP = cidr.Inc(firstIP)
-					lastIP := firstIP
-
-					for i := 0; i < len(nodes)-1; i++ {
-						lastIP = cidr.Inc(lastIP)
 					}
 
 					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Preparing controlAction")

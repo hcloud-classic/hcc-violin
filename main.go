@@ -55,6 +55,12 @@ func main() {
 		logger.Logger.Panic(err)
 	}
 
+	go func() {
+		forever := make(chan bool)
+		logger.Logger.Println("RabbitMQ forever channel ready.")
+		<-forever
+	}()
+
 	http.Handle("/graphql", graphql.GraphqlHandler)
 
 	logger.Logger.Println("Server is running on port " + strconv.Itoa(int(config.HTTP.Port)))
