@@ -8,10 +8,14 @@ import (
 	"hcc/violin/lib/mysql"
 	"hcc/violin/lib/syscheck"
 	"net/http"
+	"runtime"
 	"strconv"
 )
 
 func main() {
+	// Use max CPUs
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	if !syscheck.CheckRoot() {
 		return
 	}
@@ -23,6 +27,8 @@ func main() {
 		_ = logger.FpLog.Close()
 	}()
 
+	config.Parser()
+
 	err := mysql.Prepare()
 	if err != nil {
 		return
@@ -31,6 +37,7 @@ func main() {
 		_ = mysql.Db.Close()
 	}()
 
+	// RabbitMQ Section
 	err = rabbitmq.PrepareChannel()
 	if err != nil {
 		logger.Logger.Panic(err)
@@ -40,6 +47,18 @@ func main() {
 	}()
 	defer func() {
 		_ = rabbitmq.Connection.Close()
+	}()
+
+	// Viola Section
+	err = rabbitmq.ViolaToViolin()
+	if err != nil {
+		logger.Logger.Panic(err)
+	}
+
+	go func() {
+		forever := make(chan bool)
+		logger.Logger.Println("RabbitMQ forever channel ready.")
+		<-forever
 	}()
 
 	http.Handle("/graphql", graphql.GraphqlHandler)

@@ -1,14 +1,14 @@
 package dao
 
 import (
+	gouuid "github.com/nu7hatch/gouuid"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
-	"hcc/violin/lib/uuidgen"
 	"hcc/violin/model"
 	"time"
 )
 
-// ReadServerNode :
+// ReadServerNode - cgs
 func ReadServerNode(args map[string]interface{}) (interface{}, error) {
 	var serverNode model.ServerNode
 	var err error
@@ -36,7 +36,7 @@ func ReadServerNode(args map[string]interface{}) (interface{}, error) {
 	return serverNode, nil
 }
 
-// ReadServerNodeList :
+// ReadServerNodeList - cgs
 func ReadServerNodeList(args map[string]interface{}) (interface{}, error) {
 	var err error
 	var serverNodes []model.ServerNode
@@ -56,7 +56,9 @@ func ReadServerNodeList(args map[string]interface{}) (interface{}, error) {
 		logger.Logger.Println(err.Error())
 		return nil, err
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
 
 	for stmt.Next() {
 		err := stmt.Scan(&uuid, &serverUUID, &nodeUUID, &createdAt)
@@ -71,7 +73,7 @@ func ReadServerNodeList(args map[string]interface{}) (interface{}, error) {
 	return serverNodes, nil
 }
 
-// ReadServerNodeAll :
+// ReadServerNodeAll - cgs
 func ReadServerNodeAll(args map[string]interface{}) (interface{}, error) {
 	var err error
 	var serverNodes []model.ServerNode
@@ -103,13 +105,14 @@ func ReadServerNodeAll(args map[string]interface{}) (interface{}, error) {
 	return serverNodes, nil
 }
 
-// CreateServerNode :
+// CreateServerNode - cgs
 func CreateServerNode(args map[string]interface{}) (interface{}, error) {
-	uuid, err := uuidgen.UUIDgen()
+	out, err := gouuid.NewV4()
 	if err != nil {
-		logger.Logger.Println("Failed to generate uuid!")
+		logger.Logger.Println(err)
 		return nil, err
 	}
+	uuid := out.String()
 
 	serverNode := model.ServerNode{
 		UUID:       uuid,
@@ -120,10 +123,13 @@ func CreateServerNode(args map[string]interface{}) (interface{}, error) {
 	sql := "insert into server_node(uuid, server_uuid, node_uuid, created_at) values (?, ?, ?, now())"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		logger.Logger.Println(err.Error())
+		logger.Logger.Println(err)
 		return nil, err
 	}
-	defer stmt.Close()
+	defer func() {
+		_ = stmt.Close()
+	}()
+
 	result, err := stmt.Exec(serverNode.UUID, serverNode.ServerUUID, serverNode.NodeUUID)
 	if err != nil {
 		logger.Logger.Println(err)
@@ -134,7 +140,7 @@ func CreateServerNode(args map[string]interface{}) (interface{}, error) {
 	return serverNode, nil
 }
 
-// DeleteServerNode :
+// DeleteServerNode - cgs
 func DeleteServerNode(args map[string]interface{}) (interface{}, error) {
 	var err error
 

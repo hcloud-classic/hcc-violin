@@ -1,65 +1,129 @@
+// url
+http://localhost:7500/graphql
 
-	}
+//// server
 
-	go func() {
-		for d := range msgsCreate {
-			log.Printf("return_nodes: Received a create message: %s", d.Body)
+// create
+mutation _ {
+  create_server(subnet_uuid: "1234", os: "ubuntu", server_name: "server1", server_desc: "test server", cpu: 1, memory: 4, disk_size: 20, status: "running", user_uuid: "1234") {
+    uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
+  }
+}
 
-			var nodes []model.Node
-			err = json.Unmarshal(d.Body, &nodes)
-			if err != nil {
-				logger.Logger.Println("get_nodes: Failed to unmarshal subnet data")
-				return
-			}
+// read
+query {
+  server(uuid: "37b50a05-ed0c-4a76-7f4b-39b02e066e65") {
+    uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
+  }
+}
 
-			serverUUID := server.UUID
-			nodeNr := server.NodeNr
+query {
+  list_server(uuid: "37b50a05-ed0c-4a76-7f4b-39b02e066e65", row:5, page:1) {
+    uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
+    created_at
+  }
+}
 
-			nodes, err := dao.GetAvailableNodes()
-			if err != nil {
-				logger.Logger.Println(err)
-				return
-			}
+query {
+  all_server(row:5, page:1) {
+    uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
+    created_at
+  }
+}
 
-			if nodeNr > len(nodes) {
-				logger.Logger.Println("get_nodes: Requested nodeNr is lager than available nodes count")
-				return
-			}
+query {
+	num_server{
+    number
+  }
+}
 
-			for i, node := range nodes {
-				if i > nodeNr {
-					break
-				}
-				err := dao.UpdateNodeServerUUID(node, serverUUID)
-				if err != nil {
-					logger.Logger.Println("get_nodes: error occurred while updating server_uuid of node (UUID = " + node.UUID)
-					return
-				}
-			}
+// update
+mutation _ {
+  update_server(uuid: "813966ad-6c41-47fe-4f7c-ba59608d3f9a", subnet_uuid: "1234", os: "centos", server_name: "server1", server_desc: "test server", cpu: 1, memory: 4, disk_size: 20, status: "stop", user_uuid: "1234") {
+    uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
+  }
+}
 
-			nodesSelected, err := dao.GetNodesOfServer(serverUUID)
-			if err != nil {
-				logger.Logger.Println(err)
-				return
-			}
+// delete
+mutation _ {
+  delete_server(uuid:"75149b85-61a2-4008-5766-10bdc3514641"){uuid}
+}
 
-			err = ReturnNodes(nodesSelected)
-			if err != nil {
-				logger.Logger.Println(err)
-				return
-			}
+//// server_node
 
-			/*
-				TODO
-				- 1. select * from node where server_uuid is not null
-				- 2. 필요한 갯수 만큼 get
-				- 3. get 한 노드들에 대해 update node set server_uuid = [server_uuid]
-				- 4. return nodeUUIDs: select * from node where server_uuid = [server_uuid]
-				5. publish to harp: create_dhcpd_conf
-			*/
+// create
 
-			//logger.Logger.Println("create_dhcpd_config: UUID = " + uuid + ": " + result)
-		}
-	}()
+mutation _ {
+  create_server_node(server_uuid: "1111", node_uuid: "2222") {
+    uuid
+    server_uuid
+    node_uuid
+    created_at
+  }
+}
 
-	return nil
+// read
+
+// read
+query {
+  server_node(uuid: "8e792a64-eb1d-44f4-470c-ac870f4e48d8") {
+    uuid
+    server_uuid
+    node_uuid
+    created_at
+  }
+}
+
+// update
+
+// delete
+
+// delete
+mutation _ {
+  delete_server_node(uuid:"8e792a64-eb1d-44f4-470c-ac870f4e48d8"){uuid}
+}

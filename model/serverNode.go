@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-// ServerNode :
+// ServerNode - cgs
 type ServerNode struct {
 	UUID       string    `json:"uuid"`
 	ServerUUID string    `json:"server_uuid"`
@@ -10,7 +10,7 @@ type ServerNode struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
-// ServerNodes :
+// ServerNodes - cgs
 type ServerNodes struct {
 	Server []Server `json:"server_node"`
 }

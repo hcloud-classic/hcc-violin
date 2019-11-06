@@ -2,30 +2,27 @@ package rabbitmq
 
 import (
 	"encoding/json"
-	"github.com/streadway/amqp"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
+
+	"github.com/streadway/amqp"
 )
 
-// GetNodes : Publish 'get_nodes' queues to RabbitMQ channel
-func GetNodes(nodeNr int, serverUUID string) error {
+// ViolinToViola : Publish 'run_hcc_cli' queues to RabbitMQ channel
+func ViolinToViola(action model.Control) error {
 	qCreate, err := Channel.QueueDeclare(
-		"get_nodes",
+		"violin_to_viola",
 		false,
 		false,
 		false,
 		false,
 		nil)
 	if err != nil {
-		logger.Logger.Println("get_nodes: Failed to declare a create queue")
+		logger.Logger.Println("ViolinToViola: Failed to declare a create queue")
 		return err
 	}
 
-	var server model.Server
-	server.UUID = serverUUID
-	server.NodeNr = nodeNr
-
-	body, _ := json.Marshal(server)
+	body, _ := json.Marshal(action)
 	err = Channel.Publish(
 		"",
 		qCreate.Name,
@@ -37,40 +34,7 @@ func GetNodes(nodeNr int, serverUUID string) error {
 			Body:            body,
 		})
 	if err != nil {
-		logger.Logger.Println("get_nodes: Failed to register publisher")
-		return err
-	}
-
-	return nil
-}
-
-// UpdateSubnet : Publish 'update_subnet' queues to RabbitMQ channel
-func UpdateSubnet(subnet model.Subnet) error {
-	qCreate, err := Channel.QueueDeclare(
-		"update_subnet",
-		false,
-		false,
-		false,
-		false,
-		nil)
-	if err != nil {
-		logger.Logger.Println("update_subnet: Failed to declare a create queue")
-		return err
-	}
-
-	body, _ := json.Marshal(subnet)
-	err = Channel.Publish(
-		"",
-		qCreate.Name,
-		false,
-		false,
-		amqp.Publishing{
-			ContentType:     "text/plain",
-			ContentEncoding: "utf-8",
-			Body:            body,
-		})
-	if err != nil {
-		logger.Logger.Println("update_subnet: Failed to register publisher")
+		logger.Logger.Println("ViolinToViola: Failed to register publisher")
 		return err
 	}
 
