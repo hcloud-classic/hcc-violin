@@ -98,7 +98,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 
 				if len(subnet.Data.Subnet.ServerUUID) != 0 {
 					errMsg := "create_server: Selected subnet (subnetUUID=" + subnetUUID +
-						") is used by one of server (serverUUID=" + subnet.Data.Subnet.ServerUUID +")"
+						") is used by one of server (serverUUID=" + subnet.Data.Subnet.ServerUUID + ")"
 					logger.Logger.Println(errMsg)
 					return nil, errors.New(errMsg)
 				}
