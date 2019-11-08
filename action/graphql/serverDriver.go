@@ -15,7 +15,7 @@ import (
 )
 
 func createServer(params graphql.ResolveParams) (interface{}, error) {
-	logger.Logger.Println("create_server: Getting subnet info from harp module")
+	logger.Logger.Println("createServer: Getting subnet info from harp module")
 
 	subnetUUID := params.Args["subnet_uuid"].(string)
 	subnet, err := GetSubnet(subnetUUID)
@@ -25,24 +25,24 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 	}
 
 	if len(subnet.Data.Subnet.ServerUUID) != 0 {
-		errMsg := "create_server: Selected subnet (subnetUUID=" + subnetUUID +
+		errMsg := "createServer: Selected subnet (subnetUUID=" + subnetUUID +
 			") is used by one of server (serverUUID=" + subnet.Data.Subnet.ServerUUID + ")"
 		logger.Logger.Println(errMsg)
 		return nil, errors.New(errMsg)
 	}
-	logger.Logger.Println("create_server: subnet info: network IP=" + subnet.Data.Subnet.NetworkIP +
+	logger.Logger.Println("createServer: subnet info: network IP=" + subnet.Data.Subnet.NetworkIP +
 		", netmask=" + subnet.Data.Subnet.Netmask)
 
 	netIPnetworkIP := net.ParseIP(subnet.Data.Subnet.NetworkIP).To4()
 	if netIPnetworkIP == nil {
-		errMsg := "create_server: got wrong network IP"
+		errMsg := "createServer: got wrong network IP"
 		logger.Logger.Println(errMsg)
 		return nil, errors.New(errMsg)
 	}
 
 	mask, err := checkNetmask(subnet.Data.Subnet.Netmask)
 	if err != nil {
-		errMsg := "create_server: got wrong subnet mask"
+		errMsg := "createServer: got wrong subnet mask"
 		logger.Logger.Println(errMsg)
 		return nil, errors.New(errMsg)
 	}
@@ -52,7 +52,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		Mask: mask,
 	}
 
-	logger.Logger.Println("create_server: Generating server UUID")
+	logger.Logger.Println("createServer: Generating server UUID")
 	out, err := uuid.NewV4()
 	if err != nil {
 		logger.Logger.Println(err)
@@ -65,7 +65,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 	diskSize := params.Args["disk_size"].(int)
 
 	// stage 1. select node - leader, compute
-	logger.Logger.Println("create_server: Getting available nodes from flute module")
+	logger.Logger.Println("createServer: Getting available nodes from flute module")
 
 	listNodeData, err := GetNodes()
 	if err != nil {
@@ -83,7 +83,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 	var nodeUUIDs []string
 
 	if len(nodes) < nrNodes || len(nodes) == 0 {
-		errMsg := "create_server: not enough available nodes"
+		errMsg := "createServer: not enough available nodes"
 		logger.Logger.Println(errMsg)
 		return nil, errors.New(errMsg)
 	}
@@ -94,7 +94,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 			break
 		}
 
-		logger.Logger.Println("create_server: Updating nodes info to flute module")
+		logger.Logger.Println("createServer: Updating nodes info to flute module")
 
 		err = UpdateNode(node, serverUUID)
 		if err != nil {
@@ -116,7 +116,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		nodeSelected++
 	}
 
-	logger.Logger.Println("create_server: Getting IP address range")
+	logger.Logger.Println("createServer: Getting IP address range")
 	firstIP, _ := cidr.AddressRange(&ipNet)
 	firstIP = cidr.Inc(firstIP)
 	lastIP := firstIP
@@ -127,7 +127,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 
 	go func() {
 		// stage 2. create volume - os, data
-		logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Creating os volume")
+		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Creating os volume")
 		var volumeOS = model.Volume{
 			Size:       model.OSDiskSize,
 			Filesystem: os,
@@ -138,11 +138,11 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		}
 		err = CreateDisk(volumeOS, serverUUID)
 		if err != nil {
-			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + err.Error())
 			return
 		}
 
-		logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Creating data volume")
+		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Creating data volume")
 		var volumeData = model.Volume{
 			Size:       diskSize,
 			Filesystem: os,
@@ -153,15 +153,15 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		}
 		err = CreateDisk(volumeData, serverUUID)
 		if err != nil {
-			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + err.Error())
 			return
 		}
 
 		// stage 3. UpdateSubnet (get subnet info -> create dhcpd config -> update_subnet)
-		logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Updating subnet info")
+		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Updating subnet info")
 		_, err = UpdateSubnet(subnetUUID, serverUUID)
 		if err != nil {
-			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + " UpdateSubnet: " + err.Error())
+			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + " UpdateSubnet: " + err.Error())
 			return
 		}
 
@@ -172,26 +172,26 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 				nodeUUIDsStr += ","
 			}
 		}
-		logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + " nodeUUIDsStr: " + nodeUUIDsStr)
+		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + " nodeUUIDsStr: " + nodeUUIDsStr)
 
 		err = CreateDHCPDConfig(subnetUUID, nodeUUIDsStr)
 		if err != nil {
-			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + " CreateDHCPDConfig: " + err.Error())
+			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + " CreateDHCPDConfig: " + err.Error())
 			return
 		}
 
 		// stage 4. node power on
-		logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
+		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
 		var i = 1
 		for _, node := range nodes {
 			if node.UUID == subnet.Data.Subnet.LeaderNodeUUID {
 				_, err := OnNode(node.PXEMacAddr)
 				if err != nil {
-					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
+					logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
 					return
 				}
 
-				logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode: leader MAC Addr: " + node.PXEMacAddr)
+				logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode: leader MAC Addr: " + node.PXEMacAddr)
 
 				break
 			}
@@ -200,14 +200,14 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		}
 
 		if i > len(nodes) {
-			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Failed to find leader node")
+			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Failed to find leader node")
 			return
 		}
 
 		// Wait for leader node to turned on
 		time.Sleep(time.Second * time.Duration(config.Flute.WaitForLeaderNodeTimeoutSec))
 
-		logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
+		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
 		for _, node := range nodes {
 			if node.UUID == subnet.Data.Subnet.LeaderNodeUUID {
 				continue
@@ -215,14 +215,14 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 
 			_, err := OnNode(node.PXEMacAddr)
 			if err != nil {
-				logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
+				logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
 				return
 			}
 
-			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode: compute MAC Addr: " + node.PXEMacAddr)
+			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode: compute MAC Addr: " + node.PXEMacAddr)
 		}
 
-		logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
+		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
 
 		var controlAction = model.Control{
 			HccCommand: "hcc nodes add -n 2",
@@ -231,11 +231,11 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		}
 
 		// stage 5. viola install
-		logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Running HccCLI")
+		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Running HccCLI")
 
 		err = rabbitmq.ViolinToViola(controlAction)
 		if err != nil {
-			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
+			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + err.Error())
 			return
 		}
 		// while checking Cello DB cluster status is runnig in N times, until retry is expired
