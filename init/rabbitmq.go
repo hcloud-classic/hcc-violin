@@ -11,10 +11,14 @@ func rabbitmqInit() error {
 		return err
 	}
 	defer func() {
-		_ = rabbitmq.Channel.Close()
+		if rabbitmq.Channel != nil {
+			_ = rabbitmq.Channel.Close()
+		}
 	}()
 	defer func() {
-		_ = rabbitmq.Connection.Close()
+		if rabbitmq.Connection != nil {
+			_ = rabbitmq.Connection.Close()
+		}
 	}()
 
 	// Viola Section
