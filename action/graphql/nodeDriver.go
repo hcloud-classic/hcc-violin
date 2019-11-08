@@ -2,25 +2,24 @@ package graphql
 
 import (
 	"hcc/violin/model"
-	"reflect"
 )
 
 // OnNode : Turn on the node by sending WOL magic packet
-func OnNode(macAddr string) (string, error) {
+func OnNode(macAddr string) (interface{}, error) {
 	query := "mutation _ {\n" +
 		"	on_node(mac:\"" + macAddr + "\")\n" +
 		"}"
 
-	result, err := DoHTTPRequest(false, nil, query)
+	result, err := DoHTTPRequest("flute", false, nil, query)
 	if err != nil {
 		return "", err
 	}
 
-	return result.(string), nil
+	return result, nil
 }
 
 // GetNodes : Get not activated nodes info from flute module
-func GetNodes() (ListNodeData, error) {
+func GetNodes() (interface{}, error) {
 	query := "query {\n" +
 		"	list_node(active: 0, row:10, page:1) {\n" +
 		"		uuid\n" +
@@ -38,12 +37,12 @@ func GetNodes() (ListNodeData, error) {
 
 	var listNodeData ListNodeData
 
-	result, err := DoHTTPRequest(true, reflect.ValueOf(listNodeData).Interface(), query)
+	result, err := DoHTTPRequest("flute", true, listNodeData, query)
 	if err != nil {
 		return listNodeData, err
 	}
 
-	return result.(ListNodeData), nil
+	return result, nil
 }
 
 // UpdateNode : Add server_uuid information to each nodes
@@ -54,7 +53,7 @@ func UpdateNode(node model.Node, serverUUID string) error {
 		"	}\n" +
 		"}"
 
-	_, err := DoHTTPRequest(false, nil, query)
+	_, err := DoHTTPRequest("flute", false, nil, query)
 	if err != nil {
 		return err
 	}

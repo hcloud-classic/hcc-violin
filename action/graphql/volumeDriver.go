@@ -16,7 +16,7 @@ func CreateDisk(volume model.Volume, serverUUID string) error {
 		"	}\n" +
 		"}"
 
-	_, err := DoHTTPRequest(false, nil, query)
+	_, err := DoHTTPRequest("cello", false, nil, query)
 	if err != nil {
 		return err
 	}

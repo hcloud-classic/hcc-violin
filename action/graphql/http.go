@@ -12,10 +12,26 @@ import (
 )
 
 // DoHTTPRequest : Send http request to other modules with GraphQL query string.
-func DoHTTPRequest(needData bool, data interface{}, query string) (interface{}, error) {
+func DoHTTPRequest(moduleName string, needData bool, data interface{}, query string) (interface{}, error) {
 	client := &http.Client{Timeout: time.Duration(config.Flute.RequestTimeoutMs) * time.Millisecond}
-	req, err := http.NewRequest("GET", "http://"+config.Flute.ServerAddress+":"+strconv.Itoa(int(config.Flute.ServerPort))+
-		"/graphql?query="+queryURLEncoder(query), nil)
+
+	var url = "http://"
+	switch moduleName {
+	case "flute":
+		url += config.Flute.ServerAddress + ":" + strconv.Itoa(int(config.Flute.ServerPort))
+		break
+	case "harp":
+		url += config.Harp.ServerAddress + ":" + strconv.Itoa(int(config.Harp.ServerPort))
+		break
+	case "cello":
+		url += config.Cello.ServerAddress + ":" + strconv.Itoa(int(config.Cello.ServerPort))
+		break
+	default:
+		return nil, errors.New("unknown module name")
+	}
+	url += "/graphql?query=" + queryURLEncoder(query)
+
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +58,26 @@ func DoHTTPRequest(needData bool, data interface{}, query string) (interface{}, 
 				if data == nil {
 					return nil, errors.New("needData marked as true but data is nil")
 				}
-				err = json.Unmarshal([]byte(result), &data)
-				if err != nil {
-					return data, err
+
+				switch moduleName {
+				case "flute":
+					listNodeData := data.(ListNodeData)
+					err = json.Unmarshal([]byte(result), &listNodeData)
+					if err != nil {
+						return nil, err
+					}
+
+					return listNodeData, nil
+				case "harp":
+					subnetData := data.(SubnetData)
+					err = json.Unmarshal([]byte(result), &subnetData)
+					if err != nil {
+						return nil, err
+					}
+
+					return subnetData, nil
+				default:
+					return nil, errors.New("data is not supported for " + moduleName + " module")
 				}
 			}
 

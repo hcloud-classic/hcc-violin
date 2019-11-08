@@ -24,23 +24,23 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		return nil, err
 	}
 
-	if len(subnet.Data.Subnet.ServerUUID) != 0 {
+	if len(subnet.ServerUUID) != 0 {
 		errMsg := "createServer: Selected subnet (subnetUUID=" + subnetUUID +
-			") is used by one of server (serverUUID=" + subnet.Data.Subnet.ServerUUID + ")"
+			") is used by one of server (serverUUID=" + subnet.ServerUUID + ")"
 		logger.Logger.Println(errMsg)
 		return nil, errors.New(errMsg)
 	}
-	logger.Logger.Println("createServer: subnet info: network IP=" + subnet.Data.Subnet.NetworkIP +
-		", netmask=" + subnet.Data.Subnet.Netmask)
+	logger.Logger.Println("createServer: subnet info: network IP=" + subnet.NetworkIP +
+		", netmask=" + subnet.Netmask)
 
-	netIPnetworkIP := net.ParseIP(subnet.Data.Subnet.NetworkIP).To4()
+	netIPnetworkIP := net.ParseIP(subnet.NetworkIP).To4()
 	if netIPnetworkIP == nil {
 		errMsg := "createServer: got wrong network IP"
 		logger.Logger.Println(errMsg)
 		return nil, errors.New(errMsg)
 	}
 
-	mask, err := checkNetmask(subnet.Data.Subnet.Netmask)
+	mask, err := checkNetmask(subnet.Netmask)
 	if err != nil {
 		errMsg := "createServer: got wrong subnet mask"
 		logger.Logger.Println(errMsg)
@@ -68,6 +68,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 	logger.Logger.Println("createServer: Getting available nodes from flute module")
 
 	listNodeData, err := GetNodes()
+	nodes := listNodeData.(ListNodeData).Data.ListNode
 	if err != nil {
 		logger.Logger.Print(err)
 		return nil, err
@@ -79,7 +80,6 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 	// TODO : Get leader node's UUID from selected nodes. Currently, leader node's UUID is provided by subnet data.
 	// stage 1.1 update nodes info (server_uuid)
 	// stage 1.2 insert nodes to server_node table
-	var nodes = listNodeData.Data.ListNode
 	var nodeUUIDs []string
 
 	if len(nodes) < nrNodes || len(nodes) == 0 {
@@ -134,7 +134,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 			ServerUUID: serverUUID,
 			UseType:    "os",
 			UserUUID:   userUUID,
-			NetworkIP:  subnet.Data.Subnet.NetworkIP,
+			NetworkIP:  subnet.NetworkIP,
 		}
 		err = CreateDisk(volumeOS, serverUUID)
 		if err != nil {
@@ -149,7 +149,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 			ServerUUID: serverUUID,
 			UseType:    "data",
 			UserUUID:   userUUID,
-			NetworkIP:  subnet.Data.Subnet.NetworkIP,
+			NetworkIP:  subnet.NetworkIP,
 		}
 		err = CreateDisk(volumeData, serverUUID)
 		if err != nil {
@@ -184,7 +184,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
 		var i = 1
 		for _, node := range nodes {
-			if node.UUID == subnet.Data.Subnet.LeaderNodeUUID {
+			if node.UUID == subnet.LeaderNodeUUID {
 				_, err := OnNode(node.PXEMacAddr)
 				if err != nil {
 					logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
@@ -209,7 +209,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 
 		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
 		for _, node := range nodes {
-			if node.UUID == subnet.Data.Subnet.LeaderNodeUUID {
+			if node.UUID == subnet.LeaderNodeUUID {
 				continue
 			}
 

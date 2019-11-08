@@ -2,11 +2,11 @@ package graphql
 
 import (
 	"hcc/violin/lib/logger"
-	"reflect"
+	"hcc/violin/model"
 )
 
 // GetSubnet : Get subnet info from harp module
-func GetSubnet(subnetUUID string) (SubnetData, error) {
+func GetSubnet(subnetUUID string) (model.Subnet, error) {
 	query := "query {\n" +
 		"	subnet(uuid:\"" + subnetUUID + "\"){\n" +
 		"		uuid\n" +
@@ -26,16 +26,16 @@ func GetSubnet(subnetUUID string) (SubnetData, error) {
 
 	var subnetData SubnetData
 
-	result, err := DoHTTPRequest(true, reflect.ValueOf(subnetData).Interface(), query)
+	result, err := DoHTTPRequest("harp", true, subnetData, query)
 	if err != nil {
-		return subnetData, err
+		return subnetData.Data.Subnet, err
 	}
 
-	return result.(SubnetData), nil
+	return result.(SubnetData).Data.Subnet, nil
 }
 
 // UpdateSubnet : Add server_uuid to subnet
-func UpdateSubnet(subnetUUID string, serverUUID string) (SubnetData, error) {
+func UpdateSubnet(subnetUUID string, serverUUID string) (interface{}, error) {
 	query := "mutation _ {\n" +
 		"	update_subnet(uuid: \"" + subnetUUID + "\", server_uuid: \"" + serverUUID + "\"){\n" +
 		"		uuid\n" +
@@ -45,12 +45,12 @@ func UpdateSubnet(subnetUUID string, serverUUID string) (SubnetData, error) {
 
 	var subnetData SubnetData
 
-	result, err := DoHTTPRequest(true, reflect.ValueOf(subnetData).Interface(), query)
+	result, err := DoHTTPRequest("harp", true, subnetData, query)
 	if err != nil {
-		return subnetData, err
+		return subnetData.Data.Subnet, err
 	}
 
-	return result.(SubnetData), nil
+	return result.(SubnetData).Data.Subnet, nil
 }
 
 // CreateDHCPDConfig : Add server_uuid to subnet
@@ -59,7 +59,7 @@ func CreateDHCPDConfig(subnetUUID string, nodeUUIDsStr string) error {
 		"	create_dhcpd_conf(subnet_uuid: \"" + subnetUUID + "\", node_uuids: \"" + nodeUUIDsStr + "\")\n" +
 		"}"
 
-	_, err := DoHTTPRequest(false, nil, query)
+	_, err := DoHTTPRequest("harp", false, nil, query)
 	if err != nil {
 		return err
 	}
