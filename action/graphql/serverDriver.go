@@ -18,7 +18,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 	logger.Logger.Println("create_server: Getting subnet info from harp module")
 
 	subnetUUID := params.Args["subnet_uuid"].(string)
-	subnet, err := ToHarpGetSubnet(subnetUUID)
+	subnet, err := GetSubnet(subnetUUID)
 	if err != nil {
 		logger.Logger.Println(err)
 		return nil, err
@@ -67,7 +67,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 	// stage 1. select node - leader, compute
 	logger.Logger.Println("create_server: Getting available nodes from flute module")
 
-	listNodeData, err := ToFluteGetNodes()
+	listNodeData, err := GetNodes()
 	if err != nil {
 		logger.Logger.Print(err)
 		return nil, err
@@ -96,7 +96,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 
 		logger.Logger.Println("create_server: Updating nodes info to flute module")
 
-		err = ToFluteUpdateNode(node, serverUUID)
+		err = UpdateNode(node, serverUUID)
 		if err != nil {
 			logger.Logger.Println(err)
 			return nil, err
@@ -136,7 +136,7 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 			UserUUID:   userUUID,
 			NetworkIP:  subnet.Data.Subnet.NetworkIP,
 		}
-		err = ToCelloCreateDisk(volumeOS, serverUUID)
+		err = CreateDisk(volumeOS, serverUUID)
 		if err != nil {
 			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 			return
@@ -151,17 +151,17 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 			UserUUID:   userUUID,
 			NetworkIP:  subnet.Data.Subnet.NetworkIP,
 		}
-		err = ToCelloCreateDisk(volumeData, serverUUID)
+		err = CreateDisk(volumeData, serverUUID)
 		if err != nil {
 			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + err.Error())
 			return
 		}
 
-		// stage 3. ToHarpUpdateSubnet (get subnet info -> create dhcpd config -> update_subnet)
+		// stage 3. UpdateSubnet (get subnet info -> create dhcpd config -> update_subnet)
 		logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Updating subnet info")
-		_, err = ToHarpUpdateSubnet(subnetUUID, serverUUID)
+		_, err = UpdateSubnet(subnetUUID, serverUUID)
 		if err != nil {
-			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + " ToHarpUpdateSubnet: " + err.Error())
+			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + " UpdateSubnet: " + err.Error())
 			return
 		}
 
@@ -174,9 +174,9 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		}
 		logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + " nodeUUIDsStr: " + nodeUUIDsStr)
 
-		err = ToHarpCreateDHCPDConfig(subnetUUID, nodeUUIDsStr)
+		err = CreateDHCPDConfig(subnetUUID, nodeUUIDsStr)
 		if err != nil {
-			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + " ToHarpCreateDHCPDConfig: " + err.Error())
+			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + " CreateDHCPDConfig: " + err.Error())
 			return
 		}
 
@@ -185,13 +185,13 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		var i = 1
 		for _, node := range nodes {
 			if node.UUID == subnet.Data.Subnet.LeaderNodeUUID {
-				_, err := ToFluteOnNode(node.PXEMacAddr)
+				_, err := OnNode(node.PXEMacAddr)
 				if err != nil {
-					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": ToFluteOnNode error: " + err.Error())
+					logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
 					return
 				}
 
-				logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": ToFluteOnNode: leader MAC Addr: " + node.PXEMacAddr)
+				logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode: leader MAC Addr: " + node.PXEMacAddr)
 
 				break
 			}
@@ -213,13 +213,13 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 				continue
 			}
 
-			_, err := ToFluteOnNode(node.PXEMacAddr)
+			_, err := OnNode(node.PXEMacAddr)
 			if err != nil {
-				logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": ToFluteOnNode error: " + err.Error())
+				logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
 				return
 			}
 
-			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": ToFluteOnNode: compute MAC Addr: " + node.PXEMacAddr)
+			logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": OnNode: compute MAC Addr: " + node.PXEMacAddr)
 		}
 
 		logger.Logger.Println("create_server_routine: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
