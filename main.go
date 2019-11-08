@@ -2,6 +2,7 @@ package main
 
 import (
 	"hcc/violin/action/graphql"
+	violinEnd "hcc/violin/end"
 	violinInit "hcc/violin/init"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
@@ -11,6 +12,9 @@ import (
 
 func main() {
 	err := violinInit.MainInit()
+	defer func() {
+		violinEnd.MainEnd()
+	}()
 	if err != nil {
 		panic(err)
 	}
