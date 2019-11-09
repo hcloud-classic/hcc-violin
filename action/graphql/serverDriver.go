@@ -14,21 +14,21 @@ import (
 	"time"
 )
 
-func createServer(params graphql.ResolveParams) (interface{}, error) {
-	logger.Logger.Println("createServer: Getting subnet info from harp module")
+func doGetSubnet(subnetUUID string) (net.IPNet, model.Subnet, error) {
+	var ipNet net.IPNet
+	var subnet model.Subnet
 
-	subnetUUID := params.Args["subnet_uuid"].(string)
 	subnet, err := GetSubnet(subnetUUID)
 	if err != nil {
 		logger.Logger.Println(err)
-		return nil, err
+		return ipNet, subnet, err
 	}
 
 	if len(subnet.ServerUUID) != 0 {
 		errMsg := "createServer: Selected subnet (subnetUUID=" + subnetUUID +
 			") is used by one of server (serverUUID=" + subnet.ServerUUID + ")"
 		logger.Logger.Println(errMsg)
-		return nil, errors.New(errMsg)
+		return ipNet, subnet, errors.New(errMsg)
 	}
 	logger.Logger.Println("createServer: subnet info: network IP=" + subnet.NetworkIP +
 		", netmask=" + subnet.Netmask)
@@ -37,36 +37,36 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 	if netIPnetworkIP == nil {
 		errMsg := "createServer: got wrong network IP"
 		logger.Logger.Println(errMsg)
-		return nil, errors.New(errMsg)
+		return ipNet, subnet, errors.New(errMsg)
 	}
 
 	mask, err := checkNetmask(subnet.Netmask)
 	if err != nil {
 		errMsg := "createServer: got wrong subnet mask"
 		logger.Logger.Println(errMsg)
-		return nil, errors.New(errMsg)
+		return ipNet, subnet, errors.New(errMsg)
 	}
 
-	ipNet := net.IPNet{
+	ipNet = net.IPNet{
 		IP:   netIPnetworkIP,
 		Mask: mask,
 	}
 
-	logger.Logger.Println("createServer: Generating server UUID")
+	return ipNet, subnet, nil
+}
+
+func doGenerateServerUUID() (string, error) {
 	out, err := uuid.NewV4()
 	if err != nil {
 		logger.Logger.Println(err)
-		return nil, err
+		return "", err
 	}
 	serverUUID := out.String()
 
-	userUUID := params.Args["user_uuid"].(string)
-	os := params.Args["os"].(string)
-	diskSize := params.Args["disk_size"].(int)
+	return serverUUID, nil
+}
 
-	// stage 1. select node - leader, compute
-	logger.Logger.Println("createServer: Getting available nodes from flute module")
-
+func doGetNodes(serverUUID string) ([]model.Node, error) {
 	listNodeData, err := GetNodes()
 	nodes := listNodeData.(ListNodeData).Data.ListNode
 	if err != nil {
@@ -78,8 +78,6 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 	var nrNodes = 2
 
 	// TODO : Get leader node's UUID from selected nodes. Currently, leader node's UUID is provided by subnet data.
-	// stage 1.1 update nodes info (server_uuid)
-	// stage 1.2 insert nodes to server_node table
 	var nodeUUIDs []string
 
 	if len(nodes) < nrNodes || len(nodes) == 0 {
@@ -116,8 +114,11 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		nodeSelected++
 	}
 
-	logger.Logger.Println("createServer: Getting IP address range")
-	firstIP, _ := cidr.AddressRange(&ipNet)
+	return nodes, nil
+}
+
+func doGetIPRange(serverSubnet net.IPNet, nodes []model.Node) (net.IP, net.IP) {
+	firstIP, _ := cidr.AddressRange(&serverSubnet)
 	firstIP = cidr.Inc(firstIP)
 	lastIP := firstIP
 
@@ -125,117 +126,205 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 		lastIP = cidr.Inc(lastIP)
 	}
 
-	go func() {
-		// stage 2. create volume - os, data
-		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Creating os volume")
-		var volumeOS = model.Volume{
-			Size:       model.OSDiskSize,
-			Filesystem: os,
-			ServerUUID: serverUUID,
-			UseType:    "os",
-			UserUUID:   userUUID,
-			NetworkIP:  subnet.NetworkIP,
+	return firstIP, lastIP
+}
+
+func doCreateVolume(serverUUID string, params graphql.ResolveParams, useType string, subnet model.Subnet) error {
+	userUUID := params.Args["user_uuid"].(string)
+	os := params.Args["os"].(string)
+	diskSize := params.Args["disk_size"].(int)
+
+	var volume model.Volume
+
+	switch useType {
+	case "os":
+		volume.Size = model.OSDiskSize
+		break
+	case "data":
+		volume.Size = diskSize
+		break
+	default:
+		return errors.New("got invalid useType")
+	}
+
+	volume = model.Volume{
+		Filesystem: os,
+		ServerUUID: serverUUID,
+		UseType:    useType,
+		UserUUID:   userUUID,
+		NetworkIP:  subnet.NetworkIP,
+	}
+
+	err := CreateDisk(volume, serverUUID)
+	if err != nil {
+		logger.Logger.Println("doCreateVolume: server_uuid=" + serverUUID + ": " + err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func doUpdateSubnet(subnetUUID string, serverUUID string) error {
+	_, err := UpdateSubnet(subnetUUID, serverUUID)
+	if err != nil {
+		logger.Logger.Println("doUpdateSubnet: server_uuid=" + serverUUID + " UpdateSubnet: " + err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func doCreateDHCPDConfig(subnetUUID string, serverUUID string, nodes []model.Node) error {
+	var nodeUUIDsStr = ""
+	for i, node := range nodes {
+		nodeUUIDsStr += node.UUID
+		if i != len(nodes)-1 {
+			nodeUUIDsStr += ","
 		}
-		err = CreateDisk(volumeOS, serverUUID)
-		if err != nil {
-			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + err.Error())
-			return
-		}
+	}
+	logger.Logger.Println("doCreateDHCPDConfig: server_uuid=" + serverUUID + " nodeUUIDsStr: " + nodeUUIDsStr)
 
-		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Creating data volume")
-		var volumeData = model.Volume{
-			Size:       diskSize,
-			Filesystem: os,
-			ServerUUID: serverUUID,
-			UseType:    "data",
-			UserUUID:   userUUID,
-			NetworkIP:  subnet.NetworkIP,
-		}
-		err = CreateDisk(volumeData, serverUUID)
-		if err != nil {
-			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + err.Error())
-			return
-		}
+	err := CreateDHCPDConfig(subnetUUID, nodeUUIDsStr)
+	if err != nil {
+		logger.Logger.Println("doCreateDHCPDConfig: server_uuid=" + serverUUID + " CreateDHCPDConfig: " + err.Error())
+		return err
+	}
 
-		// stage 3. UpdateSubnet (get subnet info -> create dhcpd config -> update_subnet)
-		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Updating subnet info")
-		_, err = UpdateSubnet(subnetUUID, serverUUID)
-		if err != nil {
-			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + " UpdateSubnet: " + err.Error())
-			return
-		}
+	return nil
+}
 
-		var nodeUUIDsStr = ""
-		for i, node := range nodes {
-			nodeUUIDsStr += node.UUID
-			if i != len(nodes)-1 {
-				nodeUUIDsStr += ","
-			}
-		}
-		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + " nodeUUIDsStr: " + nodeUUIDsStr)
-
-		err = CreateDHCPDConfig(subnetUUID, nodeUUIDsStr)
-		if err != nil {
-			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + " CreateDHCPDConfig: " + err.Error())
-			return
-		}
-
-		// stage 4. node power on
-		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Turning on leader node")
-		var i = 1
-		for _, node := range nodes {
-			if node.UUID == subnet.LeaderNodeUUID {
-				_, err := OnNode(node.PXEMacAddr)
-				if err != nil {
-					logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
-					return
-				}
-
-				logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode: leader MAC Addr: " + node.PXEMacAddr)
-
-				break
-			}
-
-			i++
-		}
-
-		if i > len(nodes) {
-			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Failed to find leader node")
-			return
-		}
-
-		// Wait for leader node to turned on
-		time.Sleep(time.Second * time.Duration(config.Flute.WaitForLeaderNodeTimeoutSec))
-
-		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
-		for _, node := range nodes {
-			if node.UUID == subnet.LeaderNodeUUID {
-				continue
-			}
-
+func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []model.Node) error {
+	printLogCreateServerRoutine(serverUUID, "Turning on leader node")
+	var i = 1
+	for _, node := range nodes {
+		if node.UUID == leaderNodeUUID {
 			_, err := OnNode(node.PXEMacAddr)
 			if err != nil {
-				logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
-				return
+				logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
+				return err
 			}
 
-			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode: compute MAC Addr: " + node.PXEMacAddr)
+			logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode: leader MAC Addr: " + node.PXEMacAddr)
+			break
 		}
 
-		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
+		i++
+	}
 
-		var controlAction = model.Control{
-			HccCommand: "hcc nodes add -n 2",
-			HccIPRange: "range " + firstIP.String() + " " + lastIP.String(),
-			ServerUUID: serverUUID,
+	if i > len(nodes) {
+		logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": " + "Failed to find leader node")
+		return errors.New("failed to find leader node")
+	}
+
+	// Wait for leader node to turned on
+	time.Sleep(time.Second * time.Duration(config.Flute.WaitForLeaderNodeTimeoutSec))
+
+	logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
+	for _, node := range nodes {
+		if node.UUID == leaderNodeUUID {
+			continue
 		}
 
-		// stage 5. viola install
-		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + "Running HccCLI")
-
-		err = rabbitmq.ViolinToViola(controlAction)
+		_, err := OnNode(node.PXEMacAddr)
 		if err != nil {
-			logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": " + err.Error())
+			logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
+			return err
+		}
+
+		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode: compute MAC Addr: " + node.PXEMacAddr)
+	}
+
+	return nil
+}
+
+func doHccCLI(serverUUID string, firstIP net.IP, lastIP net.IP) error {
+	logger.Logger.Println("doHccCLI: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
+
+	var controlAction = model.Control{
+		HccCommand: "hcc nodes add -n 2",
+		HccIPRange: "range " + firstIP.String() + " " + lastIP.String(),
+		ServerUUID: serverUUID,
+	}
+
+	err := rabbitmq.ViolinToViola(controlAction)
+	if err != nil {
+		logger.Logger.Println("doHccCLI: server_uuid=" + serverUUID + ": " + err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func printLogCreateServerRoutine(serverUUID string, msg string) {
+	logger.Logger.Println("doHccCLI: server_uuid=" + serverUUID + ": " + msg)
+}
+
+func createServer(params graphql.ResolveParams) (interface{}, error) {
+	subnetUUID := params.Args["subnet_uuid"].(string)
+
+	logger.Logger.Println("createServer: Getting subnet info from harp module")
+	serverSubnet, subnet, err := doGetSubnet(subnetUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Logger.Println("createServer: Generating server UUID")
+	serverUUID, err := doGenerateServerUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Logger.Println("createServer: Getting available nodes from flute module")
+	nodes, err := doGetNodes(serverUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Logger.Println("createServer: Getting IP address range")
+	firstIP, lastIP := doGetIPRange(serverSubnet, nodes)
+
+	go func() {
+		printLogCreateServerRoutine(serverUUID, "Creating os volume")
+		err = doCreateVolume(serverUUID, params, "os", subnet)
+		if err != nil {
+			printLogCreateServerRoutine(serverUUID, err.Error())
+			return
+		}
+
+		printLogCreateServerRoutine(serverUUID, "Creating data volume")
+		err = doCreateVolume(serverUUID, params, "data", subnet)
+		if err != nil {
+			printLogCreateServerRoutine(serverUUID, err.Error())
+			return
+		}
+
+		printLogCreateServerRoutine(serverUUID, "Updating subnet info")
+		err = doUpdateSubnet(subnetUUID, serverUUID)
+		if err != nil {
+			printLogCreateServerRoutine(serverUUID, err.Error())
+			return
+		}
+
+		printLogCreateServerRoutine(serverUUID, "Creating DHCPD config file")
+		err = doCreateDHCPDConfig(subnetUUID, serverUUID, nodes)
+		if err != nil {
+			printLogCreateServerRoutine(serverUUID, err.Error())
+			return
+		}
+
+		printLogCreateServerRoutine(serverUUID, "Turning on nodes")
+		err = doTurnOnNodes(serverUUID, subnet.LeaderNodeUUID, nodes)
+		if err != nil {
+			printLogCreateServerRoutine(serverUUID, err.Error())
+			return
+		}
+
+		printLogCreateServerRoutine(serverUUID, "Preparing controlAction")
+
+		printLogCreateServerRoutine(serverUUID, "Running Hcc CLI")
+		err = doHccCLI(serverUUID, firstIP, lastIP)
+		if err != nil {
+			printLogCreateServerRoutine(serverUUID, err.Error())
 			return
 		}
 		// while checking Cello DB cluster status is runnig in N times, until retry is expired
