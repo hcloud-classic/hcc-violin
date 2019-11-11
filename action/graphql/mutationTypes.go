@@ -3,6 +3,7 @@ package graphql
 import (
 	"errors"
 	"github.com/graphql-go/graphql"
+	"hcc/violin/action/graphql/type"
 	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
 	"net"
@@ -49,7 +50,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 	Fields: graphql.Fields{
 		// server DB
 		"create_server": &graphql.Field{
-			Type:        serverType,
+			Type:        _type.ServerType,
 			Description: "Create new server",
 			Args: graphql.FieldConfigArgument{
 				"subnet_uuid": &graphql.ArgumentConfig{
@@ -86,7 +87,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 			},
 		},
 		"update_server": &graphql.Field{
-			Type:        serverType,
+			Type:        _type.ServerType,
 			Description: "Update server",
 			Args: graphql.FieldConfigArgument{
 				"uuid": &graphql.ArgumentConfig{
@@ -126,7 +127,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 			},
 		},
 		"delete_server": &graphql.Field{
-			Type:        serverType,
+			Type:        _type.ServerType,
 			Description: "Delete server by uuid",
 			Args: graphql.FieldConfigArgument{
 				"uuid": &graphql.ArgumentConfig{
@@ -140,7 +141,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 		},
 		// server_node DB
 		"create_server_node": &graphql.Field{
-			Type:        serverNodeType,
+			Type:        _type.ServerNodeType,
 			Description: "Create new server_node",
 			Args: graphql.FieldConfigArgument{
 				"server_uuid": &graphql.ArgumentConfig{
@@ -155,7 +156,7 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 			},
 		},
 		"delete_server_node": &graphql.Field{
-			Type:        serverNodeType,
+			Type:        _type.ServerNodeType,
 			Description: "Delete server_node by uuid",
 			Args: graphql.FieldConfigArgument{
 				"uuid": &graphql.ArgumentConfig{

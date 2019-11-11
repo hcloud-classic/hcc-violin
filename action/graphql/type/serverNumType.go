@@ -1,8 +1,8 @@
-package graphql
+package _type
 
 import "github.com/graphql-go/graphql"
 
-var serverNum = graphql.NewObject(
+var ServerNum = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "ServerNum",
 		Fields: graphql.Fields{

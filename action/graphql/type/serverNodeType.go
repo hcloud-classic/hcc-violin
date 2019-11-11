@@ -1,8 +1,8 @@
-package graphql
+package _type
 
 import "github.com/graphql-go/graphql"
 
-var serverNodeType = graphql.NewObject(
+var ServerNodeType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "ServerNode",
 		Fields: graphql.Fields{
