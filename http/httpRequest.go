@@ -1,8 +1,9 @@
-package graphql
+package http
 
 import (
 	"encoding/json"
 	"errors"
+	violinData "hcc/violin/data"
 	"hcc/violin/lib/config"
 	"io/ioutil"
 	"net/http"
@@ -61,7 +62,7 @@ func DoHTTPRequest(moduleName string, needData bool, data interface{}, query str
 
 				switch moduleName {
 				case "flute":
-					listNodeData := data.(ListNodeData)
+					listNodeData := data.(violinData.ListNodeData)
 					err = json.Unmarshal([]byte(result), &listNodeData)
 					if err != nil {
 						return nil, err
@@ -69,7 +70,7 @@ func DoHTTPRequest(moduleName string, needData bool, data interface{}, query str
 
 					return listNodeData, nil
 				case "harp":
-					subnetData := data.(SubnetData)
+					subnetData := data.(violinData.SubnetData)
 					err = json.Unmarshal([]byte(result), &subnetData)
 					if err != nil {
 						return nil, err

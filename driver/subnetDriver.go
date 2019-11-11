@@ -1,6 +1,8 @@
-package graphql
+package driver
 
 import (
+	"hcc/violin/data"
+	"hcc/violin/http"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
 )
@@ -24,14 +26,14 @@ func GetSubnet(subnetUUID string) (model.Subnet, error) {
 		"	}\n" +
 		"}"
 
-	var subnetData SubnetData
+	var subnetData data.SubnetData
 
-	result, err := DoHTTPRequest("harp", true, subnetData, query)
+	result, err := http.DoHTTPRequest("harp", true, subnetData, query)
 	if err != nil {
 		return subnetData.Data.Subnet, err
 	}
 
-	return result.(SubnetData).Data.Subnet, nil
+	return result.(data.SubnetData).Data.Subnet, nil
 }
 
 // UpdateSubnet : Add server_uuid to subnet
@@ -43,14 +45,14 @@ func UpdateSubnet(subnetUUID string, serverUUID string) (interface{}, error) {
 		"	}\n" +
 		"}"
 
-	var subnetData SubnetData
+	var subnetData data.SubnetData
 
-	result, err := DoHTTPRequest("harp", true, subnetData, query)
+	result, err := http.DoHTTPRequest("harp", true, subnetData, query)
 	if err != nil {
 		return subnetData.Data.Subnet, err
 	}
 
-	return result.(SubnetData).Data.Subnet, nil
+	return result.(data.SubnetData).Data.Subnet, nil
 }
 
 // CreateDHCPDConfig : Add server_uuid to subnet
@@ -59,7 +61,7 @@ func CreateDHCPDConfig(subnetUUID string, nodeUUIDsStr string) error {
 		"	create_dhcpd_conf(subnet_uuid: \"" + subnetUUID + "\", node_uuids: \"" + nodeUUIDsStr + "\")\n" +
 		"}"
 
-	_, err := DoHTTPRequest("harp", false, nil, query)
+	_, err := http.DoHTTPRequest("harp", false, nil, query)
 	if err != nil {
 		return err
 	}
