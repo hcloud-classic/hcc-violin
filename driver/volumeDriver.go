@@ -1,6 +1,9 @@
-package graphql
+package driver
 
-import "hcc/violin/model"
+import (
+	"hcc/violin/http"
+	"hcc/violin/model"
+)
 
 // CreateDisk : Create os or data disk
 func CreateDisk(volume model.Volume, serverUUID string) error {
@@ -16,7 +19,7 @@ func CreateDisk(volume model.Volume, serverUUID string) error {
 		"	}\n" +
 		"}"
 
-	_, err := DoHTTPRequest("cello", false, nil, query)
+	_, err := http.DoHTTPRequest("cello", false, nil, query)
 	if err != nil {
 		return err
 	}
