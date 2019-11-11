@@ -1,4 +1,4 @@
-package graphql
+package driver
 
 import (
 	"errors"
@@ -7,12 +7,49 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/dao"
+	"hcc/violin/data"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
 	"net"
+	"strconv"
+	"strings"
 	"time"
 )
+
+func checkNetmask(netmask string) (net.IPMask, error) {
+	var err error
+
+	var maskPartsStr = strings.Split(netmask, ".")
+	if len(maskPartsStr) != 4 {
+		return nil, errors.New("netmask should be X.X.X.X form")
+	}
+
+	var maskParts [4]int
+	for i := range maskPartsStr {
+		maskParts[i], err = strconv.Atoi(maskPartsStr[i])
+		if err != nil {
+			return nil, errors.New("netmask contained none integer value")
+		}
+	}
+
+	var mask = net.IPv4Mask(
+		byte(maskParts[0]),
+		byte(maskParts[1]),
+		byte(maskParts[2]),
+		byte(maskParts[3]))
+
+	maskSizeOne, maskSizeBit := mask.Size()
+	if maskSizeOne == 0 && maskSizeBit == 0 {
+		return nil, errors.New("invalid netmask")
+	}
+
+	if maskSizeOne > 30 {
+		return nil, errors.New("netmask bit should be equal or smaller than 30")
+	}
+
+	return mask, err
+}
 
 func doGetSubnet(subnetUUID string) (net.IPNet, model.Subnet, error) {
 	var ipNet net.IPNet
@@ -68,7 +105,7 @@ func doGenerateServerUUID() (string, error) {
 
 func doGetNodes(serverUUID string) ([]model.Node, error) {
 	listNodeData, err := GetNodes()
-	nodes := listNodeData.(ListNodeData).Data.ListNode
+	nodes := listNodeData.(data.ListNodeData).Data.ListNode
 	if err != nil {
 		logger.Logger.Print(err)
 		return nil, err
@@ -259,7 +296,8 @@ func printLogCreateServerRoutine(serverUUID string, msg string) {
 	logger.Logger.Println("doHccCLI: server_uuid=" + serverUUID + ": " + msg)
 }
 
-func createServer(params graphql.ResolveParams) (interface{}, error) {
+// CreateServer : Do server creation works
+func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 	subnetUUID := params.Args["subnet_uuid"].(string)
 
 	logger.Logger.Println("createServer: Getting subnet info from harp module")
@@ -333,13 +371,15 @@ func createServer(params graphql.ResolveParams) (interface{}, error) {
 	return dao.CreateServer(serverUUID, params.Args)
 }
 
-func updateServer(params graphql.ResolveParams) (interface{}, error) {
+// UpdateServer : Do server updating works
+func UpdateServer(params graphql.ResolveParams) (interface{}, error) {
 	// TODO : Update server stages
 
 	return dao.UpdateServer(params.Args)
 }
 
-func deleteServer(params graphql.ResolveParams) (interface{}, error) {
+// DeleteServer : Do server deleting works
+func DeleteServer(params graphql.ResolveParams) (interface{}, error) {
 	// TODO : Delete server stages
 
 	return dao.DeleteServer(params.Args)
