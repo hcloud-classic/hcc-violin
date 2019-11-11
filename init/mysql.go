@@ -7,9 +7,6 @@ func mysqlInit() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = mysql.Db.Close()
-	}()
 
 	return nil
 }

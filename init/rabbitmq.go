@@ -10,12 +10,6 @@ func rabbitmqInit() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = rabbitmq.Channel.Close()
-	}()
-	defer func() {
-		_ = rabbitmq.Connection.Close()
-	}()
 
 	// Viola Section
 	err = rabbitmq.ViolaToViolin()

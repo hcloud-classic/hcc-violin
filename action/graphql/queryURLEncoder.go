@@ -1,7 +1,6 @@
 package graphql
 
 import (
-	"fmt"
 	"net/url"
 	"strings"
 )
@@ -21,8 +20,6 @@ func queryURLEncoder(queryString string) string {
 
 	urlEncode := compatibleRFC3986Encode(params.Encode())
 	urlEncode = urlEncode[len("query_string="):]
-
-	fmt.Println("urlEncode", urlEncode)
 
 	return urlEncode
 }
