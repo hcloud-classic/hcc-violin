@@ -323,50 +323,51 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 
 	go func(routineServerUUID string, routineSubnet model.Subnet, routineNodes []model.Node,
 		routineParams graphql.ResolveParams, routineFirstIP net.IP, routineLastIP net.IP) {
+		var routineError error
+
 		printLogCreateServerRoutine(routineServerUUID, "Creating os volume")
-		err = doCreateVolume(routineServerUUID, routineParams, "os", routineSubnet)
-		if err != nil {
-			printLogCreateServerRoutine(routineServerUUID, err.Error())
-			return
+		routineError = doCreateVolume(routineServerUUID, routineParams, "os", routineSubnet)
+		if routineError != nil {
+			goto ERROR
 		}
 
 		printLogCreateServerRoutine(routineServerUUID, "Creating data volume")
-		err = doCreateVolume(routineServerUUID, routineParams, "data", routineSubnet)
-		if err != nil {
-			printLogCreateServerRoutine(routineServerUUID, err.Error())
-			return
+		routineError = doCreateVolume(routineServerUUID, routineParams, "data", routineSubnet)
+		if routineError != nil {
+			goto ERROR
 		}
 
 		printLogCreateServerRoutine(routineServerUUID, "Updating subnet info")
-		err = doUpdateSubnet(routineSubnet.UUID, routineServerUUID)
-		if err != nil {
-			printLogCreateServerRoutine(routineServerUUID, err.Error())
-			return
+		routineError = doUpdateSubnet(routineSubnet.UUID, routineServerUUID)
+		if routineError != nil {
+			goto ERROR
 		}
 
 		printLogCreateServerRoutine(routineServerUUID, "Creating DHCPD config file")
-		err = doCreateDHCPDConfig(routineSubnet.UUID, routineServerUUID, routineNodes)
-		if err != nil {
-			printLogCreateServerRoutine(routineServerUUID, err.Error())
-			return
+		routineError = doCreateDHCPDConfig(routineSubnet.UUID, routineServerUUID, routineNodes)
+		if routineError != nil {
+			goto ERROR
 		}
 
 		printLogCreateServerRoutine(routineServerUUID, "Turning on nodes")
-		err = doTurnOnNodes(routineServerUUID, routineSubnet.LeaderNodeUUID, routineNodes)
-		if err != nil {
-			printLogCreateServerRoutine(routineServerUUID, err.Error())
-			return
+		routineError = doTurnOnNodes(routineServerUUID, routineSubnet.LeaderNodeUUID, routineNodes)
+		if routineError != nil {
+			goto ERROR
 		}
 
 		printLogCreateServerRoutine(routineServerUUID, "Preparing controlAction")
 
 		printLogCreateServerRoutine(routineServerUUID, "Running Hcc CLI")
-		err = doHccCLI(routineServerUUID, routineFirstIP, routineLastIP)
-		if err != nil {
-			printLogCreateServerRoutine(routineServerUUID, err.Error())
-			return
+		routineError = doHccCLI(routineServerUUID, routineFirstIP, routineLastIP)
+		if routineError != nil {
+			goto ERROR
 		}
 		// while checking Cello DB cluster status is runnig in N times, until retry is expired
+
+		return
+
+		ERROR:
+			printLogCreateServerRoutine(routineServerUUID, err.Error())
 	}(serverUUID, subnet, nodes, params, firstIP, lastIP)
 
 	return dao.CreateServer(serverUUID, params.Args)
