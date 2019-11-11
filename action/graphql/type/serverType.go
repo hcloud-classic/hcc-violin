@@ -1,7 +1,8 @@
-package _type
+package graphqlType
 
 import "github.com/graphql-go/graphql"
 
+// ServerType : Graphql object type of Server
 var ServerType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "Server",

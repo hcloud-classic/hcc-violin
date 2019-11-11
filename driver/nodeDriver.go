@@ -1,6 +1,8 @@
-package graphql
+package driver
 
 import (
+	"hcc/violin/data"
+	"hcc/violin/http"
 	"hcc/violin/model"
 )
 
@@ -10,7 +12,7 @@ func OnNode(macAddr string) (interface{}, error) {
 		"	on_node(mac:\"" + macAddr + "\")\n" +
 		"}"
 
-	result, err := DoHTTPRequest("flute", false, nil, query)
+	result, err := http.DoHTTPRequest("flute", false, nil, query)
 	if err != nil {
 		return "", err
 	}
@@ -35,9 +37,9 @@ func GetNodes() (interface{}, error) {
 		"	}\n" +
 		"}"
 
-	var listNodeData ListNodeData
+	var listNodeData data.ListNodeData
 
-	result, err := DoHTTPRequest("flute", true, listNodeData, query)
+	result, err := http.DoHTTPRequest("flute", true, listNodeData, query)
 	if err != nil {
 		return listNodeData, err
 	}
@@ -53,7 +55,7 @@ func UpdateNode(node model.Node, serverUUID string) error {
 		"	}\n" +
 		"}"
 
-	_, err := DoHTTPRequest("flute", false, nil, query)
+	_, err := http.DoHTTPRequest("flute", false, nil, query)
 	if err != nil {
 		return err
 	}

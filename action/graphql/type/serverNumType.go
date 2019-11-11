@@ -1,10 +1,11 @@
-package _type
+package graphqlType
 
 import "github.com/graphql-go/graphql"
 
-var ServerNum = graphql.NewObject(
+// ServerNumType : Graphql object type of ServerNumType
+var ServerNumType = graphql.NewObject(
 	graphql.ObjectConfig{
-		Name: "ServerNum",
+		Name: "ServerNumType",
 		Fields: graphql.Fields{
 			"number": &graphql.Field{
 				Type: graphql.Int,
