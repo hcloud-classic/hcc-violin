@@ -293,7 +293,7 @@ func doHccCLI(serverUUID string, firstIP net.IP, lastIP net.IP) error {
 }
 
 func printLogCreateServerRoutine(serverUUID string, msg string) {
-	logger.Logger.Println("doHccCLI: server_uuid=" + serverUUID + ": " + msg)
+	logger.Logger.Println("createServerRoutine: server_uuid=" + serverUUID + ": " + msg)
 }
 
 // CreateServer : Do server creation works
