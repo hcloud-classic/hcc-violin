@@ -2,9 +2,6 @@ package driver
 
 import (
 	"errors"
-	"github.com/apparentlymart/go-cidr/cidr"
-	"github.com/graphql-go/graphql"
-	uuid "github.com/nu7hatch/gouuid"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/dao"
 	"hcc/violin/data"
@@ -15,6 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/graphql-go/graphql"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 func checkNetmask(netmask string) (net.IPMask, error) {
@@ -278,9 +279,9 @@ func doHccCLI(serverUUID string, firstIP net.IP, lastIP net.IP) error {
 	logger.Logger.Println("doHccCLI: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
 
 	var controlAction = model.Control{
-		HccCommand: "hcc nodes add -n 2",
-		HccIPRange: "range " + firstIP.String() + " " + lastIP.String(),
-		ServerUUID: serverUUID,
+		// HccCommand: "hcc nodes add -n 2",
+		// HccIPRange: "range " + firstIP.String() + " " + lastIP.String(),
+		Publisher: serverUUID,
 	}
 
 	err := rabbitmq.ViolinToViola(controlAction)
@@ -366,8 +367,8 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 
 		return
 
-		ERROR:
-			printLogCreateServerRoutine(routineServerUUID, err.Error())
+	ERROR:
+		printLogCreateServerRoutine(routineServerUUID, err.Error())
 	}(serverUUID, subnet, nodes, params, firstIP, lastIP)
 
 	return dao.CreateServer(serverUUID, params.Args)

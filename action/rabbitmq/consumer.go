@@ -50,20 +50,13 @@ func ViolaToViolin() error {
 			// Violin receive cluster veryfied message, will handle message within graphql
 			// update cluster status at cello DB's status
 			//*************************** */
-			// status, err := controlcli.HccCli(control.HccCommand, control.HccIPRange)
-			// if !status && err != nil {
-			// 	logger.Logger.Println("ConsumeViola: Faild execution command [", control.HccCommand, "]")
-			// } else {
-			// 	logger.Logger.Println("ConsumeViola: Success execution command [", control.HccCommand, "]")
-
-			// }
 			//
 			args := make(map[string]interface{})
-			args["uuid"] = control.ServerUUID
-			args["status"] = control.HccCommand
+			args["uuid"] = control.Control.HccType.ServerUUID
+			args["status"] = control.Control.ActionResult // Running, Failed
 			//TODO: queue get_nodes to flute module
 			_, err = dao.UpdateServer(args)
-			//logger.Logger.Println("update_subnet: UUID = " + subnet.UUID + ": " + result)
+			logger.Logger.Println(" UUID = " + control.Control.HccType.ServerUUID + ": " + control.Control.ActionResult)
 		}
 	}()
 
