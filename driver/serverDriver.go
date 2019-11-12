@@ -23,7 +23,7 @@ func checkNetmask(netmask string) (net.IPMask, error) {
 
 	var maskPartsStr = strings.Split(netmask, ".")
 	if len(maskPartsStr) != 4 {
-		return nil, errors.New("netmask should be X.X.X.X form")
+		return nil, errors.New(netmask + " is invalid, netmask should be X.X.X.X form")
 	}
 
 	var maskParts [4]int
@@ -278,10 +278,24 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []model.Node)
 func doHccCLI(serverUUID string, firstIP net.IP, lastIP net.IP) error {
 	logger.Logger.Println("doHccCLI: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
 
-	var controlAction = model.Control{
-		// HccCommand: "hcc nodes add -n 2",
-		// HccIPRange: "range " + firstIP.String() + " " + lastIP.String(),
-		Publisher: serverUUID,
+	hccaction := model.HccAction{
+
+		ActionArea:  "nodes",
+		ActionClass: "add",
+		ActionScope: "0",
+		HccIPRange:  string(firstIP) + " " + string(lastIP),
+		ServerUUID:  serverUUID,
+	}
+
+	hcctype := model.Action{
+		ActionType: "hcc",
+		HccType:    hccaction,
+	}
+
+	controlAction := model.Control{
+		Publisher: "violin",
+		Receiver:  "violin",
+		Control:   hcctype,
 	}
 
 	err := rabbitmq.ViolinToViola(controlAction)

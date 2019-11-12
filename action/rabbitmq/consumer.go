@@ -45,7 +45,7 @@ func ViolaToViolin() error {
 				logger.Logger.Println("ViolaToViolin: Failed to unmarshal viola_to_violin data")
 				// return
 			}
-			logger.Logger.Println("RabbitmQ : ", control)
+			logger.Logger.Println("[Violin]RabbitmQ Receive: ", control)
 			//To-Do******************************/
 			// Violin receive cluster veryfied message, will handle message within graphql
 			// update cluster status at cello DB's status
