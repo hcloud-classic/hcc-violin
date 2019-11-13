@@ -283,7 +283,7 @@ func doHccCLI(serverUUID string, firstIP net.IP, lastIP net.IP) error {
 		ActionArea:  "nodes",
 		ActionClass: "add",
 		ActionScope: "0",
-		HccIPRange:  string(firstIP) + " " + string(lastIP),
+		HccIPRange:  firstIP.String() + " " + lastIP.String(),
 		ServerUUID:  serverUUID,
 	}
 
@@ -381,8 +381,8 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 
 		return
 
-		ERROR:
-			printLogCreateServerRoutine(routineServerUUID, routineError.Error())
+	ERROR:
+		printLogCreateServerRoutine(routineServerUUID, routineError.Error())
 	}(serverUUID, subnet, nodes, params, firstIP, lastIP)
 
 	return dao.CreateServer(serverUUID, params.Args)
