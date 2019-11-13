@@ -167,7 +167,7 @@ func doGetIPRange(serverSubnet net.IPNet, nodes []model.Node) (net.IP, net.IP) {
 	return firstIP, lastIP
 }
 
-func doCreateVolume(serverUUID string, params graphql.ResolveParams, useType string, subnet model.Subnet) error {
+func doCreateVolume(serverUUID string, params graphql.ResolveParams, useType string, firstIP net.IP) error {
 	userUUID := params.Args["user_uuid"].(string)
 	os := params.Args["os"].(string)
 	diskSize := params.Args["disk_size"].(int)
@@ -190,7 +190,7 @@ func doCreateVolume(serverUUID string, params graphql.ResolveParams, useType str
 		ServerUUID: serverUUID,
 		UseType:    useType,
 		UserUUID:   userUUID,
-		NetworkIP:  subnet.NetworkIP,
+		NetworkIP:  firstIP.String(),
 	}
 
 	err := CreateDisk(volume, serverUUID)
@@ -341,13 +341,13 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 		var routineError error
 
 		printLogCreateServerRoutine(routineServerUUID, "Creating os volume")
-		routineError = doCreateVolume(routineServerUUID, routineParams, "os", routineSubnet)
+		routineError = doCreateVolume(routineServerUUID, routineParams, "os", routineFirstIP)
 		if routineError != nil {
 			goto ERROR
 		}
 
 		printLogCreateServerRoutine(routineServerUUID, "Creating data volume")
-		routineError = doCreateVolume(routineServerUUID, routineParams, "data", routineSubnet)
+		routineError = doCreateVolume(routineServerUUID, routineParams, "data", routineFirstIP)
 		if routineError != nil {
 			goto ERROR
 		}
