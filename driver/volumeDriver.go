@@ -3,12 +3,13 @@ package driver
 import (
 	"hcc/violin/http"
 	"hcc/violin/model"
+	"strconv"
 )
 
 // CreateDisk : Create os or data disk
 func CreateDisk(volume model.Volume, serverUUID string) error {
 	query := "mutation _ {\n" +
-		"	create_volume(size:0, filesystem:\"" + volume.Filesystem + "\", server_uuid:\"" + serverUUID + "\", use_type:\"" + volume.UseType + "\", user_uuid:\"" + volume.UseType + "\", network_ip:\"" + volume.NetworkIP + "\") {\n" +
+		"	create_volume(size:" + strconv.Itoa(volume.Size) + ", filesystem:\"" + volume.Filesystem + "\", server_uuid:\"" + serverUUID + "\", use_type:\"" + volume.UseType + "\", user_uuid:\"" + volume.UseType + "\", network_ip:\"" + volume.NetworkIP + "\") {\n" +
 		"		uuid\n" +
 		"		size\n" +
 		"		filesystem\n" +
