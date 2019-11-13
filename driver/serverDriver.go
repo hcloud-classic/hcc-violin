@@ -173,19 +173,21 @@ func doCreateVolume(serverUUID string, params graphql.ResolveParams, useType str
 	diskSize := params.Args["disk_size"].(int)
 
 	var volume model.Volume
+	var size int
 
 	switch useType {
 	case "os":
-		volume.Size = model.OSDiskSize
+		size = model.OSDiskSize
 		break
 	case "data":
-		volume.Size = diskSize
+		size = diskSize
 		break
 	default:
 		return errors.New("got invalid useType")
 	}
 
 	volume = model.Volume{
+		Size: size,
 		Filesystem: os,
 		ServerUUID: serverUUID,
 		UseType:    useType,
