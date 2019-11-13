@@ -283,7 +283,7 @@ func doHccCLI(serverUUID string, firstIP net.IP, lastIP net.IP) error {
 		ActionArea:  "nodes",
 		ActionClass: "add",
 		ActionScope: "0",
-		HccIPRange:  string(firstIP) + " " + string(lastIP),
+		HccIPRange:  firstIP.String() + " " + lastIP.String(),
 		ServerUUID:  serverUUID,
 	}
 
