@@ -381,8 +381,8 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 
 		return
 
-		ERROR:
-			printLogCreateServerRoutine(routineServerUUID, routineError.Error())
+	ERROR:
+		printLogCreateServerRoutine(routineServerUUID, routineError.Error())
 	}(serverUUID, subnet, nodes, params, firstIP, lastIP)
 
 	return dao.CreateServer(serverUUID, params.Args)
