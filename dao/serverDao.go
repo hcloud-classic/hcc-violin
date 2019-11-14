@@ -108,6 +108,9 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	if statusOk {
 		sql += " and status = '" + status + "'"
 	}
+	if userUUIDOk {
+		sql += " and user_uuid = '" + userUUID + "'"
+	}
 
 	sql += " and user_uuid = ? order by created_at desc limit ? offset ?"
 	logger.Logger.Println("list_server sql  : ", sql)
