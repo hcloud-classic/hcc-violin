@@ -74,9 +74,6 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	status, statusOk := args["status"].(string)
 	userUUID, userUUIDOk := args["user_uuid"].(string)
 
-	if !userUUIDOk {
-		return nil, errors.New("need userUUID argument")
-	}
 	row, rowOk := args["row"].(int)
 	page, pageOk := args["page"].(int)
 	if !rowOk || !pageOk {
