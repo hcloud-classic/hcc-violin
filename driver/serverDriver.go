@@ -315,7 +315,10 @@ func printLogCreateServerRoutine(serverUUID string, msg string) {
 
 // CreateServer : Do server creation works
 func CreateServer(params graphql.ResolveParams) (interface{}, error) {
-	subnetUUID := params.Args["subnet_uuid"].(string)
+	subnetUUID, subnetUUIDOk := params.Args["subnet_uuid"].(string)
+	if !subnetUUIDOk {
+		return nil, errors.New("need a subnetUUID argument")
+	}
 
 	logger.Logger.Println("createServer: Getting subnet info from harp module")
 	serverSubnet, subnet, err := doGetSubnet(subnetUUID)
