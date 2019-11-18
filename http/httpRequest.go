@@ -14,17 +14,19 @@ import (
 
 // DoHTTPRequest : Send http request to other modules with GraphQL query string.
 func DoHTTPRequest(moduleName string, needData bool, data interface{}, query string) (interface{}, error) {
-	client := &http.Client{Timeout: time.Duration(config.Flute.RequestTimeoutMs) * time.Millisecond}
-
+	var timeout time.Duration
 	var url = "http://"
 	switch moduleName {
 	case "flute":
+		timeout = time.Duration(config.Flute.RequestTimeoutMs)
 		url += config.Flute.ServerAddress + ":" + strconv.Itoa(int(config.Flute.ServerPort))
 		break
 	case "harp":
+		timeout = time.Duration(config.Harp.RequestTimeoutMs)
 		url += config.Harp.ServerAddress + ":" + strconv.Itoa(int(config.Harp.ServerPort))
 		break
 	case "cello":
+		timeout = time.Duration(config.Cello.RequestTimeoutMs)
 		url += config.Cello.ServerAddress + ":" + strconv.Itoa(int(config.Cello.ServerPort))
 		break
 	default:
@@ -32,6 +34,7 @@ func DoHTTPRequest(moduleName string, needData bool, data interface{}, query str
 	}
 	url += "/graphql?query=" + queryURLEncoder(query)
 
+	client := &http.Client{Timeout: timeout * time.Millisecond}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err

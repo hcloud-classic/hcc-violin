@@ -38,9 +38,6 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				"disk_size": &graphql.ArgumentConfig{
 					Type: graphql.Int,
 				},
-				"status": &graphql.ArgumentConfig{
-					Type: graphql.String,
-				},
 				"user_uuid": &graphql.ArgumentConfig{
 					Type: graphql.String,
 				},

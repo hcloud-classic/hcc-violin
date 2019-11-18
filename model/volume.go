@@ -2,9 +2,6 @@ package model
 
 import "time"
 
-// DefaultPXEdir : Default PXE directory
-var DefaultPXEdir = "/root/boottp/HCC"
-
 // OSDiskSize : Disk size for OS use
 var OSDiskSize = 20
 
