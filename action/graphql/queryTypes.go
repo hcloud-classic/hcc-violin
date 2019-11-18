@@ -130,7 +130,7 @@ var queryTypes = graphql.NewObject(
 				Args:        graphql.FieldConfigArgument{},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					logger.Logger.Println("Resolving: all_server_node")
-					return dao.ReadServerNodeAll(params.Args)
+					return dao.ReadServerNodeAll()
 				},
 			},
 		},
