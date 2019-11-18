@@ -118,9 +118,6 @@ var queryTypes = graphql.NewObject(
 					"server_uuid": &graphql.ArgumentConfig{
 						Type: graphql.String,
 					},
-					"node_uuid": &graphql.ArgumentConfig{
-						Type: graphql.String,
-					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					logger.Logger.Println("Resolving: list_server_node")
