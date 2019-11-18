@@ -341,6 +341,12 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 	logger.Logger.Println("createServer: Getting IP address range")
 	firstIP, lastIP := doGetIPRange(serverSubnet, nodes)
 
+	status := "creating"
+	_, err = dao.CreateServer(serverUUID, status, params.Args)
+	if err != nil {
+		return nil, errors.New("failed to add new server as creating status")
+	}
+
 	go func(routineServerUUID string, routineSubnet model.Subnet, routineNodes []model.Node,
 		routineParams graphql.ResolveParams, routineFirstIP net.IP, routineLastIP net.IP) {
 		var routineError error
@@ -388,9 +394,15 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 
 	ERROR:
 		printLogCreateServerRoutine(routineServerUUID, routineError.Error())
+		status := "failed"
+		_, err = dao.CreateServer(serverUUID, status, params.Args)
+		if err != nil {
+			logger.Logger.Println("createServerRoutine: Failed to add new server as failed status")
+		}
 	}(serverUUID, subnet, nodes, params, firstIP, lastIP)
 
-	return dao.CreateServer(serverUUID, params.Args)
+	status = "running"
+	return dao.CreateServer(serverUUID, status, params.Args)
 }
 
 // UpdateServer : Do server updating works
