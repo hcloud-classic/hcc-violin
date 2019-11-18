@@ -2,9 +2,6 @@ package driver
 
 import (
 	"errors"
-	"github.com/apparentlymart/go-cidr/cidr"
-	"github.com/graphql-go/graphql"
-	uuid "github.com/nu7hatch/gouuid"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/dao"
 	"hcc/violin/data"
@@ -15,6 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/graphql-go/graphql"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 func checkNetmask(netmask string) (net.IPMask, error) {
@@ -22,7 +23,7 @@ func checkNetmask(netmask string) (net.IPMask, error) {
 
 	var maskPartsStr = strings.Split(netmask, ".")
 	if len(maskPartsStr) != 4 {
-		return nil, errors.New("netmask should be X.X.X.X form")
+		return nil, errors.New(netmask + " is invalid, netmask should be X.X.X.X form")
 	}
 
 	var maskParts [4]int
@@ -166,30 +167,32 @@ func doGetIPRange(serverSubnet net.IPNet, nodes []model.Node) (net.IP, net.IP) {
 	return firstIP, lastIP
 }
 
-func doCreateVolume(serverUUID string, params graphql.ResolveParams, useType string, subnet model.Subnet) error {
+func doCreateVolume(serverUUID string, params graphql.ResolveParams, useType string, firstIP net.IP) error {
 	userUUID := params.Args["user_uuid"].(string)
 	os := params.Args["os"].(string)
 	diskSize := params.Args["disk_size"].(int)
 
 	var volume model.Volume
+	var size int
 
 	switch useType {
 	case "os":
-		volume.Size = model.OSDiskSize
+		size = model.OSDiskSize
 		break
 	case "data":
-		volume.Size = diskSize
+		size = diskSize
 		break
 	default:
 		return errors.New("got invalid useType")
 	}
 
 	volume = model.Volume{
+		Size: size,
 		Filesystem: os,
 		ServerUUID: serverUUID,
 		UseType:    useType,
 		UserUUID:   userUUID,
-		NetworkIP:  subnet.NetworkIP,
+		NetworkIP:  firstIP.String(),
 	}
 
 	err := CreateDisk(volume, serverUUID)
@@ -277,10 +280,24 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []model.Node)
 func doHccCLI(serverUUID string, firstIP net.IP, lastIP net.IP) error {
 	logger.Logger.Println("doHccCLI: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
 
-	var controlAction = model.Control{
-		HccCommand: "hcc nodes add -n 2",
-		HccIPRange: "range " + firstIP.String() + " " + lastIP.String(),
-		ServerUUID: serverUUID,
+	hccaction := model.HccAction{
+
+		ActionArea:  "nodes",
+		ActionClass: "add",
+		ActionScope: "0",
+		HccIPRange:  firstIP.String() + " " + lastIP.String(),
+		ServerUUID:  serverUUID,
+	}
+
+	hcctype := model.Action{
+		ActionType: "hcc",
+		HccType:    hccaction,
+	}
+
+	controlAction := model.Control{
+		Publisher: "violin",
+		Receiver:  "violin",
+		Control:   hcctype,
 	}
 
 	err := rabbitmq.ViolinToViola(controlAction)
@@ -293,12 +310,15 @@ func doHccCLI(serverUUID string, firstIP net.IP, lastIP net.IP) error {
 }
 
 func printLogCreateServerRoutine(serverUUID string, msg string) {
-	logger.Logger.Println("doHccCLI: server_uuid=" + serverUUID + ": " + msg)
+	logger.Logger.Println("createServerRoutine: server_uuid=" + serverUUID + ": " + msg)
 }
 
 // CreateServer : Do server creation works
 func CreateServer(params graphql.ResolveParams) (interface{}, error) {
-	subnetUUID := params.Args["subnet_uuid"].(string)
+	subnetUUID, subnetUUIDOk := params.Args["subnet_uuid"].(string)
+	if !subnetUUIDOk {
+		return nil, errors.New("need a subnetUUID argument")
+	}
 
 	logger.Logger.Println("createServer: Getting subnet info from harp module")
 	serverSubnet, subnet, err := doGetSubnet(subnetUUID)
@@ -321,54 +341,68 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 	logger.Logger.Println("createServer: Getting IP address range")
 	firstIP, lastIP := doGetIPRange(serverSubnet, nodes)
 
-	go func() {
-		printLogCreateServerRoutine(serverUUID, "Creating os volume")
-		err = doCreateVolume(serverUUID, params, "os", subnet)
-		if err != nil {
-			printLogCreateServerRoutine(serverUUID, err.Error())
-			return
+	status := "creating"
+	_, err = dao.CreateServer(serverUUID, status, params.Args)
+	if err != nil {
+		return nil, errors.New("failed to add new server as creating status")
+	}
+
+	go func(routineServerUUID string, routineSubnet model.Subnet, routineNodes []model.Node,
+		routineParams graphql.ResolveParams, routineFirstIP net.IP, routineLastIP net.IP) {
+		var routineError error
+
+		printLogCreateServerRoutine(routineServerUUID, "Creating os volume")
+		routineError = doCreateVolume(routineServerUUID, routineParams, "os", routineFirstIP)
+		if routineError != nil {
+			goto ERROR
 		}
 
-		printLogCreateServerRoutine(serverUUID, "Creating data volume")
-		err = doCreateVolume(serverUUID, params, "data", subnet)
-		if err != nil {
-			printLogCreateServerRoutine(serverUUID, err.Error())
-			return
+		printLogCreateServerRoutine(routineServerUUID, "Creating data volume")
+		routineError = doCreateVolume(routineServerUUID, routineParams, "data", routineFirstIP)
+		if routineError != nil {
+			goto ERROR
 		}
 
-		printLogCreateServerRoutine(serverUUID, "Updating subnet info")
-		err = doUpdateSubnet(subnetUUID, serverUUID)
-		if err != nil {
-			printLogCreateServerRoutine(serverUUID, err.Error())
-			return
+		printLogCreateServerRoutine(routineServerUUID, "Updating subnet info")
+		routineError = doUpdateSubnet(routineSubnet.UUID, routineServerUUID)
+		if routineError != nil {
+			goto ERROR
 		}
 
-		printLogCreateServerRoutine(serverUUID, "Creating DHCPD config file")
-		err = doCreateDHCPDConfig(subnetUUID, serverUUID, nodes)
-		if err != nil {
-			printLogCreateServerRoutine(serverUUID, err.Error())
-			return
+		printLogCreateServerRoutine(routineServerUUID, "Creating DHCPD config file")
+		routineError = doCreateDHCPDConfig(routineSubnet.UUID, routineServerUUID, routineNodes)
+		if routineError != nil {
+			goto ERROR
 		}
 
-		printLogCreateServerRoutine(serverUUID, "Turning on nodes")
-		err = doTurnOnNodes(serverUUID, subnet.LeaderNodeUUID, nodes)
-		if err != nil {
-			printLogCreateServerRoutine(serverUUID, err.Error())
-			return
+		printLogCreateServerRoutine(routineServerUUID, "Turning on nodes")
+		routineError = doTurnOnNodes(routineServerUUID, routineSubnet.LeaderNodeUUID, routineNodes)
+		if routineError != nil {
+			goto ERROR
 		}
 
-		printLogCreateServerRoutine(serverUUID, "Preparing controlAction")
+		printLogCreateServerRoutine(routineServerUUID, "Preparing controlAction")
 
-		printLogCreateServerRoutine(serverUUID, "Running Hcc CLI")
-		err = doHccCLI(serverUUID, firstIP, lastIP)
-		if err != nil {
-			printLogCreateServerRoutine(serverUUID, err.Error())
-			return
+		printLogCreateServerRoutine(routineServerUUID, "Running Hcc CLI")
+		routineError = doHccCLI(routineServerUUID, routineFirstIP, routineLastIP)
+		if routineError != nil {
+			goto ERROR
 		}
 		// while checking Cello DB cluster status is runnig in N times, until retry is expired
-	}()
 
-	return dao.CreateServer(serverUUID, params.Args)
+		return
+
+	ERROR:
+		printLogCreateServerRoutine(routineServerUUID, routineError.Error())
+		status := "failed"
+		_, err = dao.CreateServer(serverUUID, status, params.Args)
+		if err != nil {
+			logger.Logger.Println("createServerRoutine: Failed to add new server as failed status")
+		}
+	}(serverUUID, subnet, nodes, params, firstIP, lastIP)
+
+	status = "running"
+	return dao.CreateServer(serverUUID, status, params.Args)
 }
 
 // UpdateServer : Do server updating works

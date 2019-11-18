@@ -11,7 +11,7 @@ import (
 // ViolinToViola : Publish 'run_hcc_cli' queues to RabbitMQ channel
 func ViolinToViola(action model.Control) error {
 	qCreate, err := Channel.QueueDeclare(
-		"violin_to_viola",
+		"to_viola",
 		false,
 		false,
 		false,

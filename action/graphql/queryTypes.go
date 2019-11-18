@@ -118,9 +118,6 @@ var queryTypes = graphql.NewObject(
 					"server_uuid": &graphql.ArgumentConfig{
 						Type: graphql.String,
 					},
-					"node_uuid": &graphql.ArgumentConfig{
-						Type: graphql.String,
-					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					logger.Logger.Println("Resolving: list_server_node")
@@ -133,7 +130,7 @@ var queryTypes = graphql.NewObject(
 				Args:        graphql.FieldConfigArgument{},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					logger.Logger.Println("Resolving: all_server_node")
-					return dao.ReadServerNodeAll(params.Args)
+					return dao.ReadServerNodeAll()
 				},
 			},
 		},
