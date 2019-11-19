@@ -10,6 +10,33 @@ import (
 	"time"
 )
 
+func getStatus(input string) (string, error) {
+	var status string
+
+	switch input {
+	case "creating":
+	case "Creating":
+		status = "Creating"
+		break
+	case "Running":
+	case "running":
+		status = "Running"
+		break
+	case "Stopped":
+	case "stopped":
+		status = "Stopped"
+		break
+	case "Failed":
+	case "failed":
+		status = "Failed"
+		break
+	default:
+		return "", errors.New("unknown status")
+	}
+
+	return status, nil
+}
+
 // ReadServer - cgs
 func ReadServer(args map[string]interface{}) (interface{}, error) {
 	var server model.Server
@@ -209,25 +236,9 @@ func ReadServerNum() (model.ServerNum, error) {
 
 // CreateServer - cgs
 func CreateServer(serverUUID string, status string, args map[string]interface{}) (interface{}, error) {
-	switch status {
-	case "creating":
-	case "Creating":
-		status = "Creating"
-		break
-	case "Running":
-	case "running":
-		status = "Running"
-		break
-	case "Stopped":
-	case "stopped":
-		status = "Stopped"
-		break
-	case "Failed":
-	case "failed":
-		status = "Failed"
-		break
-	default:
-		return nil, errors.New("unknown status")
+	status, err := getStatus(status)
+	if err != nil {
+		return nil, err
 	}
 
 	server := model.Server{
@@ -278,8 +289,6 @@ func checkUpdateServerArgs(args map[string]interface{}) bool {
 
 // UpdateServer - cgs
 func UpdateServer(args map[string]interface{}) (interface{}, error) {
-	var err error
-
 	requestedUUID, requestedUUIDOk := args["uuid"].(string)
 	subnetUUID, subnetUUIDOk := args["subnet_uuid"].(string)
 	os, osOk := args["os"].(string)
@@ -291,25 +300,9 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	status, statusOk := args["status"].(string)
 	userUUID, userUUIDOk := args["user_uuid"].(string)
 
-	switch status {
-	case "creating":
-	case "Creating":
-		status = "Creating"
-		break
-	case "Running":
-	case "running":
-		status = "Running"
-		break
-	case "Stopped":
-	case "stopped":
-		status = "Stopped"
-		break
-	case "Failed":
-	case "failed":
-		status = "Failed"
-		break
-	default:
-		return nil, errors.New("unknown status")
+	status, err := getStatus(status)
+	if err != nil {
+		return nil, err
 	}
 
 	server := new(model.Server)
@@ -381,7 +374,7 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 		return server, nil
 	}
 
-	return nil, err
+	return nil, errors.New("uuid argument is missing")
 }
 
 // DeleteServer - cgs
