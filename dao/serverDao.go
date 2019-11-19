@@ -213,19 +213,19 @@ func CreateServer(serverUUID string, status string, args map[string]interface{})
 	case "creating":
 	case "Creating":
 		status = "Creating"
-		break;
+		break
 	case "Running":
 	case "running":
 		status = "Running"
-		break;
+		break
 	case "Stopped":
 	case "stopped":
 		status = "Stopped"
-		break;
+		break
 	case "Failed":
 	case "failed":
 		status = "Failed"
-		break;
+		break
 	default:
 		return nil, errors.New("unknown status")
 	}
@@ -295,19 +295,19 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	case "creating":
 	case "Creating":
 		status = "Creating"
-		break;
+		break
 	case "Running":
 	case "running":
 		status = "Running"
-		break;
+		break
 	case "Stopped":
 	case "stopped":
 		status = "Stopped"
-		break;
+		break
 	case "Failed":
 	case "failed":
 		status = "Failed"
-		break;
+		break
 	default:
 		return nil, errors.New("unknown status")
 	}
