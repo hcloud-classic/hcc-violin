@@ -1,6 +1,7 @@
 package dao
 
 import (
+	dbsql "database/sql"
 	"errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
@@ -136,7 +137,6 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 
 // ReadServerAll - cgs
 func ReadServerAll(args map[string]interface{}) (interface{}, error) {
-	var err error
 	var servers []model.Server
 	var uuid string
 	var subnetUUID string
@@ -149,16 +149,25 @@ func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	var status string
 	var userUUID string
 	var createdAt time.Time
+
 	row, rowOk := args["row"].(int)
 	page, pageOk := args["page"].(int)
-	if !rowOk || !pageOk {
-		return nil, err
+	var sql string
+	var stmt *dbsql.Rows
+	var err error
+
+	if !rowOk && !pageOk {
+		sql = "select * from server order by created_at desc"
+		stmt, err = mysql.Db.Query(sql)
+	} else if rowOk && pageOk {
+		sql = "select * from server order by created_at desc limit ? offset ?"
+		stmt, err = mysql.Db.Query(sql, row, row*(page-1))
+	} else {
+		return nil, errors.New("please insert row and page arguments or leave arguments as empty state")
 	}
 
-	sql := "select * from server order by created_at desc limit ? offset ?"
 	logger.Logger.Println("list_server sql  : ", sql)
 
-	stmt, err := mysql.Db.Query(sql, row, row*(page-1))
 	if err != nil {
 		logger.Logger.Println(err.Error())
 		return nil, err
