@@ -74,7 +74,7 @@ func ReadServerNodeList(args map[string]interface{}) (interface{}, error) {
 }
 
 // ReadServerNodeAll - cgs
-func ReadServerNodeAll(args map[string]interface{}) (interface{}, error) {
+func ReadServerNodeAll() (interface{}, error) {
 	var err error
 	var serverNodes []model.ServerNode
 	var uuid string

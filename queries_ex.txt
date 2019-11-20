@@ -5,7 +5,7 @@ http://localhost:7500/graphql
 
 // create
 mutation _ {
-  create_server(subnet_uuid: "1234", os: "ubuntu", server_name: "server1", server_desc: "test server", cpu: 1, memory: 4, disk_size: 20, status: "running", user_uuid: "1234") {
+  create_server(subnet_uuid: "36b83a39-750c-4588-6243-a3272a4a3e4f", os: "ubuntu", server_name: "ish server", server_desc: "test server", cpu: 1, memory: 4, disk_size: 10, user_uuid: "jolla") {
     uuid
     subnet_uuid
     os

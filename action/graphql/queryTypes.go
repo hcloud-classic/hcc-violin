@@ -2,6 +2,7 @@ package graphql
 
 import (
 	"github.com/graphql-go/graphql"
+	graphqlType "hcc/violin/action/graphql/type"
 	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
@@ -13,7 +14,7 @@ var queryTypes = graphql.NewObject(
 		Fields: graphql.Fields{
 			// server DB
 			"server": &graphql.Field{
-				Type:        serverType,
+				Type:        graphqlType.ServerType,
 				Description: "Get server by uuid",
 				Args: graphql.FieldConfigArgument{
 					"uuid": &graphql.ArgumentConfig{
@@ -26,7 +27,7 @@ var queryTypes = graphql.NewObject(
 				},
 			},
 			"list_server": &graphql.Field{
-				Type:        graphql.NewList(serverType),
+				Type:        graphql.NewList(graphqlType.ServerType),
 				Description: "Get server list",
 				Args: graphql.FieldConfigArgument{
 					"subnet_uuid": &graphql.ArgumentConfig{
@@ -69,7 +70,7 @@ var queryTypes = graphql.NewObject(
 				},
 			},
 			"all_server": &graphql.Field{
-				Type:        graphql.NewList(serverType),
+				Type:        graphql.NewList(graphqlType.ServerType),
 				Description: "Get all server list",
 				Args: graphql.FieldConfigArgument{
 					"row": &graphql.ArgumentConfig{
@@ -85,7 +86,7 @@ var queryTypes = graphql.NewObject(
 				},
 			},
 			"num_server": &graphql.Field{
-				Type:        serverNum,
+				Type:        graphqlType.ServerNumType,
 				Description: "Get the number of server",
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					logger.Logger.Println("Resolving: num_server")
@@ -98,7 +99,7 @@ var queryTypes = graphql.NewObject(
 			},
 			// server_node DB
 			"server_node": &graphql.Field{
-				Type:        serverNodeType,
+				Type:        graphqlType.ServerNodeType,
 				Description: "Get server_node by uuid",
 				Args: graphql.FieldConfigArgument{
 					"uuid": &graphql.ArgumentConfig{
@@ -111,13 +112,10 @@ var queryTypes = graphql.NewObject(
 				},
 			},
 			"list_server_node": &graphql.Field{
-				Type:        graphql.NewList(serverNodeType),
+				Type:        graphql.NewList(graphqlType.ServerNodeType),
 				Description: "Get server_node list",
 				Args: graphql.FieldConfigArgument{
 					"server_uuid": &graphql.ArgumentConfig{
-						Type: graphql.String,
-					},
-					"node_uuid": &graphql.ArgumentConfig{
 						Type: graphql.String,
 					},
 				},
@@ -127,12 +125,12 @@ var queryTypes = graphql.NewObject(
 				},
 			},
 			"all_server_node": &graphql.Field{
-				Type:        graphql.NewList(serverNodeType),
+				Type:        graphql.NewList(graphqlType.ServerNodeType),
 				Description: "Get all server_node list",
 				Args:        graphql.FieldConfigArgument{},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 					logger.Logger.Println("Resolving: all_server_node")
-					return dao.ReadServerNodeAll(params.Args)
+					return dao.ReadServerNodeAll()
 				},
 			},
 		},

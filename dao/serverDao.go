@@ -1,6 +1,7 @@
 package dao
 
 import (
+	dbsql "database/sql"
 	"errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
@@ -74,9 +75,6 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	status, statusOk := args["status"].(string)
 	userUUID, userUUIDOk := args["user_uuid"].(string)
 
-	if !userUUIDOk {
-		return nil, errors.New("need userUUID argument")
-	}
 	row, rowOk := args["row"].(int)
 	page, pageOk := args["page"].(int)
 	if !rowOk || !pageOk {
@@ -108,11 +106,14 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	if statusOk {
 		sql += " and status = '" + status + "'"
 	}
+	if userUUIDOk {
+		sql += " and user_uuid = '" + userUUID + "'"
+	}
 
-	sql += " and user_uuid = ? order by created_at desc limit ? offset ?"
+	sql += " order by created_at desc limit ? offset ?"
 	logger.Logger.Println("list_server sql  : ", sql)
 
-	stmt, err := mysql.Db.Query(sql, userUUID, row, row*(page-1))
+	stmt, err := mysql.Db.Query(sql, row, row*(page-1))
 	if err != nil {
 		logger.Logger.Println(err.Error())
 		return nil, err
@@ -136,7 +137,6 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 
 // ReadServerAll - cgs
 func ReadServerAll(args map[string]interface{}) (interface{}, error) {
-	var err error
 	var servers []model.Server
 	var uuid string
 	var subnetUUID string
@@ -149,16 +149,25 @@ func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	var status string
 	var userUUID string
 	var createdAt time.Time
+
 	row, rowOk := args["row"].(int)
 	page, pageOk := args["page"].(int)
-	if !rowOk || !pageOk {
-		return nil, err
+	var sql string
+	var stmt *dbsql.Rows
+	var err error
+
+	if !rowOk && !pageOk {
+		sql = "select * from server order by created_at desc"
+		stmt, err = mysql.Db.Query(sql)
+	} else if rowOk && pageOk {
+		sql = "select * from server order by created_at desc limit ? offset ?"
+		stmt, err = mysql.Db.Query(sql, row, row*(page-1))
+	} else {
+		return nil, errors.New("please insert row and page arguments or leave arguments as empty state")
 	}
 
-	sql := "select * from server order by created_at desc limit ? offset ?"
 	logger.Logger.Println("list_server sql  : ", sql)
 
-	stmt, err := mysql.Db.Query(sql, row, row*(page-1))
 	if err != nil {
 		logger.Logger.Println(err.Error())
 		return nil, err
@@ -209,7 +218,7 @@ func CreateServer(serverUUID string, args map[string]interface{}) (interface{}, 
 		CPU:        args["cpu"].(int),
 		Memory:     args["memory"].(int),
 		DiskSize:   args["disk_size"].(int),
-		Status:     args["status"].(string),
+		Status:     "Creating",
 		UserUUID:   args["user_uuid"].(string),
 	}
 
@@ -248,8 +257,6 @@ func checkUpdateServerArgs(args map[string]interface{}) bool {
 
 // UpdateServer - cgs
 func UpdateServer(args map[string]interface{}) (interface{}, error) {
-	var err error
-
 	requestedUUID, requestedUUIDOk := args["uuid"].(string)
 	subnetUUID, subnetUUIDOk := args["subnet_uuid"].(string)
 	os, osOk := args["os"].(string)
@@ -330,7 +337,31 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 		return server, nil
 	}
 
-	return nil, err
+	return nil, errors.New("uuid argument is missing")
+}
+
+// UpdateServerStatus : Update status of the server
+func UpdateServerStatus(server_uuid string, status string) (error) {
+	sql := "update server set status = '" + status + "' where uuid = ?"
+
+	logger.Logger.Println("UpdateServerStatus sql : ", sql)
+
+	stmt, err := mysql.Db.Prepare(sql)
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return err
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+
+	result, err2 := stmt.Exec(server_uuid)
+	if err2 != nil {
+		logger.Logger.Println(err2)
+		return err
+	}
+	logger.Logger.Println(result.LastInsertId())
+	return nil
 }
 
 // DeleteServer - cgs
