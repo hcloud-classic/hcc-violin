@@ -341,12 +341,6 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 	logger.Logger.Println("createServer: Getting IP address range")
 	firstIP, lastIP := doGetIPRange(serverSubnet, nodes)
 
-	status := "creating"
-	_, err = dao.CreateServer(serverUUID, status, params.Args)
-	if err != nil {
-		return nil, errors.New("failed to add new server as creating status")
-	}
-
 	go func(routineServerUUID string, routineSubnet model.Subnet, routineNodes []model.Node,
 		routineParams graphql.ResolveParams, routineFirstIP net.IP, routineLastIP net.IP) {
 		var routineError error
@@ -390,19 +384,22 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 		}
 		// while checking Cello DB cluster status is runnig in N times, until retry is expired
 
+		err = dao.UpdateServerStatus(serverUUID, "Running")
+		if err != nil {
+			logger.Logger.Println("createServerRoutine: Failed to update server status as running")
+		}
+
 		return
 
 	ERROR:
 		printLogCreateServerRoutine(routineServerUUID, routineError.Error())
-		status := "failed"
-		_, err = dao.CreateServer(serverUUID, status, params.Args)
+		err = dao.UpdateServerStatus(serverUUID, "Failed")
 		if err != nil {
-			logger.Logger.Println("createServerRoutine: Failed to add new server as failed status")
+			logger.Logger.Println("createServerRoutine: Failed to update server status as failed")
 		}
 	}(serverUUID, subnet, nodes, params, firstIP, lastIP)
 
-	status = "running"
-	return dao.CreateServer(serverUUID, status, params.Args)
+	return dao.CreateServer(serverUUID, params.Args)
 }
 
 // UpdateServer : Do server updating works

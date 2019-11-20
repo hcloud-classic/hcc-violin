@@ -10,33 +10,6 @@ import (
 	"time"
 )
 
-func getStatus(input string) (string, error) {
-	var status string
-
-	switch input {
-	case "creating":
-	case "Creating":
-		status = "Creating"
-		break
-	case "Running":
-	case "running":
-		status = "Running"
-		break
-	case "Stopped":
-	case "stopped":
-		status = "Stopped"
-		break
-	case "Failed":
-	case "failed":
-		status = "Failed"
-		break
-	default:
-		return "", errors.New("unknown status")
-	}
-
-	return status, nil
-}
-
 // ReadServer - cgs
 func ReadServer(args map[string]interface{}) (interface{}, error) {
 	var server model.Server
@@ -235,12 +208,7 @@ func ReadServerNum() (model.ServerNum, error) {
 }
 
 // CreateServer - cgs
-func CreateServer(serverUUID string, status string, args map[string]interface{}) (interface{}, error) {
-	status, err := getStatus(status)
-	if err != nil {
-		return nil, err
-	}
-
+func CreateServer(serverUUID string, args map[string]interface{}) (interface{}, error) {
 	server := model.Server{
 		UUID:       serverUUID,
 		SubnetUUID: args["subnet_uuid"].(string),
@@ -250,7 +218,7 @@ func CreateServer(serverUUID string, status string, args map[string]interface{})
 		CPU:        args["cpu"].(int),
 		Memory:     args["memory"].(int),
 		DiskSize:   args["disk_size"].(int),
-		Status:     status,
+		Status:     "Creating",
 		UserUUID:   args["user_uuid"].(string),
 	}
 
@@ -299,11 +267,6 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	diskSize, diskSizeOk := args["disk_size"].(int)
 	status, statusOk := args["status"].(string)
 	userUUID, userUUIDOk := args["user_uuid"].(string)
-
-	status, err := getStatus(status)
-	if err != nil {
-		return nil, err
-	}
 
 	server := new(model.Server)
 	server.UUID = requestedUUID
@@ -375,6 +338,30 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	}
 
 	return nil, errors.New("uuid argument is missing")
+}
+
+// UpdateServerStatus : Update status of the server
+func UpdateServerStatus(server_uuid string, status string) (error) {
+	sql := "update server set status = '" + status + "', where uuid = ?"
+
+	logger.Logger.Println("UpdateServerStatus sql : ", sql)
+
+	stmt, err := mysql.Db.Prepare(sql)
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return err
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+
+	result, err2 := stmt.Exec(server_uuid)
+	if err2 != nil {
+		logger.Logger.Println(err2)
+		return err
+	}
+	logger.Logger.Println(result.LastInsertId())
+	return nil
 }
 
 // DeleteServer - cgs
