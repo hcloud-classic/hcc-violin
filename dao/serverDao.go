@@ -342,7 +342,7 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 
 // UpdateServerStatus : Update status of the server
 func UpdateServerStatus(server_uuid string, status string) (error) {
-	sql := "update server set status = '" + status + "', where uuid = ?"
+	sql := "update server set status = '" + status + "' where uuid = ?"
 
 	logger.Logger.Println("UpdateServerStatus sql : ", sql)
 
