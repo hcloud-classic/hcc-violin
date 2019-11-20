@@ -41,6 +41,9 @@ var mutationTypes = graphql.NewObject(graphql.ObjectConfig{
 				"user_uuid": &graphql.ArgumentConfig{
 					Type: graphql.String,
 				},
+				"nr_node": &graphql.ArgumentConfig{
+					Type: graphql.Int,
+				},
 			},
 			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 				logger.Logger.Println("Resolving: create_server")
