@@ -76,13 +76,13 @@ func DoHTTPRequest(moduleName string, needData bool, data interface{}, query str
 
 				switch moduleName {
 				case "flute":
-					listNodeData := data.(violinData.ListNodeData)
-					err = json.Unmarshal([]byte(result), &listNodeData)
+					allNodeData := data.(violinData.AllNodeData)
+					err = json.Unmarshal([]byte(result), &allNodeData)
 					if err != nil {
 						return nil, err
 					}
 
-					return listNodeData, nil
+					return allNodeData, nil
 				case "harp":
 					subnetData := data.(violinData.SubnetData)
 					err = json.Unmarshal([]byte(result), &subnetData)
