@@ -4,7 +4,32 @@ import (
 	"hcc/violin/data"
 	"hcc/violin/http"
 	"hcc/violin/model"
+	"strconv"
 )
+
+func SchedulingNodes(userquota model.Quota) (interface{}, error) {
+	// Json Type
+	query := "mutation _{\n" +
+		"	schedule_nodes(server_uuid:\"" + userquota.ServerUUID + "\", cpu:" + strconv.Itoa(userquota.CPU) + ", memory:" + strconv.Itoa(userquota.Memory) + ", nr_node:" + strconv.Itoa(userquota.NumberOfNodes) + ") {\n" +
+		" 	 node_uuid\n" +
+		"	  }" +
+		"}"
+
+	//String
+	// query := "mutation _{\n" +
+	// 	"	selected_nodes (server_uuid:\"" + userquota.ServerUUID + "\", cpu:" + strconv.Itoa(userquota.CPU) + ", memory:" + strconv.Itoa(userquota.Memory) + ", nr_node:" + strconv.Itoa(userquota.NumberOfNodes) + ") " +
+	// 	"}"
+
+	var SchedulingNodes data.ScheduledNodeData
+
+	result, err := http.DoHTTPRequest("violin_scheduler", true, SchedulingNodes, query, false)
+
+	if err != nil {
+		return SchedulingNodes, err
+	}
+
+	return result, nil
+}
 
 // OnNode : Turn on the node by sending WOL magic packet
 func OnNode(macAddr string) (interface{}, error) {
@@ -12,11 +37,37 @@ func OnNode(macAddr string) (interface{}, error) {
 		"	on_node(mac:\"" + macAddr + "\")\n" +
 		"}"
 
-	result, err := http.DoHTTPRequest("flute", false, nil, query)
+	result, err := http.DoHTTPRequest("flute", false, nil, query, false)
 	if err != nil {
 		return "", err
 	}
 
+	return result, nil
+}
+
+// GetSingleNode : Get not activated nodes info from flute module
+func GetSingleNode(NodeUUID string) (interface{}, error) {
+	query := "query {\n" +
+		"	node(uuid: \"" + NodeUUID + "\" ) {\n" +
+		"		uuid\n" +
+		"		bmc_mac_addr\n" +
+		"		bmc_ip\n" +
+		"		pxe_mac_addr\n" +
+		"		status\n" +
+		"		cpu_cores\n" +
+		"		memory\n" +
+		"		description\n" +
+		"		created_at\n" +
+		"		active\n" +
+		"	}\n" +
+		"}"
+
+	var singleNodeData data.SingleNodeData
+
+	result, err := http.DoHTTPRequest("flute", true, singleNodeData, query, true)
+	if err != nil {
+		return singleNodeData, err
+	}
 	return result, nil
 }
 
@@ -39,7 +90,7 @@ func GetNodes() (interface{}, error) {
 
 	var allNodeData data.AllNodeData
 
-	result, err := http.DoHTTPRequest("flute", true, allNodeData, query)
+	result, err := http.DoHTTPRequest("flute", true, allNodeData, query, false)
 	if err != nil {
 		return allNodeData, err
 	}
@@ -55,7 +106,7 @@ func UpdateNode(node model.Node, serverUUID string) error {
 		"	}\n" +
 		"}"
 
-	_, err := http.DoHTTPRequest("flute", false, nil, query)
+	_, err := http.DoHTTPRequest("flute", false, nil, query, false)
 	if err != nil {
 		return err
 	}

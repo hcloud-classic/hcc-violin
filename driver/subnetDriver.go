@@ -28,7 +28,7 @@ func GetSubnet(subnetUUID string) (model.Subnet, error) {
 
 	var subnetData data.SubnetData
 
-	result, err := http.DoHTTPRequest("harp", true, subnetData, query)
+	result, err := http.DoHTTPRequest("harp", true, subnetData, query, false)
 	if err != nil {
 		return subnetData.Data.Subnet, err
 	}
@@ -47,7 +47,7 @@ func UpdateSubnet(subnetUUID string, serverUUID string) (interface{}, error) {
 
 	var subnetData data.SubnetData
 
-	result, err := http.DoHTTPRequest("harp", true, subnetData, query)
+	result, err := http.DoHTTPRequest("harp", true, subnetData, query, false)
 	if err != nil {
 		return subnetData.Data.Subnet, err
 	}
@@ -61,7 +61,7 @@ func CreateDHCPDConfig(subnetUUID string, nodeUUIDsStr string) error {
 		"	create_dhcpd_conf(subnet_uuid: \"" + subnetUUID + "\", node_uuids: \"" + nodeUUIDsStr + "\")\n" +
 		"}"
 
-	_, err := http.DoHTTPRequest("harp", false, nil, query)
+	_, err := http.DoHTTPRequest("harp", false, nil, query, false)
 	if err != nil {
 		return err
 	}
