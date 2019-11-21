@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/Terry-Mao/goconf"
 	"hcc/violin/lib/logger"
+
+	"github.com/Terry-Mao/goconf"
 )
 
 var conf = goconf.New()
@@ -162,6 +163,29 @@ func parseHarp() {
 	}
 }
 
+func parseScheduler() {
+	config.SchedulerConfig = conf.Get("violin_scheduler")
+	if config.SchedulerConfig == nil {
+		logger.Logger.Panicln("no harp section")
+	}
+
+	ViolinScheduler = violin_scheduler{}
+	ViolinScheduler.ServerAddress, err = config.SchedulerConfig.String("violin_scheduler_server_address")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	ViolinScheduler.ServerPort, err = config.SchedulerConfig.Int("violin_scheduler_server_port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	ViolinScheduler.RequestTimeoutMs, err = config.SchedulerConfig.Int("violin_scheduler_request_timeout_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+}
+
 // Parser : Parse config file
 func Parser() {
 	if err = conf.Parse(configLocation); err != nil {
@@ -174,4 +198,5 @@ func Parser() {
 	parseFlute()
 	parseCello()
 	parseHarp()
+	parseScheduler()
 }
