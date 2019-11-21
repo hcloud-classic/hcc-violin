@@ -4,12 +4,12 @@ import "hcc/violin/lib/config"
 
 // MainInit : Main initialization function
 func MainInit() error {
-	// err := syscheckInit()
-	// if err != nil {
-	// 	return err
-	// }
+	err := syscheckInit()
+	if err != nil {
+		return err
+	}
 
-	err := loggerInit()
+	err = loggerInit()
 	if err != nil {
 		return err
 	}
