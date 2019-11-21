@@ -166,7 +166,7 @@ func parseHarp() {
 func parseScheduler() {
 	config.SchedulerConfig = conf.Get("violin_scheduler")
 	if config.SchedulerConfig == nil {
-		logger.Logger.Panicln("no harp section")
+		logger.Logger.Panicln("no violin_scheduler section")
 	}
 
 	ViolinScheduler = violin_scheduler{}
