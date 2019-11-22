@@ -4,8 +4,35 @@ import (
 	"hcc/violin/data"
 	"hcc/violin/http"
 	"hcc/violin/model"
+
 	"strconv"
 )
+
+//  VncControl : codex
+func VncControl(vncOpt model.Vnc) (interface{}, error) {
+	// Json Type
+	query := "mutation _{\n" +
+		"	control_vnc(server_uuid:\"" + vncOpt.ServerUUID + "\", target_ip:" + vncOpt.TargetIP + ", target_port:" + vncOpt.TargetPort + ", action:" + vncOpt.ActionClassify + ") {\n" +
+		" 	 node_uuid\n" +
+		"	  server_uuid\n" +
+		"	  target_ip\n" +
+		"     target_port\n" +
+		"     target_pass\n" +
+		"     websocket_port\n" +
+		"     vnc_info\n" +
+		"     action\n" +
+		"	  }" +
+		"}"
+
+	var VNCNodes data.VncNodeData
+	result, err := http.DoHTTPRequest("violin_novnc", true, VNCNodes, query, true)
+
+	if err != nil {
+		return SchedulingNodes, err
+	}
+
+	return result, nil
+}
 
 func SchedulingNodes(userquota model.Quota) (interface{}, error) {
 	// Json Type

@@ -56,7 +56,18 @@ func ViolaToViolin() error {
 			args["status"] = control.Control.ActionResult // Running, Failed
 			//TODO: queue get_nodes to flute module
 			_, err = dao.UpdateServer(args)
+
 			logger.Logger.Println(" UUID = " + control.Control.HccType.ServerUUID + ": " + control.Control.ActionResult)
+
+			// vntOpt := model.Vnc{
+			// 	ServerUUID=args["uuid"].(string)
+			// }
+			// Leaderiprange :=  strings.Split(control.Control.HccType.HccIPRange," ")
+			// if len(Leaderiprange)>1{
+			// 	vntOpt.TargetIP:=Leaderiprange[0]
+			// 	CreateVnc, actionerr := driver.VncControl()
+			// }
+
 		}
 	}()
 

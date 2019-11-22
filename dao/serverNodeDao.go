@@ -1,11 +1,12 @@
 package dao
 
 import (
-	gouuid "github.com/nu7hatch/gouuid"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
 	"time"
+
+	gouuid "github.com/nu7hatch/gouuid"
 )
 
 // ReadServerNode - cgs

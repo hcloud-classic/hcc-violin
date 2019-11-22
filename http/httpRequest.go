@@ -118,6 +118,17 @@ func DoHTTPRequest(moduleName string, needData bool, data interface{}, query str
 					// fmt.Println("\nscheduledList: ", scheduledList)
 
 					return scheduledList, nil
+				case "violin_novnc":
+					vncData := data.(violinData.VncNodeData)
+					fmt.Println("result : ", result)
+					err = json.Unmarshal([]byte(result), &vncData)
+					if err != nil {
+						return nil, err
+					}
+					fmt.Println("vncData : ", vncData)
+
+					return vncData, nil
+
 				default:
 					return nil, errors.New("data is not supported for " + moduleName + " module")
 				}

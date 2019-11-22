@@ -21,6 +21,12 @@ type ScheduledNodeData struct {
 	} `json:"data"`
 }
 
+type VncNodeData struct {
+	Data struct {
+		ScheduledNode model.Vnc `json:"control_vnc"`
+	} `json:"data"`
+}
+
 // type ScheduledNodeData struct {
 // 	Data struct {
 // 		NodeList []string `json:"selected_nodes"`
