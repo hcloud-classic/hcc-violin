@@ -384,7 +384,7 @@ func DeleteServer(args map[string]interface{}) (interface{}, error) {
 		result, err2 := stmt.Exec(requestedUUID)
 		if err2 != nil {
 			logger.Logger.Println(err2)
-			return nil, err
+			return nil, err2
 		}
 		logger.Logger.Println(result.RowsAffected())
 
