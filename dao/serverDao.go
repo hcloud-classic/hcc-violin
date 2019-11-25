@@ -368,7 +368,9 @@ func UpdateServerStatus(server_uuid string, status string) (error) {
 func DeleteServer(args map[string]interface{}) (interface{}, error) {
 	var err error
 
+	var server model.Server
 	requestedUUID, ok := args["uuid"].(string)
+	server.UUID = requestedUUID
 	if ok {
 		sql := "delete from server where uuid = ?"
 		stmt, err := mysql.Db.Prepare(sql)
@@ -386,8 +388,8 @@ func DeleteServer(args map[string]interface{}) (interface{}, error) {
 		}
 		logger.Logger.Println(result.RowsAffected())
 
-		return requestedUUID, nil
+		return server, nil
 	}
 
-	return requestedUUID, err
+	return nil, err
 }
