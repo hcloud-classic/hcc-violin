@@ -447,16 +447,13 @@ func UpdateServer(params graphql.ResolveParams) (interface{}, error) {
 // DeleteServer : Do server deleting works
 func DeleteServer(params graphql.ResolveParams) (interface{}, error) {
 	// TODO : Delete server stages
-	var server model.Server
 
 	err := cmdUtil.RunScript("/root/script/prepare_create_server.sh")
 	if err != nil {
 		return nil, err
 	}
 
-	server.UUID = params.Args["uuid"].(string)
-
-	return server, nil
+	return dao.DeleteServer(params.Args)
 }
 
 func TestServer(params graphql.ResolveParams) (interface{}, error) {
