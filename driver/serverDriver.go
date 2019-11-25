@@ -448,10 +448,7 @@ func UpdateServer(params graphql.ResolveParams) (interface{}, error) {
 func DeleteServer(params graphql.ResolveParams) (interface{}, error) {
 	// TODO : Delete server stages
 
-	err := cmdUtil.RunScript("/root/script/prepare_create_server.sh")
-	if err != nil {
-		return nil, err
-	}
+	_ = cmdUtil.RunScript("/root/script/prepare_create_server.sh")
 
 	return dao.DeleteServer(params.Args)
 }
