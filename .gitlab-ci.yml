@@ -48,10 +48,10 @@ build:
   stage: build
   script:
     - gmake
-    - sudo ezjail-admin stop violin
-    - sudo cp $PWD/violin /usr/jails/basejail/bin/
-    - sudo chmod 755 /usr/jails/basejail/bin/violin
-    - sudo ezjail-admin start violin &
+    - sudo /usr/sbin/service violin stop
+    - sudo cp $PWD/violin /bin/violin
+    - sudo chmod 755 /bin/violin
+    - sudo /usr/sbin/service violin start
     - echo "Finished"
 #  only:
 #  - master

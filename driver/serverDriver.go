@@ -6,6 +6,7 @@ import (
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/dao"
 	"hcc/violin/data"
+	"hcc/violin/lib/cmdUtil"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
@@ -446,6 +447,8 @@ func UpdateServer(params graphql.ResolveParams) (interface{}, error) {
 // DeleteServer : Do server deleting works
 func DeleteServer(params graphql.ResolveParams) (interface{}, error) {
 	// TODO : Delete server stages
+
+	_ = cmdUtil.RunScript("/root/script/prepare_create_server.sh")
 
 	return dao.DeleteServer(params.Args)
 }
