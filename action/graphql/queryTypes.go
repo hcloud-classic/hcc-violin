@@ -133,5 +133,18 @@ var queryTypes = graphql.NewObject(
 					return dao.ReadServerNodeAll()
 				},
 			},
+			"num_nodes_server": &graphql.Field{
+				Type:        graphqlType.ServerNumType,
+				Description: "Get the number of nodes of server",
+				Args: graphql.FieldConfigArgument{
+					"server_uuid": &graphql.ArgumentConfig{
+						Type: graphql.String,
+					},
+				},
+				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					logger.Logger.Println("Resolving: num_nodes_server")
+					return dao.ReadServerNodeNum(params.Args)
+				},
+			},
 		},
 	})
