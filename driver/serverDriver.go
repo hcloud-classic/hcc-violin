@@ -429,6 +429,15 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 		}
 	}(serverUUID, subnet, nodes, params, firstIP, lastIP)
 
+	cpuCores := 0
+	memory := 0
+	for _, node := range nodes {
+		cpuCores += node.CPUCores
+		memory += node.Memory
+	}
+	params.Args["cpu"] = cpuCores
+	params.Args["memory"] = memory
+
 	return dao.CreateServer(serverUUID, params.Args)
 }
 
