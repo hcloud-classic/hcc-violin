@@ -419,11 +419,6 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 		}
 		// while checking Cello DB cluster status is runnig in N times, until retry is expired
 
-		err = dao.UpdateServerStatus(serverUUID, "Running")
-		if err != nil {
-			logger.Logger.Println("createServerRoutine: Failed to update server status as running")
-		}
-
 		return
 
 	ERROR:
@@ -433,6 +428,15 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 			logger.Logger.Println("createServerRoutine: Failed to update server status as failed")
 		}
 	}(serverUUID, subnet, nodes, params, firstIP, lastIP)
+
+	cpuCores := 0
+	memory := 0
+	for _, node := range nodes {
+		cpuCores += node.CPUCores
+		memory += node.Memory
+	}
+	params.Args["cpu"] = cpuCores
+	params.Args["memory"] = memory
 
 	return dao.CreateServer(serverUUID, params.Args)
 }
