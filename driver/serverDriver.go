@@ -187,7 +187,7 @@ func doCreateVolume(serverUUID string, params graphql.ResolveParams, useType str
 	}
 
 	volume = model.Volume{
-		Size: size,
+		Size:       size,
 		Filesystem: os,
 		ServerUUID: serverUUID,
 		UseType:    useType,

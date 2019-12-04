@@ -1,6 +1,7 @@
 package dao
 
 import (
+	dbsql "database/sql"
 	"errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
@@ -8,6 +9,33 @@ import (
 	"strconv"
 	"time"
 )
+
+func getStatus(input string) (string, error) {
+	var status string
+
+	switch input {
+	case "creating":
+	case "Creating":
+		status = "Creating"
+		break
+	case "Running":
+	case "running":
+		status = "Running"
+		break
+	case "Stopped":
+	case "stopped":
+		status = "Stopped"
+		break
+	case "Failed":
+	case "failed":
+		status = "Failed"
+		break
+	default:
+		return "", errors.New("unknown status")
+	}
+
+	return status, nil
+}
 
 // ReadServer - cgs
 func ReadServer(args map[string]interface{}) (interface{}, error) {
@@ -136,7 +164,6 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 
 // ReadServerAll - cgs
 func ReadServerAll(args map[string]interface{}) (interface{}, error) {
-	var err error
 	var servers []model.Server
 	var uuid string
 	var subnetUUID string
@@ -149,16 +176,25 @@ func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	var status string
 	var userUUID string
 	var createdAt time.Time
+
 	row, rowOk := args["row"].(int)
 	page, pageOk := args["page"].(int)
-	if !rowOk || !pageOk {
-		return nil, err
+	var sql string
+	var stmt *dbsql.Rows
+	var err error
+
+	if !rowOk && !pageOk {
+		sql = "select * from server order by created_at desc"
+		stmt, err = mysql.Db.Query(sql)
+	} else if rowOk && pageOk {
+		sql = "select * from server order by created_at desc limit ? offset ?"
+		stmt, err = mysql.Db.Query(sql, row, row*(page-1))
+	} else {
+		return nil, errors.New("please insert row and page arguments or leave arguments as empty state")
 	}
 
-	sql := "select * from server order by created_at desc limit ? offset ?"
 	logger.Logger.Println("list_server sql  : ", sql)
 
-	stmt, err := mysql.Db.Query(sql, row, row*(page-1))
 	if err != nil {
 		logger.Logger.Println(err.Error())
 		return nil, err
@@ -200,25 +236,9 @@ func ReadServerNum() (model.ServerNum, error) {
 
 // CreateServer - cgs
 func CreateServer(serverUUID string, status string, args map[string]interface{}) (interface{}, error) {
-	switch status {
-	case "creating":
-	case "Creating":
-		status = "Creating"
-		break;
-	case "Running":
-	case "running":
-		status = "Running"
-		break;
-	case "Stopped":
-	case "stopped":
-		status = "Stopped"
-		break;
-	case "Failed":
-	case "failed":
-		status = "Failed"
-		break;
-	default:
-		return nil, errors.New("unknown status")
+	status, err := getStatus(status)
+	if err != nil {
+		return nil, err
 	}
 
 	server := model.Server{
@@ -269,8 +289,6 @@ func checkUpdateServerArgs(args map[string]interface{}) bool {
 
 // UpdateServer - cgs
 func UpdateServer(args map[string]interface{}) (interface{}, error) {
-	var err error
-
 	requestedUUID, requestedUUIDOk := args["uuid"].(string)
 	subnetUUID, subnetUUIDOk := args["subnet_uuid"].(string)
 	os, osOk := args["os"].(string)
@@ -282,25 +300,9 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 	status, statusOk := args["status"].(string)
 	userUUID, userUUIDOk := args["user_uuid"].(string)
 
-	switch status {
-	case "creating":
-	case "Creating":
-		status = "Creating"
-		break;
-	case "Running":
-	case "running":
-		status = "Running"
-		break;
-	case "Stopped":
-	case "stopped":
-		status = "Stopped"
-		break;
-	case "Failed":
-	case "failed":
-		status = "Failed"
-		break;
-	default:
-		return nil, errors.New("unknown status")
+	status, err := getStatus(status)
+	if err != nil {
+		return nil, err
 	}
 
 	server := new(model.Server)
@@ -372,7 +374,7 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 		return server, nil
 	}
 
-	return nil, err
+	return nil, errors.New("uuid argument is missing")
 }
 
 // DeleteServer - cgs

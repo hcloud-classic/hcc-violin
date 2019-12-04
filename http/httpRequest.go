@@ -12,10 +12,10 @@ import (
 	"time"
 )
 
-// DoHTTPRequest : Send http request to other modules with GraphQL query string.
-func DoHTTPRequest(moduleName string, needData bool, data interface{}, query string) (interface{}, error) {
+func getModuleHTTPInfo(moduleName string) (time.Duration, string, error) {
 	var timeout time.Duration
 	var url = "http://"
+
 	switch moduleName {
 	case "flute":
 		timeout = time.Duration(config.Flute.RequestTimeoutMs)
@@ -30,8 +30,19 @@ func DoHTTPRequest(moduleName string, needData bool, data interface{}, query str
 		url += config.Cello.ServerAddress + ":" + strconv.Itoa(int(config.Cello.ServerPort))
 		break
 	default:
-		return nil, errors.New("unknown module name")
+		return 0, "", errors.New("unknown module name")
 	}
+
+	return timeout, url, nil
+}
+
+// DoHTTPRequest : Send http request to other modules with GraphQL query string.
+func DoHTTPRequest(moduleName string, needData bool, data interface{}, query string) (interface{}, error) {
+	timeout, url, err := getModuleHTTPInfo(moduleName)
+	if err != nil {
+		return nil, err
+	}
+
 	url += "/graphql?query=" + queryURLEncoder(query)
 
 	client := &http.Client{Timeout: timeout * time.Millisecond}
