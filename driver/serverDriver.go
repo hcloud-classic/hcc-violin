@@ -105,8 +105,8 @@ func doGenerateServerUUID() (string, error) {
 }
 
 func doGetNodes(serverUUID string) ([]model.Node, error) {
-	listNodeData, err := GetNodes()
-	nodes := listNodeData.(data.ListNodeData).Data.ListNode
+	allNodeData, err := GetNodes()
+	nodes := allNodeData.(data.AllNodeData).Data.AllNode
 	if err != nil {
 		logger.Logger.Print(err)
 		return nil, err

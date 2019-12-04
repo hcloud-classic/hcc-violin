@@ -2,9 +2,9 @@ package data
 
 import "hcc/violin/model"
 
-// ListNodeData : Data structure of list_node
-type ListNodeData struct {
+// AllNodeData : Data structure of all_node
+type AllNodeData struct {
 	Data struct {
-		ListNode []model.Node `json:"list_node"`
+		AllNode []model.Node `json:"all_node"`
 	} `json:"data"`
 }
