@@ -23,7 +23,7 @@ func OnNode(macAddr string) (interface{}, error) {
 // GetNodes : Get not activated nodes info from flute module
 func GetNodes() (interface{}, error) {
 	query := "query {\n" +
-		"	list_node(active: 0, row:10, page:1) {\n" +
+		"	all_node(active: 0) {\n" +
 		"		uuid\n" +
 		"		bmc_mac_addr\n" +
 		"		bmc_ip\n" +
@@ -37,11 +37,11 @@ func GetNodes() (interface{}, error) {
 		"	}\n" +
 		"}"
 
-	var listNodeData data.ListNodeData
+	var allNodeData data.AllNodeData
 
-	result, err := http.DoHTTPRequest("flute", true, listNodeData, query)
+	result, err := http.DoHTTPRequest("flute", true, allNodeData, query)
 	if err != nil {
-		return listNodeData, err
+		return allNodeData, err
 	}
 
 	return result, nil
