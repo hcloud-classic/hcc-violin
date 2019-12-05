@@ -454,7 +454,8 @@ func DeleteServer(params graphql.ResolveParams) (interface{}, error) {
 
 	_ = cmdUtil.RunScript("/root/script/prepare_create_server.sh")
 
-	return dao.DeleteServer(params.Args)
+	return dao.UpdateServer(params.Args)
+	//return dao.DeleteServer(params.Args)
 }
 
 func TestServer(params graphql.ResolveParams) (interface{}, error) {
