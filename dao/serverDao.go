@@ -196,7 +196,7 @@ func ReadServerNum() (model.ServerNum, error) {
 	var serverNr int
 	var err error
 
-	sql := "select count(*) from server"
+	sql := "select count(*) from server where status != 'Deleted'"
 	err = mysql.Db.QueryRow(sql).Scan(&serverNr)
 	if err != nil {
 		logger.Logger.Println(err)
@@ -341,7 +341,7 @@ func UpdateServer(args map[string]interface{}) (interface{}, error) {
 }
 
 // UpdateServerStatus : Update status of the server
-func UpdateServerStatus(server_uuid string, status string) (error) {
+func UpdateServerStatus(server_uuid string, status string) error {
 	sql := "update server set status = '" + status + "' where uuid = ?"
 
 	logger.Logger.Println("UpdateServerStatus sql : ", sql)

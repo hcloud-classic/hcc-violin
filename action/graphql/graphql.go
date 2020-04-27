@@ -22,6 +22,7 @@ var Schema, _ = graphql.NewSchema(
 // Pretty : Show sorted json code in GraphiQL
 //
 // GraphiQL : Show GraphQL GUI request form in web browser
+
 var GraphqlHandler = handler.New(&handler.Config{
 	Schema:   &Schema,
 	Pretty:   true,
