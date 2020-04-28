@@ -128,7 +128,7 @@ func GetNodes() (interface{}, error) {
 // UpdateNode : Add server_uuid information to each nodes
 func UpdateNode(node model.Node, serverUUID string) error {
 	query := "mutation{\n" +
-		"	update_node(uuid:\"" + node.UUID + "\", server_uuid:\"" + serverUUID + "\"){\n" +
+		"	update_node(uuid:\"" + node.UUID + "\", server_uuid:\"" + serverUUID + "\", active: 1){\n" +
 		"		uuid\n" +
 		"	}\n" +
 		"}"
