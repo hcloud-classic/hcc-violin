@@ -7,7 +7,17 @@ import (
 	"strconv"
 )
 
+func init() {
+	err := violinInit.MainInit()
+	if err != nil {
+		panic(err)
+	}
+}
+
 func main() {
+	defer func() {
+		violinEnd.MainEnd()
+	}()
 
 	http.Handle("/graphql", graphql.GraphqlHandler)
 	logger.Logger.Println("Opening server on port " + strconv.Itoa(int(config.HTTP.Port)) + "...")
