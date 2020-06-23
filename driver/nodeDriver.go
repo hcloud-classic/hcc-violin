@@ -59,9 +59,9 @@ func SchedulingNodes(userquota model.Quota) (interface{}, error) {
 }
 
 // OnNode : Turn on the node by sending WOL magic packet
-func OnNode(macAddr string) (interface{}, error) {
+func OnNode(uuid string) (interface{}, error) {
 	query := "mutation _ {\n" +
-		"	on_node(mac:\"" + macAddr + "\")\n" +
+		"	on_node(uuid:\"" + uuid + "\")\n" +
 		"}"
 
 	result, err := http.DoHTTPRequest("flute", false, nil, query, false)

@@ -267,13 +267,13 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []model.Node)
 	var i = 1
 	for _, node := range nodes {
 		if node.UUID == leaderNodeUUID {
-			_, err := OnNode(node.PXEMacAddr)
+			_, err := OnNode(node.UUID)
 			if err != nil {
 				logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
 				return err
 			}
 
-			logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode: leader MAC Addr: " + node.PXEMacAddr)
+			logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode: leaderNodeUUID: " + node.UUID)
 			break
 		}
 
@@ -294,13 +294,13 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []model.Node)
 			continue
 		}
 
-		_, err := OnNode(node.PXEMacAddr)
+		_, err := OnNode(node.UUID)
 		if err != nil {
 			logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
 			return err
 		}
 
-		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode: compute MAC Addr: " + node.PXEMacAddr)
+		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode: computeNodeUUID: " + node.UUID)
 	}
 
 	return nil
