@@ -162,3 +162,64 @@ func doGetNodes(userquota model.Quota) ([]model.Node, error) {
 
 	return GatherSelectedNodes, nil
 }
+
+
+
+func doGetIPRange(serverSubnet net.IPNet, nodes []model.Node) (net.IP, net.IP) {
+	firstIP, _ := cidr.AddressRange(&serverSubnet)
+	firstIP = cidr.Inc(firstIP)
+	lastIP := firstIP
+
+	for i := 0; i < len(nodes)-1; i++ {
+		lastIP = cidr.Inc(lastIP)
+	}
+
+	return firstIP, lastIP
+}
+
+func doCreateVolume(serverUUID string, params graphql.ResolveParams, useType string, firstIP net.IP) error {
+	userUUID := params.Args["user_uuid"].(string)
+	os := params.Args["os"].(string)
+	diskSize := params.Args["disk_size"].(int)
+
+	var volume model.Volume
+	var size int
+
+	switch useType {
+	case "os":
+		size = model.OSDiskSize
+		break
+	case "data":
+		size = diskSize
+		break
+	default:
+		return errors.New("got invalid useType")
+	}
+
+	volume = model.Volume{
+		Size:       size,
+		Filesystem: os,
+		ServerUUID: serverUUID,
+		UseType:    useType,
+		UserUUID:   userUUID,
+		NetworkIP:  firstIP.String(),
+	}
+
+	err := CreateDisk(volume, serverUUID)
+	if err != nil {
+		logger.Logger.Println("doCreateVolume: server_uuid=" + serverUUID + ": " + err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func doUpdateSubnet(subnetUUID string, serverUUID string) error {
+	_, err := UpdateSubnet(subnetUUID, serverUUID)
+	if err != nil {
+		logger.Logger.Println("doUpdateSubnet: server_uuid=" + serverUUID + " UpdateSubnet: " + err.Error())
+		return err
+	}
+
+	return nil
+}
