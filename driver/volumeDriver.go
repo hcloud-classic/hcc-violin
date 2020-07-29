@@ -9,7 +9,7 @@ import (
 // CreateDisk : Create os or data disk
 func CreateDisk(volume model.Volume, serverUUID string) error {
 	query := "mutation _ {\n" +
-		"	create_volume(size:" + strconv.Itoa(volume.Size) + ", filesystem:\"" + volume.Filesystem + "\", server_uuid:\"" + serverUUID + "\", use_type:\"" + volume.UseType + "\", user_uuid:\"" + volume.UseType + "\", network_ip:\"" + volume.NetworkIP + "\") {\n" +
+		"	create_volume(size:" + strconv.Itoa(volume.Size) + ", filesystem:\"" + volume.Filesystem + "\", server_uuid:\"" + serverUUID + "\", use_type:\"" + volume.UseType + "\", user_uuid:\"" + volume.UseType + "\", network_ip:\"" + volume.NetworkIP + "\", gateway_ip:\"" + volume.GatewayIP + "\") {\n" +
 		"		uuid\n" +
 		"		size\n" +
 		"		filesystem\n" +
