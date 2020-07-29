@@ -224,7 +224,7 @@ func doCreateVolume(serverUUID string, params graphql.ResolveParams, useType str
 		NetworkIP:  firstIP.String(),
 		GatewayIP:  gateway,
 	}
-
+	logger.Logger.Println("GatewayIP [", gateway, "]")
 	err := CreateDisk(volume, serverUUID)
 	if err != nil {
 		logger.Logger.Println("doCreateVolume: server_uuid=" + serverUUID + ": " + err.Error())
