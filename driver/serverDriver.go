@@ -234,8 +234,8 @@ func doCreateVolume(serverUUID string, params graphql.ResolveParams, useType str
 	return nil
 }
 
-func doUpdateSubnet(subnetUUID string, serverUUID string) error {
-	_, err := UpdateSubnet(subnetUUID, serverUUID)
+func doUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string) error {
+	_, err := UpdateSubnet(subnetUUID, leaderNodeUUID, serverUUID)
 	if err != nil {
 		logger.Logger.Println("doUpdateSubnet: server_uuid=" + serverUUID + " UpdateSubnet: " + err.Error())
 		return err
@@ -398,7 +398,7 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 		}
 
 		printLogCreateServerRoutine(routineServerUUID, "Updating subnet info")
-		routineError = doUpdateSubnet(routineSubnet.UUID, routineServerUUID)
+		routineError = doUpdateSubnet(routineSubnet.UUID, routineSubnet.LeaderNodeUUID, routineServerUUID)
 		if routineError != nil {
 			goto ERROR
 		}

@@ -37,10 +37,11 @@ func GetSubnet(subnetUUID string) (model.Subnet, error) {
 }
 
 // UpdateSubnet : Add server_uuid to subnet
-func UpdateSubnet(subnetUUID string, serverUUID string) (interface{}, error) {
+func UpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string) (interface{}, error) {
 	query := "mutation _ {\n" +
-		"	update_subnet(uuid: \"" + subnetUUID + "\", server_uuid: \"" + serverUUID + "\"){\n" +
+		"	update_subnet(uuid: \"" + subnetUUID + "\" leader_node_uuid: \"" + leaderNodeUUID + "\", server_uuid: \"" + serverUUID + "\"){\n" +
 		"		uuid\n" +
+		"		leader_node_uuid\n" +
 		"		server_uuid\n" +
 		"	}\n" +
 		"}"
