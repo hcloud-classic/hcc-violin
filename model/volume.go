@@ -15,6 +15,7 @@ type Volume struct {
 	UserUUID   string    `json:"user_uuid"`
 	CreatedAt  time.Time `json:"created_at"`
 	NetworkIP  string    `json:"network_ip"`
+	GatewayIP  string    `json:"gateway_ip"`
 }
 
 // Volumes - cgs
