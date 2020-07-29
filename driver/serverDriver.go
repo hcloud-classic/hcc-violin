@@ -184,6 +184,35 @@ func doGetNodes(userquota model.Quota) ([]model.Node, error) {
 	return GatherSelectedNodes, nil
 }
 
+func doGetLeaderNodeUUID(nodes []model.Node) (string, error) {
+	var smallestBMCipSum = 0
+	var leaderNodeUUID string
+
+	if len(nodes) == 0 {
+		logger.Logger.Println("doGetLeaderNodeUUID(): there are no nodes")
+		return "", errors.New("there are no nodes")
+	}
+
+	for _, node := range nodes {
+		ipStr := node.BmcIP
+		ipArrs := strings.Split(ipStr, ".")
+		var ipSum = 0
+		for _, ipArr := range ipArrs {
+			ipArrInt, err := strconv.Atoi(ipArr)
+			if err != nil {
+				return "", err
+			}
+			ipSum += ipArrInt
+		}
+		if smallestBMCipSum < ipSum {
+			smallestBMCipSum = ipSum
+			leaderNodeUUID = node.BmcIP
+		}
+	}
+
+	return leaderNodeUUID, nil
+}
+
 func doGetIPRange(serverSubnet net.IPNet, nodes []model.Node) (net.IP, net.IP) {
 	firstIP, _ := cidr.AddressRange(&serverSubnet)
 	firstIP = cidr.Inc(firstIP)
@@ -374,6 +403,14 @@ func CreateServer(params graphql.ResolveParams) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Logger.Println("createServer: Getting leaderNodeUUID from nodes[]")
+	leaderNodeUUID, err := doGetLeaderNodeUUID(nodes)
+	if err != nil {
+		return nil, err
+	}
+	subnet.LeaderNodeUUID = leaderNodeUUID
+
 	logger.Logger.Println("createServer: Getting IP address range")
 	firstIP, lastIP := doGetIPRange(serverSubnet, nodes)
 
