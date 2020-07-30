@@ -20,9 +20,17 @@ var queryTypes = graphql.NewObject(
 					"uuid": &graphql.ArgumentConfig{
 						Type: graphql.String,
 					},
+					"log_quiet": &graphql.ArgumentConfig{
+						Type: graphql.Boolean,
+					},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
-					logger.Logger.Println("Resolving: server")
+					args := params.Args
+					logQuiet, logQuietOk := args["log_quiet"].(bool)
+					if !logQuietOk || !logQuiet {
+						logger.Logger.Println("Resolving: server")
+					}
+
 					return dao.ReadServer(params.Args)
 				},
 			},
