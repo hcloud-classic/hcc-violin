@@ -131,3 +131,56 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	}
 	return servers, nil
 }
+
+func ReadServerAll(args map[string]interface{}) (interface{}, error) {
+	var servers []model.Server
+	var uuid string
+	var subnetUUID string
+	var os string
+	var serverName string
+	var serverDesc string
+	var cpu int
+	var memory int
+	var diskSize int
+	var status string
+	var userUUID string
+	var createdAt time.Time
+
+	row, rowOk := args["row"].(int)
+	page, pageOk := args["page"].(int)
+	var sql string
+	var stmt *dbsql.Rows
+	var err error
+
+	if !rowOk && !pageOk {
+		sql = "select * from server order by created_at desc"
+		stmt, err = mysql.Db.Query(sql)
+	} else if rowOk && pageOk {
+		sql = "select * from server order by created_at desc limit ? offset ?"
+		stmt, err = mysql.Db.Query(sql, row, row*(page-1))
+	} else {
+		return nil, errors.New("please insert row and page arguments or leave arguments as empty state")
+	}
+
+	logger.Logger.Println("list_server sql  : ", sql)
+
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return nil, err
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+
+	for stmt.Next() {
+		err := stmt.Scan(&uuid, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
+		if err != nil {
+			logger.Logger.Println(err)
+			return nil, err
+		}
+		server := model.Server{UUID: uuid, SubnetUUID: subnetUUID, OS: os, ServerName: serverName, ServerDesc: serverDesc, CPU: cpu, Memory: memory, DiskSize: diskSize, Status: status, UserUUID: userUUID, CreatedAt: createdAt}
+		servers = append(servers, server)
+	}
+
+	return servers, nil
+}
