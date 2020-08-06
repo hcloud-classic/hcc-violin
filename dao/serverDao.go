@@ -184,3 +184,68 @@ func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 
 	return servers, nil
 }
+
+// ReadServerNum - cgs
+func ReadServerNum() (model.ServerNum, error) {
+	logger.Logger.Println("serverDao: ReadServerNum")
+	var serverNum model.ServerNum
+	var serverNr int
+	var err error
+
+	sql := "select count(*) from server where status != 'Deleted'"
+	err = mysql.Db.QueryRow(sql).Scan(&serverNr)
+	if err != nil {
+		logger.Logger.Println(err)
+		return serverNum, err
+	}
+	serverNum.Number = serverNr
+
+	return serverNum, nil
+}
+
+func CreateServer(serverUUID string, args map[string]interface{}) (interface{}, error) {
+	server := model.Server{
+		UUID:       serverUUID,
+		SubnetUUID: args["subnet_uuid"].(string),
+		OS:         args["os"].(string),
+		ServerName: args["server_name"].(string),
+		ServerDesc: args["server_desc"].(string),
+		CPU:        args["cpu"].(int),
+		Memory:     args["memory"].(int),
+		DiskSize:   args["disk_size"].(int),
+		Status:     "Creating",
+		UserUUID:   args["user_uuid"].(string),
+	}
+
+	sql := "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())"
+	stmt, err := mysql.Db.Prepare(sql)
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return nil, err
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+	result, err := stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.CPU, server.Memory, server.DiskSize, server.Status, server.UserUUID)
+	if err != nil {
+		logger.Logger.Println(err)
+		return nil, err
+	}
+	logger.Logger.Println(result.LastInsertId())
+
+	return server, nil
+}
+
+func checkUpdateServerArgs(args map[string]interface{}) bool {
+	_, subnetUUIDOk := args["subnet_uuid"].(string)
+	_, osOk := args["os"].(string)
+	_, serverNameOk := args["server_name"].(string)
+	_, serverDescOk := args["server_desc"].(string)
+	_, cpuOk := args["cpu"].(int)
+	_, memoryOk := args["memory"].(int)
+	_, diskSizeOk := args["disk_size"].(int)
+	_, statusOk := args["status"].(string)
+	_, userUUIDOk := args["user_uuid"].(string)
+
+	return !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !statusOk && !userUUIDOk
+}
