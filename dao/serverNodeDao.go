@@ -187,14 +187,14 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, error) {
 	return &serverNode, nil
 }
 
-// DeleteServerNode : Delete server nodes. Delete server nodes matched with server UUID.
+// DeleteServerNode : Delete a server node matched with provided UUID.
 func DeleteServerNode(in *pb.ReqDeleteServerNode) (string, error) {
 	var err error
 
 	requestedUUID := in.GetUUID()
 	requestedUUIDOk := len(requestedUUID) != 0
 	if !requestedUUIDOk {
-		return "", errors.New("need a uuid argument")
+		return "", errors.New("need a UUID argument")
 	}
 
 	sql := "delete from server_node where uuid = ?"
@@ -214,4 +214,33 @@ func DeleteServerNode(in *pb.ReqDeleteServerNode) (string, error) {
 	logger.Logger.Println(result.RowsAffected())
 
 	return requestedUUID, nil
+}
+
+// DeleteServerNodeByServerUUID : Delete server nodes. Delete server nodes matched with server UUID.
+func DeleteServerNodeByServerUUID(in *pb.ReqDeleteServerNodeByServerUUID) (string, error) {
+	var err error
+
+	requestedServerUUID := in.GetServerUUID()
+	requestedServerUUIDOk := len(requestedServerUUID) != 0
+	if !requestedServerUUIDOk {
+		return "", errors.New("need a serverUUID argument")
+	}
+
+	sql := "delete from server_node where server_uuid = ?"
+	stmt, err := mysql.Db.Prepare(sql)
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return "", err
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+	result, err2 := stmt.Exec(requestedServerUUID)
+	if err2 != nil {
+		logger.Logger.Println(err2)
+		return "", err
+	}
+	logger.Logger.Println(result.RowsAffected())
+
+	return requestedServerUUID, nil
 }

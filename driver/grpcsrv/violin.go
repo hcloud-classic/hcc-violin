@@ -156,3 +156,14 @@ func (s *violinServer) DeleteServerNode(_ context.Context, in *pb.ReqDeleteServe
 
 	return &pb.ResDeleteServerNode{UUID: uuid}, nil
 }
+
+func (s *violinServer) DeleteServerNodeByServerUUID(_ context.Context, in *pb.ReqDeleteServerNodeByServerUUID) (*pb.ResDeleteServerNodeByServerUUID, error) {
+	logger.Logger.Println("Request received: DeleteServerNodeByServerUUID()")
+
+	serverUUID, err := dao.DeleteServerNodeByServerUUID(in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ResDeleteServerNodeByServerUUID{ServerUUID: serverUUID}, nil
+}
