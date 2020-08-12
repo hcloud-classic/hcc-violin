@@ -149,10 +149,10 @@ func (s *violinServer) GetServerNodeNum(_ context.Context, in *pb.ReqGetServerNo
 func (s *violinServer) DeleteServerNode(_ context.Context, in *pb.ReqDeleteServerNode) (*pb.ResDeleteServerNode, error) {
 	logger.Logger.Println("Request received: DeleteServerNode()")
 
-	serverUUID, err := dao.DeleteServerNode(in)
+	uuid, err := dao.DeleteServerNode(in)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.ResDeleteServerNode{ServerUUID: serverUUID}, nil
+	return &pb.ResDeleteServerNode{UUID: uuid}, nil
 }

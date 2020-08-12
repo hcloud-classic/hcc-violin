@@ -191,13 +191,13 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, error) {
 func DeleteServerNode(in *pb.ReqDeleteServerNode) (string, error) {
 	var err error
 
-	requestedUUID := in.GetServerUUID()
+	requestedUUID := in.GetUUID()
 	requestedUUIDOk := len(requestedUUID) != 0
 	if !requestedUUIDOk {
-		return "", errors.New("need a serverUUID argument")
+		return "", errors.New("need a uuid argument")
 	}
 
-	sql := "delete from server_node where server_uuid = ?"
+	sql := "delete from server_node where uuid = ?"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
 		logger.Logger.Println(err.Error())
