@@ -2,19 +2,18 @@ package dao
 
 import (
 	"errors"
+	"github.com/golang/protobuf/ptypes"
+	gouuid "github.com/nu7hatch/gouuid"
+	pb "hcc/violin/action/grpc/rpcviolin"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
-	"hcc/violin/model"
 	"time"
-
-	gouuid "github.com/nu7hatch/gouuid"
 )
 
-// ReadServerNode - cgs
-func ReadServerNode(args map[string]interface{}) (interface{}, error) {
-	var serverNode model.ServerNode
+// ReadServerNode : Get infos of a server node
+func ReadServerNode(uuid string) (*pb.ServerNode, error) {
+	var serverNode pb.ServerNode
 	var err error
-	uuid := args["uuid"].(string)
 	var serverUUID string
 	var nodeUUID string
 	var createdAt time.Time
@@ -33,23 +32,31 @@ func ReadServerNode(args map[string]interface{}) (interface{}, error) {
 	serverNode.UUID = uuid
 	serverNode.ServerUUID = serverUUID
 	serverNode.NodeUUID = nodeUUID
-	serverNode.CreatedAt = createdAt
 
-	return serverNode, nil
+	serverNode.CreatedAt, err = ptypes.TimestampProto(createdAt)
+	if err != nil {
+		logger.Logger.Println(err)
+		return nil, err
+	}
+
+	return &serverNode, nil
 }
 
-// ReadServerNodeList - cgs
-func ReadServerNodeList(args map[string]interface{}) (interface{}, error) {
-	var err error
-	var serverNodes []model.ServerNode
+// ReadServerNodeList : Get list of server nodes with provided server UUID
+func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, error) {
+	serverUUID := in.GetServerUUID()
+	serverUUIDOk := len(serverUUID) != 0
+	if !serverUUIDOk {
+		return nil, errors.New("need a server_uuid argument")
+	}
+
+	var serverNodeList pb.ResGetServerNodeList
+	var serverNodes []pb.ServerNode
+	var pserverNodes []*pb.ServerNode
+
 	var uuid string
 	var nodeUUID string
 	var createdAt time.Time
-	serverUUID, serverUUIDOk := args["server_uuid"].(string)
-
-	if !serverUUIDOk {
-		return nil, err
-	}
 
 	sql := "select * from server_node where server_uuid = ?"
 
@@ -68,56 +75,40 @@ func ReadServerNodeList(args map[string]interface{}) (interface{}, error) {
 			logger.Logger.Println(err.Error())
 			return nil, err
 		}
-		serverNode := model.ServerNode{UUID: uuid, ServerUUID: serverUUID, NodeUUID: nodeUUID, CreatedAt: createdAt}
-		logger.Logger.Println(serverNode)
-		serverNodes = append(serverNodes, serverNode)
-	}
-	return serverNodes, nil
-}
 
-// ReadServerNodeAll - cgs
-func ReadServerNodeAll() (interface{}, error) {
-	var err error
-	var serverNodes []model.ServerNode
-	var uuid string
-	var serverUUID string
-	var nodeUUID string
-	var createdAt time.Time
-
-	sql := "select * from server_node order by created_at desc"
-	stmt, err := mysql.Db.Query(sql)
-	if err != nil {
-		logger.Logger.Println(err.Error())
-		return nil, err
-	}
-	defer func() {
-		_ = stmt.Close()
-	}()
-
-	for stmt.Next() {
-		err := stmt.Scan(&uuid, &serverUUID, &nodeUUID, &createdAt)
+		_createdAt, err := ptypes.TimestampProto(createdAt)
 		if err != nil {
 			logger.Logger.Println(err)
 			return nil, err
 		}
-		serverNode := model.ServerNode{UUID: uuid, ServerUUID: serverUUID, NodeUUID: nodeUUID, CreatedAt: createdAt}
-		serverNodes = append(serverNodes, serverNode)
+
+		serverNodes = append(serverNodes, pb.ServerNode{
+			UUID:       uuid,
+			ServerUUID: serverUUID,
+			NodeUUID:   nodeUUID,
+			CreatedAt:  _createdAt})
 	}
 
-	return serverNodes, nil
+	for i := range serverNodes {
+		pserverNodes = append(pserverNodes, &serverNodes[i])
+	}
+
+	serverNodeList.ServerNodeList = pserverNodes
+
+	return &serverNodeList, nil
 }
 
-// ReadServerNodeNum - ish
-func ReadServerNodeNum(args map[string]interface{}) (interface{}, error) {
-	logger.Logger.Println("serverNodeDao: ReadServerNodeNum")
-	var serverNodeNum model.ServerNodeNum
-	var serverNodeNr int
-	var err error
-
-	serverUUID, serverUUIDOk := args["server_uuid"].(string)
+// ReadServerNodeNum : Get the number of server nodes
+func ReadServerNodeNum(in *pb.ReqGetServerNodeNum) (*pb.ResGetServerNodeNum, error) {
+	serverUUID := in.GetServerUUID()
+	serverUUIDOk := len(serverUUID) != 0
 	if !serverUUIDOk {
 		return nil, errors.New("need a server_uuid argument")
 	}
+
+	var serverNodeNum pb.ResGetServerNodeNum
+	var serverNodeNr int
+	var err error
 
 	sql := "select count(*) from server_node where server_uuid = '" + serverUUID + "'"
 	err = mysql.Db.QueryRow(sql).Scan(&serverNodeNr)
@@ -125,14 +116,25 @@ func ReadServerNodeNum(args map[string]interface{}) (interface{}, error) {
 		logger.Logger.Println(err)
 		return nil, err
 	}
-	serverNodeNum.Number = serverNodeNr
+	serverNodeNum.Num = int64(serverNodeNr)
 
-	return serverNodeNum, nil
+	return &serverNodeNum, nil
 }
 
+func checkCreateServerNodeArgs(reqServerNode *pb.ServerNode) bool {
+	serverUUIDOk := len(reqServerNode.ServerUUID) != 0
+	nodeUUIDOk := len(reqServerNode.NodeUUID) != 0
 
-// CreateServerNode - cgs
-func CreateServerNode(args map[string]interface{}) (interface{}, error) {
+	return !(serverUUIDOk && nodeUUIDOk)
+}
+
+// CreateServerNode : Create server nodes. Insert each node UUIDs with server UUID.
+func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, error) {
+	reqServerNode := in.GetServerNode()
+	if reqServerNode == nil {
+		return nil, errors.New("serverNode is nil")
+	}
+
 	out, err := gouuid.NewV4()
 	if err != nil {
 		logger.Logger.Println(err)
@@ -140,10 +142,14 @@ func CreateServerNode(args map[string]interface{}) (interface{}, error) {
 	}
 	uuid := out.String()
 
-	serverNode := model.ServerNode{
+	if checkCreateServerNodeArgs(reqServerNode) {
+		return nil, errors.New("some of arguments are missing")
+	}
+
+	serverNode := pb.ServerNode{
 		UUID:       uuid,
-		ServerUUID: args["server_uuid"].(string),
-		NodeUUID:   args["node_uuid"].(string),
+		ServerUUID: reqServerNode.ServerUUID,
+		NodeUUID:   reqServerNode.NodeUUID,
 	}
 
 	sql := "insert into server_node(uuid, server_uuid, node_uuid, created_at) values (?, ?, ?, now())"
@@ -163,33 +169,34 @@ func CreateServerNode(args map[string]interface{}) (interface{}, error) {
 	}
 	logger.Logger.Println(result.LastInsertId())
 
-	return serverNode, nil
+	return &serverNode, nil
 }
 
-// DeleteServerNode - cgs
-func DeleteServerNode(args map[string]interface{}) (interface{}, error) {
+// DeleteServerNode : Delete server nodes. Delete server nodes matched with server UUID.
+func DeleteServerNode(in *pb.ReqDeleteServerNode) (string, error) {
 	var err error
 
-	requestedUUID, ok := args["uuid"].(string)
-	if ok {
-		sql := "delete from server_node where uuid = ?"
-		stmt, err := mysql.Db.Prepare(sql)
-		if err != nil {
-			logger.Logger.Println(err.Error())
-			return nil, err
-		}
-		defer func() {
-			_ = stmt.Close()
-		}()
-		result, err2 := stmt.Exec(requestedUUID)
-		if err2 != nil {
-			logger.Logger.Println(err2)
-			return nil, err
-		}
-		logger.Logger.Println(result.RowsAffected())
-
-		return requestedUUID, nil
+	requestedUUID := in.GetUUID()
+	requestedUUIDOk := len(requestedUUID) != 0
+	if !requestedUUIDOk {
+		return "", errors.New("need a uuid argument")
 	}
 
-	return requestedUUID, err
+	sql := "delete from server_node where uuid = ?"
+	stmt, err := mysql.Db.Prepare(sql)
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return "", err
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+	result, err2 := stmt.Exec(requestedUUID)
+	if err2 != nil {
+		logger.Logger.Println(err2)
+		return "", err
+	}
+	logger.Logger.Println(result.RowsAffected())
+
+	return requestedUUID, nil
 }

@@ -17,14 +17,6 @@ func getModuleHTTPInfo(moduleName string) (time.Duration, string, error) {
 	var timeout time.Duration
 	var url = "http://"
 	switch moduleName {
-	case "flute":
-		timeout = time.Duration(config.Flute.RequestTimeoutMs)
-		url += config.Flute.ServerAddress + ":" + strconv.Itoa(int(config.Flute.ServerPort))
-		break
-	case "harp":
-		timeout = time.Duration(config.Harp.RequestTimeoutMs)
-		url += config.Harp.ServerAddress + ":" + strconv.Itoa(int(config.Harp.ServerPort))
-		break
 	case "cello":
 		timeout = time.Duration(config.Cello.RequestTimeoutMs)
 		url += config.Cello.ServerAddress + ":" + strconv.Itoa(int(config.Cello.ServerPort))
@@ -77,37 +69,6 @@ func DoHTTPRequest(moduleName string, needData bool, data interface{}, query str
 				}
 
 				switch moduleName {
-				case "flute":
-
-					if singleData {
-						NodeData := data.(violinData.SingleNodeData)
-						err = json.Unmarshal([]byte(result), &NodeData)
-
-						// fmt.Println("result : ", result)
-
-						if err != nil {
-							return nil, err
-						}
-						fmt.Println("Flute SingleNodeData", NodeData)
-						return NodeData, nil
-					} else {
-						NodeData := data.(violinData.AllNodeData)
-						err = json.Unmarshal([]byte(result), &NodeData)
-						if err != nil {
-							return nil, err
-						}
-						fmt.Println("Flute allNodeData", NodeData)
-						return NodeData, nil
-					}
-
-				case "harp":
-					subnetData := data.(violinData.SubnetData)
-					err = json.Unmarshal([]byte(result), &subnetData)
-					if err != nil {
-						return nil, err
-					}
-
-					return subnetData, nil
 				case "violin_scheduler":
 
 					scheduledList := data.(violinData.ScheduledNodeData)

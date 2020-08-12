@@ -1,17 +1,39 @@
 package main
 
 import (
-	"hcc/violin/action/graphql"
-	violinEnd "hcc/violin/end"
-	violinInit "hcc/violin/init"
+	"hcc/violin/action/rabbitmq"
+	"hcc/violin/driver/grpccli"
+	"hcc/violin/driver/grpcsrv"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
-	"net/http"
-	"strconv"
+	"hcc/violin/lib/mysql"
+	"hcc/violin/lib/syscheck"
 )
 
 func init() {
-	err := violinInit.MainInit()
+	err := syscheck.CheckRoot()
+	if err != nil {
+		panic(err)
+	}
+
+	err = logger.Init()
+	if err != nil {
+		panic(err)
+	}
+
+	config.Parser()
+
+	err = mysql.Init()
+	if err != nil {
+		panic(err)
+	}
+
+	err = rabbitmq.Init()
+	if err != nil {
+		panic(err)
+	}
+
+	err = grpccli.InitGRPCClient()
 	if err != nil {
 		panic(err)
 	}
@@ -19,15 +41,11 @@ func init() {
 
 func main() {
 	defer func() {
-		violinEnd.MainEnd()
+		grpccli.CleanGRPCClient()
+		rabbitmq.End()
+		mysql.End()
+		logger.End()
 	}()
 
-	http.Handle("/graphql", graphql.GraphqlHandler)
-	logger.Logger.Println("Opening server on port " + strconv.Itoa(int(config.HTTP.Port)) + "...")
-	err := http.ListenAndServe(":"+strconv.Itoa(int(config.HTTP.Port)), nil)
-	if err != nil {
-		logger.Logger.Println(err)
-		logger.Logger.Println("Failed to prepare http server!")
-		return
-	}
+	grpcsrv.Init()
 }

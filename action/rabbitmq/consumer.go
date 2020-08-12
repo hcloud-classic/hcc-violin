@@ -2,13 +2,30 @@ package rabbitmq
 
 import (
 	"encoding/json"
-	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
+	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
 )
 
-// ViolaToViolin : Consume Viola command
-func ViolaToViolin() error {
+func updateServerStatus(uuid string, status string) error {
+	sql := "update server set status = ''" + status + "'"
+	stmt, err := mysql.Db.Prepare(sql)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+
+	_, err = stmt.Exec(uuid)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func violaToViolin() error {
 	qCreate, err := Channel.QueueDeclare(
 		"viola_to_violin",
 		false,
@@ -51,13 +68,15 @@ func ViolaToViolin() error {
 			// update cluster status at cello DB's status
 			//*************************** */
 			//
-			args := make(map[string]interface{})
-			args["uuid"] = control.Control.HccType.ServerUUID
-			args["status"] = control.Control.ActionResult // Running, Failed
+			uuid := control.Control.HccType.ServerUUID
+			status := control.Control.ActionResult // Running, Failed
 			//TODO: queue get_nodes to flute module
-			_, err = dao.UpdateServer(args)
+			err = updateServerStatus(uuid, status)
+			if err != nil {
+				logger.Logger.Println("ViolaToViolin: " + err.Error())
+			}
 
-			logger.Logger.Println(" UUID = " + control.Control.HccType.ServerUUID + ": " + control.Control.ActionResult)
+			logger.Logger.Println("ViolaToViolin: UUID = " + control.Control.HccType.ServerUUID + ": " + control.Control.ActionResult)
 
 			// vntOpt := model.Vnc{
 			// 	ServerUUID=args["uuid"].(string)

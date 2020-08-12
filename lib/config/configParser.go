@@ -43,6 +43,18 @@ func parseMysql() {
 	}
 }
 
+func parseGrpc() {
+	config.GrpcConfig = conf.Get("grpc")
+	if config.GrpcConfig == nil {
+		logger.Logger.Panicln("no grpc section")
+	}
+
+	Grpc.Port, err = config.GrpcConfig.Int("port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+}
+
 func parseHTTP() {
 	config.HTTPConfig = conf.Get("http")
 	if config.HTTPConfig == nil {
@@ -50,12 +62,7 @@ func parseHTTP() {
 	}
 
 	HTTP = http{}
-	HTTP.Port, err = config.HTTPConfig.Int("port")
-	if err != nil {
-		logger.Logger.Panicln(err)
-	}
-
-	HTTP.Port, err = config.HTTPConfig.Int("port")
+	HTTP.RequestTimeoutMs, err = config.HTTPConfig.Int("request_timeout_ms")
 	if err != nil {
 		logger.Logger.Panicln(err)
 	}
@@ -169,7 +176,7 @@ func parseScheduler() {
 		logger.Logger.Panicln("no violin_scheduler section")
 	}
 
-	ViolinScheduler = violin_scheduler{}
+	ViolinScheduler = violinScheduler{}
 	ViolinScheduler.ServerAddress, err = config.SchedulerConfig.String("violin_scheduler_server_address")
 	if err != nil {
 		logger.Logger.Panicln(err)
@@ -193,6 +200,7 @@ func Parser() {
 	}
 
 	parseMysql()
+	parseGrpc()
 	parseHTTP()
 	parseRabbitMQ()
 	parseFlute()

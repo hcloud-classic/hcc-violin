@@ -6,6 +6,7 @@ var configLocation = "/etc/hcc/violin/violin.conf"
 
 type violinConfig struct {
 	MysqlConfig     *goconf.Section
+	GrpcConfig      *goconf.Section
 	HTTPConfig      *goconf.Section
 	RabbitMQConfig  *goconf.Section
 	FluteConfig     *goconf.Section
@@ -25,9 +26,11 @@ address 111.111.111.111
 port 9999
 database db_name
 
+[grpc]
+port 7500
+
 [http]
-port 8888
-RequestTimeoutMs 5000
+request_timeout_ms 5000
 
 [rabbitmq]
 rabbitmq_id user
