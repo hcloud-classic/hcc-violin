@@ -47,7 +47,7 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 	serverUUID := in.GetServerUUID()
 	serverUUIDOk := len(serverUUID) != 0
 	if !serverUUIDOk {
-		return nil, errors.New("need a server_uuid argument")
+		return nil, errors.New("need a serverUUID argument")
 	}
 
 	var serverNodeList pb.ResGetServerNodeList
@@ -103,7 +103,7 @@ func ReadServerNodeNum(in *pb.ReqGetServerNodeNum) (*pb.ResGetServerNodeNum, err
 	serverUUID := in.GetServerUUID()
 	serverUUIDOk := len(serverUUID) != 0
 	if !serverUUIDOk {
-		return nil, errors.New("need a server_uuid argument")
+		return nil, errors.New("need a serverUUID argument")
 	}
 
 	var serverNodeNum pb.ResGetServerNodeNum
