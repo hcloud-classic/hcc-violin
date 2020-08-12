@@ -146,6 +146,21 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, error) {
 		return nil, errors.New("some of arguments are missing")
 	}
 
+	serverNodeList, err := ReadServerNodeList(&pb.ReqGetServerNodeList{ServerUUID: reqServerNode.ServerUUID})
+	if err != nil {
+		return nil, err
+	}
+	pserverNodes := serverNodeList.ServerNodeList
+
+	for i := range pserverNodes {
+		if pserverNodes[i].NodeUUID == reqServerNode.NodeUUID {
+			return nil, errors.New("requested ServerNode is already present in the database (" +
+				"UUID: " + pserverNodes[i].UUID + ", " +
+				"ServerUUID: " + pserverNodes[i].ServerUUID + ", " +
+				"NodeUUID: " + pserverNodes[i].NodeUUID + ")")
+		}
+	}
+
 	serverNode := pb.ServerNode{
 		UUID:       uuid,
 		ServerUUID: reqServerNode.ServerUUID,
