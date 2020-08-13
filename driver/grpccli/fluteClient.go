@@ -19,9 +19,9 @@ func initFlute() error {
 
 	addr := config.Flute.ServerAddress + ":" + strconv.FormatInt(config.Flute.ServerPort, 10)
 	logger.Logger.Println("Trying to connect to flute module (" + addr + ")")
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(config.Flute.ConnectionTimeOutMs)*time.Millisecond)
 
 	for i := 0; i < int(config.Flute.ConnectionRetryCount); i++ {
-		ctx, _ := context.WithTimeout(context.Background(), time.Duration(config.Flute.ConnectionTimeOutMs)*time.Millisecond)
 		fluteConn, err = grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
 			logger.Logger.Println("Failed to connect flute module ("+addr+"): %v", err)
