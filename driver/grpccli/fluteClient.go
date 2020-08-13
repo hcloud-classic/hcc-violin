@@ -17,15 +17,13 @@ func initFlute() error {
 	var err error
 
 	addr := config.Flute.ServerAddress + ":" + strconv.FormatInt(config.Flute.ServerPort, 10)
-	logger.Logger.Println("Trying to connect to flute module (" + addr + ")")
-	fluteConn, err = grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock())
+	fluteConn, err = grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
-		logger.Logger.Fatalf("Failed to connect flute module ("+addr+"): %v", err)
 		return err
 	}
 
 	RC.flute = rpcflute.NewFluteClient(fluteConn)
-	logger.Logger.Println("gRPC client connected to flute module")
+	logger.Logger.Println("gRPC flute client ready")
 
 	return nil
 }

@@ -16,15 +16,13 @@ func initHarp() error {
 	var err error
 
 	addr := config.Harp.ServerAddress + ":" + strconv.FormatInt(config.Harp.ServerPort, 10)
-	logger.Logger.Println("Trying to connect to harp module (" + addr + ")")
-	harpConn, err = grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock())
+	harpConn, err = grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
-		logger.Logger.Fatalf("Failed to connect harp module ("+addr+"): %v", err)
 		return err
 	}
 
 	RC.harp = rpcharp.NewHarpClient(harpConn)
-	logger.Logger.Println("gRPC client connected to harp module")
+	logger.Logger.Println("gRPC harp client ready")
 
 	return nil
 }
