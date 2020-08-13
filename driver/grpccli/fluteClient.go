@@ -25,8 +25,6 @@ func initFlute() error {
 		fluteConn, err = grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
 			logger.Logger.Println("Failed to connect flute module ("+addr+"): %v", err)
-			logger.Logger.Println("Re-trying to connect to flute module (" +
-				strconv.Itoa(i+1) + "/" + strconv.Itoa(int(config.Flute.ConnectionRetryCount)) + ")")
 			continue
 		}
 
