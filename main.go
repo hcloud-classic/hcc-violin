@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/driver/grpccli"
 	"hcc/violin/driver/grpcsrv"
@@ -8,6 +9,9 @@ import (
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"hcc/violin/lib/syscheck"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func init() {
@@ -33,19 +37,32 @@ func init() {
 		panic(err)
 	}
 
+	go grpcsrv.Init()
 	err = grpccli.InitGRPCClient()
 	if err != nil {
 		panic(err)
 	}
 }
 
+func end() {
+	grpccli.CleanGRPCClient()
+	rabbitmq.End()
+	mysql.End()
+	logger.End()
+}
+
 func main() {
-	defer func() {
-		grpccli.CleanGRPCClient()
-		rabbitmq.End()
-		mysql.End()
-		logger.End()
+	// Catch the exit signal
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func(){
+		<- sigChan
+		end()
+		fmt.Println("Exiting violin module...")
+		os.Exit(0)
 	}()
 
-	grpcsrv.Init()
+	// Prevent to exit main thread
+	mainChan := make(chan bool)
+	<-mainChan
 }
