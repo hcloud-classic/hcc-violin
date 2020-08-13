@@ -2,7 +2,6 @@ package grpccli
 
 import (
 	"context"
-	"errors"
 	"google.golang.org/grpc"
 	"hcc/violin/action/grpc/rpcflute"
 	pb "hcc/violin/action/grpc/rpcviolin"
@@ -19,22 +18,16 @@ func initFlute() error {
 
 	addr := config.Flute.ServerAddress + ":" + strconv.FormatInt(config.Flute.ServerPort, 10)
 	logger.Logger.Println("Trying to connect to flute module (" + addr + ")")
-	ctx, _ := context.WithTimeout(context.Background(), time.Duration(config.Flute.ConnectionTimeOutMs)*time.Millisecond)
-
-	for i := 0; i < int(config.Flute.ConnectionRetryCount); i++ {
-		fluteConn, err = grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithBlock())
-		if err != nil {
-			logger.Logger.Println("Failed to connect flute module ("+addr+"): %v", err)
-			continue
-		}
-
-		RC.flute = rpcflute.NewFluteClient(fluteConn)
-		logger.Logger.Println("gRPC client connected to flute module")
-
-		return nil
+	fluteConn, err = grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		logger.Logger.Fatalf("Failed to connect flute module ("+addr+"): %v", err)
+		return err
 	}
 
-	return errors.New("retry count exceeded to connect flute module")
+	RC.flute = rpcflute.NewFluteClient(fluteConn)
+	logger.Logger.Println("gRPC client connected to flute module")
+
+	return nil
 }
 
 func cleanFlute() {

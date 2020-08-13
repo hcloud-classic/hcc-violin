@@ -113,16 +113,6 @@ func parseFlute() {
 		logger.Logger.Panicln(err)
 	}
 
-	Flute.ConnectionTimeOutMs, err = config.FluteConfig.Int("flute_connection_timeout_ms")
-	if err != nil {
-		logger.Logger.Panicln(err)
-	}
-
-	Flute.ConnectionRetryCount, err = config.FluteConfig.Int("flute_connection_retry_count")
-	if err != nil {
-		logger.Logger.Panicln(err)
-	}
-
 	Flute.RequestTimeoutMs, err = config.FluteConfig.Int("flute_request_timeout_ms")
 	if err != nil {
 		logger.Logger.Panicln(err)
@@ -170,16 +160,6 @@ func parseHarp() {
 	}
 
 	Harp.ServerPort, err = config.HarpConfig.Int("harp_server_port")
-	if err != nil {
-		logger.Logger.Panicln(err)
-	}
-
-	Harp.ConnectionTimeOutMs, err = config.HarpConfig.Int("harp_connection_timeout_ms")
-	if err != nil {
-		logger.Logger.Panicln(err)
-	}
-
-	Harp.ConnectionRetryCount, err = config.HarpConfig.Int("harp_connection_retry_count")
 	if err != nil {
 		logger.Logger.Panicln(err)
 	}
