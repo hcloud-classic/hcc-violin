@@ -2,6 +2,7 @@ package grpccli
 
 import (
 	"context"
+	"errors"
 	"google.golang.org/grpc"
 	"hcc/violin/action/grpc/rpcharp"
 	"hcc/violin/lib/config"
@@ -17,16 +18,22 @@ func initHarp() error {
 
 	addr := config.Harp.ServerAddress + ":" + strconv.FormatInt(config.Harp.ServerPort, 10)
 	logger.Logger.Println("Trying to connect to harp module (" + addr + ")")
-	harpConn, err = grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		logger.Logger.Fatalf("Failed to connect harp module ("+addr+"): %v", err)
-		return err
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(config.Harp.ConnectionTimeOutMs)*time.Millisecond)
+
+	for i := 0; i < int(config.Harp.ConnectionRetryCount); i++ {
+		harpConn, err = grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithBlock())
+		if err != nil {
+			logger.Logger.Println("Failed to connect harp module ("+addr+"): %v", err)
+			continue
+		}
+
+		RC.harp = rpcharp.NewHarpClient(harpConn)
+		logger.Logger.Println("gRPC client connected to harp module")
+
+		return nil
 	}
 
-	RC.harp = rpcharp.NewHarpClient(harpConn)
-	logger.Logger.Println("gRPC client connected to harp module")
-
-	return nil
+	return errors.New("retry count exceeded to connect harp module")
 }
 
 func cleanHarp() {

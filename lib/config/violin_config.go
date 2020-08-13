@@ -41,6 +41,8 @@ rabbitmq_port 15672
 [flute]
 flute_server_address 222.222.222.222
 flute_server_port 3333
+flute_connection_timeout_ms 5000
+flute_connection_retry_count 5
 flute_request_timeout_ms 5000
 
 [cello]
@@ -51,6 +53,8 @@ cello_request_timeout_ms 5000
 [harp]
 harp_server_address 222.222.222.222
 harp_server_port 3333
+harp_connection_timeout_ms 5000
+harp_connection_retry_count 5
 harp_request_timeout_ms 5000
 harp_wait_for_leader_node_timeout_sec 30
 -----------------------------------*/
