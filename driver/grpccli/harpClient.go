@@ -23,7 +23,7 @@ func initHarp() error {
 		ctx, _ := context.WithTimeout(context.Background(), time.Duration(config.Harp.ConnectionTimeOutMs)*time.Millisecond)
 		harpConn, err = grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
-			logger.Logger.Println("Failed to connect harp module ("+addr+"): %v", err)
+			logger.Logger.Println("Failed to connect harp module ("+addr+"): "+ err.Error())
 			logger.Logger.Println("Re-trying to connect to harp module (" +
 				strconv.Itoa(i+1) + "/" + strconv.Itoa(int(config.Harp.ConnectionRetryCount)) + ")")
 			continue
