@@ -31,6 +31,6 @@ func InitGRPCClient() error {
 
 // CleanGRPCClient : Close connections of gRPC clients
 func CleanGRPCClient() {
-	cleanFlute()
 	cleanHarp()
+	cleanFlute()
 }
