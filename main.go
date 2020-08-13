@@ -37,7 +37,6 @@ func init() {
 		panic(err)
 	}
 
-	go grpcsrv.Init()
 	err = grpccli.InitGRPCClient()
 	if err != nil {
 		panic(err)
@@ -62,7 +61,5 @@ func main() {
 		os.Exit(0)
 	}()
 
-	// Prevent to exit main thread
-	mainChan := make(chan bool)
-	<-mainChan
+	grpcsrv.Init()
 }
