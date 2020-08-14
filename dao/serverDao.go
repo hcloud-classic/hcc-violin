@@ -359,3 +359,56 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, error) {
 	logger.Logger.Println(result.LastInsertId())
 	return server, nil
 }
+
+func UpdateServerStatus(serverUUID string, status string) error {
+	sql := "update server set status = '" + status + "' where uuid = ?"
+
+	logger.Logger.Println("UpdateServerStatus sql : ", sql)
+
+	stmt, err := mysql.Db.Prepare(sql)
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return err
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+
+	result, err2 := stmt.Exec(serverUUID)
+	if err2 != nil {
+		logger.Logger.Println(err2)
+		return err
+	}
+	logger.Logger.Println(result.LastInsertId())
+	return nil
+}
+
+func DeleteServer(in *pb.ReqDeleteServer) (string, error) {
+	_ = cmdutil.RunScript("/root/script/prepare_create_server.sh")
+
+	var err error
+
+	requestedUUID := in.GetUUID()
+	requestedUUIDOk := len(requestedUUID) != 0
+	if !requestedUUIDOk {
+		return "", errors.New("need a uuid argument")
+	}
+
+	sql := "delete from server where uuid = ?"
+	stmt, err := mysql.Db.Prepare(sql)
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return "", err
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+	result, err2 := stmt.Exec(requestedUUID)
+	if err2 != nil {
+		logger.Logger.Println(err2)
+		return "", err2
+	}
+	logger.Logger.Println(result.RowsAffected())
+
+	return requestedUUID, nil
+}
