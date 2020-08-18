@@ -402,10 +402,9 @@ func checkUpdateServerArgs(reqServer *pb.Server) bool {
 	cpuOk := reqServer.CPU != 0
 	memoryOk := reqServer.Memory != 0
 	diskSizeOk := reqServer.DiskSize != 0
-	statusOk := len(reqServer.Status) != 0
 	userUUIDOk := len(reqServer.UserUUID) != 0
 
-	return !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !statusOk && !userUUIDOk
+	return !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !userUUIDOk
 }
 
 // UpdateServer : Update infos of the server
