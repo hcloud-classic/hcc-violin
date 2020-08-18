@@ -519,6 +519,12 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, error) {
 		return nil, err
 	}
 	logger.Logger.Println(result.LastInsertId())
+
+	server, err = ReadServer(server.UUID)
+	if err != nil {
+		logger.Logger.Println(err)
+	}
+
 	return server, nil
 }
 
