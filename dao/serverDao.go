@@ -323,10 +323,9 @@ func checkCreateServerArgs(reqServer *pb.Server) bool {
 	cpuOk := reqServer.GetCPU() != 0
 	memoryOk := reqServer.GetMemory() != 0
 	diskSizeOk := reqServer.GetDiskSize() != 0
-	statusOk := len(reqServer.GetStatus()) != 0
 	userUUIDOk := len(reqServer.GetUserUUID()) != 0
 
-	return !(subnetUUIDOk && osOk && serverNameOk && serverDescOk && cpuOk && memoryOk && diskSizeOk && statusOk && userUUIDOk)
+	return !(subnetUUIDOk && osOk && serverNameOk && serverDescOk && cpuOk && memoryOk && diskSizeOk && userUUIDOk)
 }
 
 // CreateServer : Create a server
