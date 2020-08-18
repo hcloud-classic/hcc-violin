@@ -495,7 +495,7 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, error) {
 		updateSet += " status = '" + server.Status + "', "
 	}
 	if userUUIDOk {
-		updateSet += " user_uuid = " + server.UserUUID + "', "
+		updateSet += " user_uuid = '" + server.UserUUID + "', "
 	}
 
 	sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
