@@ -93,7 +93,7 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 		pserverNodes = append(pserverNodes, &serverNodes[i])
 	}
 
-	serverNodeList.ServerNodeList = pserverNodes
+	serverNodeList.ServerNode = pserverNodes
 
 	return &serverNodeList, nil
 }
@@ -150,7 +150,7 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	pserverNodes := serverNodeList.ServerNodeList
+	pserverNodes := serverNodeList.ServerNode
 
 	for i := range pserverNodes {
 		if pserverNodes[i].NodeUUID == reqServerNode.NodeUUID {
