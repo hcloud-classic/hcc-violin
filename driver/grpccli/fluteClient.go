@@ -45,7 +45,7 @@ func (rc *RPCClient) OnNode(nodeUUID string) error {
 	nodes = append(nodes, &node)
 
 	_, err := rc.flute.NodePowerControl(ctx, &rpcflute.ReqNodePowerControl{
-		Node:      nodes,
+		Node:       nodes,
 		PowerState: rpcflute.PowerState_ON,
 	})
 	if err != nil {
