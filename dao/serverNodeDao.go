@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/golang/protobuf/ptypes"
 	gouuid "github.com/nu7hatch/gouuid"
-	pb "hcc/violin/action/grpc/rpcviolin"
+	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"time"

@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"hcc/violin/action/grpc/client"
+	"hcc/violin/action/grpc/server"
 	"hcc/violin/action/rabbitmq"
-	"hcc/violin/driver/grpc/client"
-	"hcc/violin/driver/grpc/server"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"

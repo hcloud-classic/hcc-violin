@@ -1,7 +1,7 @@
 package driver
 
 import (
-	pb "hcc/violin/action/grpc/rpcviolin"
+	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/data"
 	"hcc/violin/http"
 	"strconv"

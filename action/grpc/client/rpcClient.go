@@ -1,8 +1,8 @@
 package client
 
 import (
-	"hcc/violin/action/grpc/rpcflute"
-	"hcc/violin/action/grpc/rpcharp"
+	"hcc/violin/action/grpc/pb/rpcflute"
+	"hcc/violin/action/grpc/pb/rpcharp"
 )
 
 // RPCClient : Struct type of gRPC clients

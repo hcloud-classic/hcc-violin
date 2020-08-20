@@ -4,7 +4,7 @@ import (
 	dbsql "database/sql"
 	"errors"
 	"github.com/golang/protobuf/ptypes"
-	pb "hcc/violin/action/grpc/rpcviolin"
+	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/action/rabbitmq"
 	cmdutil "hcc/violin/lib/cmdUtil"
 	"hcc/violin/lib/logger"

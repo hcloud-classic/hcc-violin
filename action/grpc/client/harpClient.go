@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 	"google.golang.org/grpc"
-	"hcc/violin/action/grpc/rpcharp"
+	"hcc/violin/action/grpc/pb/rpcharp"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"strconv"

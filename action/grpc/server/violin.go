@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	pb "hcc/violin/action/grpc/rpcviolin"
+	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
 )
