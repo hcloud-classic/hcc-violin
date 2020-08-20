@@ -9,6 +9,7 @@ import (
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"hcc/violin/lib/syscheck"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,29 +18,29 @@ import (
 func init() {
 	err := syscheck.CheckRoot()
 	if err != nil {
-		panic(err)
+		log.Fatalf("syscheck.CheckRoot(): %v", err.Error())
 	}
 
 	err = logger.Init()
 	if err != nil {
-		panic(err)
+		log.Fatalf("logger.Init(): %v", err.Error())
 	}
 
 	config.Parser()
 
 	err = mysql.Init()
 	if err != nil {
-		panic(err)
+		logger.Logger.Fatalf("mysql.Init(): %v", err.Error())
 	}
 
 	err = rabbitmq.Init()
 	if err != nil {
-		panic(err)
+		logger.Logger.Fatalf("rabbitmq.Init(): %v", err.Error())
 	}
 
 	err = grpccli.InitGRPCClient()
 	if err != nil {
-		panic(err)
+		logger.Logger.Fatalf("grpccli.InitGRPCClient(): %v", err.Error())
 	}
 }
 
