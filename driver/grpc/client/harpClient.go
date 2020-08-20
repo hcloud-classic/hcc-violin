@@ -1,4 +1,4 @@
-package grpccli
+package client
 
 import (
 	"context"

@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"hcc/violin/action/rabbitmq"
-	"hcc/violin/driver/grpccli"
-	"hcc/violin/driver/grpcsrv"
+	"hcc/violin/driver/grpc/client"
+	"hcc/violin/driver/grpc/server"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
@@ -38,14 +38,14 @@ func init() {
 		logger.Logger.Fatalf("rabbitmq.Init(): %v", err.Error())
 	}
 
-	err = grpccli.InitGRPCClient()
+	err = client.InitGRPCClient()
 	if err != nil {
-		logger.Logger.Fatalf("grpccli.InitGRPCClient(): %v", err.Error())
+		logger.Logger.Fatalf("client.InitGRPCClient(): %v", err.Error())
 	}
 }
 
 func end() {
-	grpccli.CleanGRPCClient()
+	client.CleanGRPCClient()
 	rabbitmq.End()
 	mysql.End()
 	logger.End()
@@ -62,5 +62,5 @@ func main() {
 		os.Exit(0)
 	}()
 
-	grpcsrv.Init()
+	server.Init()
 }

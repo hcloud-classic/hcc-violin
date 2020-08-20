@@ -1,4 +1,4 @@
-package grpccli
+package client
 
 import (
 	"hcc/violin/action/grpc/rpcflute"

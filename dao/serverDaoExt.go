@@ -9,7 +9,7 @@ import (
 	pb "hcc/violin/action/grpc/rpcviolin"
 	"hcc/violin/data"
 	"hcc/violin/driver"
-	"hcc/violin/driver/grpccli"
+	"hcc/violin/driver/grpc/client"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
@@ -56,7 +56,7 @@ func checkNetmask(netmask string) (net.IPMask, error) {
 func doGetSubnet(subnetUUID string) (*net.IPNet, *pb.Subnet, error) {
 	var ipNet net.IPNet
 
-	subnet, err := grpccli.RC.GetSubnet(subnetUUID)
+	subnet, err := client.RC.GetSubnet(subnetUUID)
 	if err != nil {
 		logger.Logger.Println(err)
 		return nil, nil, err
@@ -151,7 +151,7 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 
 		logger.Logger.Println("createServer: Updating nodes info to flute module")
 
-		eachSelectedNode, err := grpccli.RC.GetNode(nodeUUID)
+		eachSelectedNode, err := client.RC.GetNode(nodeUUID)
 		if err != nil {
 			logger.Logger.Println(err)
 			return nil, err
@@ -170,7 +170,7 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 			Active:      eachSelectedNode.Active,
 		})
 		// fmt.Println("GatherSelectedNodes\n", GatherSelectedNodes)
-		_, err = grpccli.RC.UpdateNode(&rpcflute.ReqUpdateNode{Node: &pb.Node{
+		_, err = client.RC.UpdateNode(&rpcflute.ReqUpdateNode{Node: &pb.Node{
 			UUID:       eachSelectedNode.UUID,
 			ServerUUID: userQuota.ServerUUID,
 		}})
@@ -250,7 +250,7 @@ func doCreateVolume(serverUUID string, celloParams map[string]interface{}, useTy
 }
 
 func doUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string) error {
-	err := grpccli.RC.UpdateSubnet(&rpcharp.ReqUpdateSubnet{
+	err := client.RC.UpdateSubnet(&rpcharp.ReqUpdateSubnet{
 		Subnet: &rpcharp.Subnet{
 			UUID:           subnetUUID,
 			LeaderNodeUUID: leaderNodeUUID,
@@ -275,7 +275,7 @@ func doCreateDHCPDConfig(subnetUUID string, serverUUID string, nodes []pb.Node) 
 	}
 	logger.Logger.Println("doCreateDHCPDConfig: server_uuid=" + serverUUID + " nodeUUIDsStr: " + nodeUUIDsStr)
 
-	err := grpccli.RC.CreateDHCPDConfig(subnetUUID, nodeUUIDsStr)
+	err := client.RC.CreateDHCPDConfig(subnetUUID, nodeUUIDsStr)
 	if err != nil {
 		logger.Logger.Println("doCreateDHCPDConfig: server_uuid=" + serverUUID + " CreateDHCPDConfig: " + err.Error())
 		return err
@@ -289,7 +289,7 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) er
 	var i = 1
 	for i := range nodes {
 		if nodes[i].UUID == leaderNodeUUID {
-			err := grpccli.RC.OnNode(nodes[i].UUID)
+			err := client.RC.OnNode(nodes[i].UUID)
 			if err != nil {
 				logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
 				return err
@@ -316,7 +316,7 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) er
 			continue
 		}
 
-		err := grpccli.RC.OnNode(nodes[i].UUID)
+		err := client.RC.OnNode(nodes[i].UUID)
 		if err != nil {
 			logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
 			return err
