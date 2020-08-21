@@ -34,7 +34,7 @@ func closeHarp() {
 // GetSubnet : Get infos of the subnet
 func (rc *RPCClient) GetSubnet(uuid string) (*rpcharp.Subnet, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
-		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
+		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
 	subnet, err := rc.harp.GetSubnet(ctx, &rpcharp.ReqGetSubnet{UUID: uuid})
 	if err != nil {
@@ -47,7 +47,7 @@ func (rc *RPCClient) GetSubnet(uuid string) (*rpcharp.Subnet, error) {
 // UpdateSubnet : Update infos of the subnet
 func (rc *RPCClient) UpdateSubnet(in *rpcharp.ReqUpdateSubnet) error {
 	ctx, cancel := context.WithTimeout(context.Background(),
-		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
+		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
 	_, err := rc.harp.UpdateSubnet(ctx, in)
 	if err != nil {
@@ -60,7 +60,7 @@ func (rc *RPCClient) UpdateSubnet(in *rpcharp.ReqUpdateSubnet) error {
 // CreateDHCPDConfig : Do dhcpd config file creation works
 func (rc *RPCClient) CreateDHCPDConfig(subnetUUID string, nodeUUIDs string) error {
 	ctx, cancel := context.WithTimeout(context.Background(),
-		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
+		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
 	_, err := rc.harp.CreateDHPCDConf(ctx, &rpcharp.ReqCreateDHPCDConf{
 		SubnetUUID: subnetUUID,
