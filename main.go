@@ -26,7 +26,7 @@ func init() {
 		log.Fatalf("logger.Init(): %v", err.Error())
 	}
 
-	config.Parser()
+	config.Init()
 
 	err = mysql.Init()
 	if err != nil {
@@ -38,14 +38,14 @@ func init() {
 		logger.Logger.Fatalf("rabbitmq.Init(): %v", err.Error())
 	}
 
-	err = client.InitGRPCClient()
+	err = client.Init()
 	if err != nil {
-		logger.Logger.Fatalf("client.InitGRPCClient(): %v", err.Error())
+		logger.Logger.Fatalf("client.Init(): %v", err.Error())
 	}
 }
 
 func end() {
-	client.CleanGRPCClient()
+	client.End()
 	rabbitmq.End()
 	mysql.End()
 	logger.End()

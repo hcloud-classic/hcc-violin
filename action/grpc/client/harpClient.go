@@ -27,7 +27,7 @@ func initHarp() error {
 	return nil
 }
 
-func cleanHarp() {
+func closeHarp() {
 	_ = harpConn.Close()
 }
 

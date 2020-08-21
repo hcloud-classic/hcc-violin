@@ -28,7 +28,7 @@ func initFlute() error {
 	return nil
 }
 
-func cleanFlute() {
+func closeFlute() {
 	_ = fluteConn.Close()
 }
 

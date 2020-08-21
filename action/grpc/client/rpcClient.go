@@ -14,8 +14,8 @@ type RPCClient struct {
 // RC : Exported variable pointed to RPCClient
 var RC = &RPCClient{}
 
-// InitGRPCClient : Initialize clients of gRPC
-func InitGRPCClient() error {
+// Init : Initialize clients of gRPC
+func Init() error {
 	err := initFlute()
 	if err != nil {
 		return err
@@ -29,8 +29,8 @@ func InitGRPCClient() error {
 	return nil
 }
 
-// CleanGRPCClient : Close connections of gRPC clients
-func CleanGRPCClient() {
-	cleanHarp()
-	cleanFlute()
+// End : Close connections of gRPC clients
+func End() {
+	closeHarp()
+	closeFlute()
 }
