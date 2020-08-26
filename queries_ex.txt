@@ -1,0 +1,129 @@
+// url
+http://localhost:7500/graphql
+
+//// server
+
+// create
+mutation _ {
+  create_server(subnet_uuid: "36b83a39-750c-4588-6243-a3272a4a3e4f", os: "ubuntu", server_name: "ish server", server_desc: "test server", cpu: 1, memory: 4, disk_size: 10, user_uuid: "jolla") {
+    uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
+  }
+}
+
+// read
+query {
+  server(uuid: "37b50a05-ed0c-4a76-7f4b-39b02e066e65") {
+    uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
+  }
+}
+
+query {
+  list_server(uuid: "37b50a05-ed0c-4a76-7f4b-39b02e066e65", row:5, page:1) {
+    uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
+    created_at
+  }
+}
+
+query {
+  all_server(row:5, page:1) {
+    uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
+    created_at
+  }
+}
+
+query {
+	num_server{
+    number
+  }
+}
+
+// update
+mutation _ {
+  update_server(uuid: "813966ad-6c41-47fe-4f7c-ba59608d3f9a", subnet_uuid: "1234", os: "centos", server_name: "server1", server_desc: "test server", cpu: 1, memory: 4, disk_size: 20, status: "stop", user_uuid: "1234") {
+    uuid
+    subnet_uuid
+    os
+    server_name
+    server_desc
+    cpu
+    memory
+    disk_size
+    status
+    user_uuid
+  }
+}
+
+// delete
+mutation _ {
+  delete_server(uuid:"75149b85-61a2-4008-5766-10bdc3514641"){uuid}
+}
+
+//// server_node
+
+// create
+
+mutation _ {
+  create_server_node(server_uuid: "1111", node_uuid: "2222") {
+    uuid
+    server_uuid
+    node_uuid
+    created_at
+  }
+}
+
+// read
+
+// read
+query {
+  server_node(uuid: "8e792a64-eb1d-44f4-470c-ac870f4e48d8") {
+    uuid
+    server_uuid
+    node_uuid
+    created_at
+  }
+}
+
+// update
+
+// delete
+
+// delete
+mutation _ {
+  delete_server_node(uuid:"8e792a64-eb1d-44f4-470c-ac870f4e48d8"){uuid}
+}
