@@ -2,18 +2,18 @@ package mysql
 
 import (
 	"hcc/violin/lib/config"
+	"hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
-	"hcc/violin/lib/syscheck"
 	"testing"
 )
 
 func Test_DB_Prepare(t *testing.T) {
-	err := syscheck.CheckRoot()
+	err := logger.Init()
 	if err != nil {
-		t.Fatal("Failed to get root permission!")
+		errors.SetErrLogger(logger.Logger)
+		errors.NewHccError(errors.ViolinInternalInitFail, "logger.Init(): "+err.Error()).Fatal()
 	}
-
-	err = logger.Init()
+	errors.SetErrLogger(logger.Logger)
 	if err != nil {
 		t.Fatal("Failed to prepare logger!")
 	}

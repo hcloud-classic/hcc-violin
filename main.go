@@ -6,41 +6,37 @@ import (
 	"hcc/violin/action/grpc/server"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/lib/config"
+	"hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
-	"hcc/violin/lib/syscheck"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
 func init() {
-	err := syscheck.CheckRoot()
+	err := logger.Init()
 	if err != nil {
-		log.Fatalf("syscheck.CheckRoot(): %v", err.Error())
+		errors.SetErrLogger(logger.Logger)
+		errors.NewHccError(errors.ViolinInternalInitFail, "logger.Init(): "+err.Error()).Fatal()
 	}
-
-	err = logger.Init()
-	if err != nil {
-		log.Fatalf("logger.Init(): %v", err.Error())
-	}
+	errors.SetErrLogger(logger.Logger)
 
 	config.Init()
 
 	err = mysql.Init()
 	if err != nil {
-		logger.Logger.Fatalf("mysql.Init(): %v", err.Error())
+		errors.NewHccError(errors.ViolinInternalInitFail, "mysql.Init(): "+err.Error()).Fatal()
 	}
 
 	err = rabbitmq.Init()
 	if err != nil {
-		logger.Logger.Fatalf("rabbitmq.Init(): %v", err.Error())
+		errors.NewHccError(errors.ViolinInternalInitFail, "rabbitmq.Init(): "+err.Error()).Fatal()
 	}
 
 	err = client.Init()
 	if err != nil {
-		logger.Logger.Fatalf("client.Init(): %v", err.Error())
+		errors.NewHccError(errors.ViolinInternalInitFail, "client.Init(): "+err.Error()).Fatal()
 	}
 }
 
