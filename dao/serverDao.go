@@ -109,6 +109,8 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 	if in.Server != nil {
 		reqServer := in.Server
 
+		uuid = reqServer.UUID
+		uuidOk := len(uuid) != 0
 		subnetUUID = reqServer.SubnetUUID
 		subnetUUIDOk := len(subnetUUID) != 0
 		os = reqServer.OS
@@ -128,6 +130,9 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 		userUUID = reqServer.UserUUID
 		userUUIDOk := len(userUUID) != 0
 
+		if uuidOk {
+			sql += " and uuid = '" + uuid + "'"
+		}
 		if subnetUUIDOk {
 			sql += " and subnet_uuid = '" + subnetUUID + "'"
 		}
