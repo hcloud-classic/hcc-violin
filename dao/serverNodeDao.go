@@ -40,7 +40,7 @@ func ReadServerNode(uuid string) (*pb.ServerNode, uint64, string) {
 
 	serverNode.CreatedAt, err = ptypes.TimestampProto(createdAt)
 	if err != nil {
-		errStr := "ReadServerNode(): "+err.Error()
+		errStr := "ReadServerNode(): " + err.Error()
 		logger.Logger.Println(errStr)
 		return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
 	}
@@ -68,7 +68,7 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 
 	stmt, err := mysql.Db.Query(sql, serverUUID)
 	if err != nil {
-		errStr := "ReadServerNodeList(): "+err.Error()
+		errStr := "ReadServerNodeList(): " + err.Error()
 		logger.Logger.Println(errStr)
 		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
@@ -89,7 +89,7 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 
 		_createdAt, err := ptypes.TimestampProto(createdAt)
 		if err != nil {
-			errStr := "ReadServerNodeList(): "+err.Error()
+			errStr := "ReadServerNodeList(): " + err.Error()
 			logger.Logger.Println(errStr)
 			return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
 		}
@@ -171,10 +171,10 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 	for i := range pserverNodes {
 		if pserverNodes[i].NodeUUID == reqServerNode.NodeUUID {
 			return nil, hccerr.ViolinInternalServerNodePresentError,
-			"CreateServerNode(): requested ServerNode is already present in the database (" +
-				"UUID: " + pserverNodes[i].UUID + ", " +
-				"ServerUUID: " + pserverNodes[i].ServerUUID + ", " +
-				"NodeUUID: " + pserverNodes[i].NodeUUID + ")"
+				"CreateServerNode(): requested ServerNode is already present in the database (" +
+					"UUID: " + pserverNodes[i].UUID + ", " +
+					"ServerUUID: " + pserverNodes[i].ServerUUID + ", " +
+					"NodeUUID: " + pserverNodes[i].NodeUUID + ")"
 		}
 	}
 
@@ -187,7 +187,7 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 	sql := "insert into server_node(uuid, server_uuid, node_uuid, created_at) values (?, ?, ?, now())"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		errStr := "CreateServerNode(): "+err.Error()
+		errStr := "CreateServerNode(): " + err.Error()
 		logger.Logger.Println(errStr)
 		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
@@ -197,7 +197,7 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 
 	result, err := stmt.Exec(serverNode.UUID, serverNode.ServerUUID, serverNode.NodeUUID)
 	if err != nil {
-		errStr := "CreateServerNode(): "+err.Error()
+		errStr := "CreateServerNode(): " + err.Error()
 		logger.Logger.Println(errStr)
 		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
@@ -219,7 +219,7 @@ func DeleteServerNode(in *pb.ReqDeleteServerNode) (string, uint64, string) {
 	sql := "delete from server_node where uuid = ?"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		errStr := "DeleteServerNode(): "+err.Error()
+		errStr := "DeleteServerNode(): " + err.Error()
 		logger.Logger.Println(errStr)
 		return "", hccerr.ViolinSQLOperationFail, errStr
 	}
@@ -228,7 +228,7 @@ func DeleteServerNode(in *pb.ReqDeleteServerNode) (string, uint64, string) {
 	}()
 	result, err2 := stmt.Exec(requestedUUID)
 	if err2 != nil {
-		errStr := "DeleteServerNode(): "+err2.Error()
+		errStr := "DeleteServerNode(): " + err2.Error()
 		logger.Logger.Println(errStr)
 		return "", hccerr.ViolinSQLOperationFail, errStr
 	}
@@ -250,7 +250,7 @@ func DeleteServerNodeByServerUUID(in *pb.ReqDeleteServerNodeByServerUUID) (strin
 	sql := "delete from server_node where server_uuid = ?"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		errStr := "DeleteServerNodeByServerUUID(): "+err.Error()
+		errStr := "DeleteServerNodeByServerUUID(): " + err.Error()
 		logger.Logger.Println(errStr)
 		return "", hccerr.ViolinSQLOperationFail, errStr
 	}
@@ -259,7 +259,7 @@ func DeleteServerNodeByServerUUID(in *pb.ReqDeleteServerNodeByServerUUID) (strin
 	}()
 	result, err2 := stmt.Exec(requestedServerUUID)
 	if err2 != nil {
-		errStr := "DeleteServerNodeByServerUUID(): "+err2.Error()
+		errStr := "DeleteServerNodeByServerUUID(): " + err2.Error()
 		logger.Logger.Println(errStr)
 		return "", hccerr.ViolinSQLOperationFail, errStr
 	}

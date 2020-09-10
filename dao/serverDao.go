@@ -65,7 +65,7 @@ func ReadServer(uuid string) (*pb.Server, uint64, string) {
 
 	server.CreatedAt, err = ptypes.TimestampProto(createdAt)
 	if err != nil {
-		errStr := "ReadServer(): "+err.Error()
+		errStr := "ReadServer(): " + err.Error()
 		logger.Logger.Println(errStr)
 		return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
 	}
@@ -173,7 +173,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 	}
 
 	if err != nil {
-		errStr := "ReadServerList(): "+err.Error()
+		errStr := "ReadServerList(): " + err.Error()
 		logger.Logger.Println(errStr)
 		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
@@ -194,7 +194,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 
 		_createdAt, err := ptypes.TimestampProto(createdAt)
 		if err != nil {
-			errStr := "ReadServerList(): "+err.Error()
+			errStr := "ReadServerList(): " + err.Error()
 			logger.Logger.Println(errStr)
 			return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
 		}
@@ -389,7 +389,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 
 	nodes, errCode, errStr = doGetAvailableNodes(in)
 	if errCode != 0 {
-		errStack.Push(&hccerr.HccError{ErrCode:errCode, ErrText: errStr})
+		errStack.Push(&hccerr.HccError{ErrCode: errCode, ErrText: errStr})
 		errStack.Push(&hccerr.HccError{ErrCode: hccerr.ViolinInternalGetAvailableNodesError, ErrText: "CreateServer(): Failed to get available nodes"})
 
 		goto ERROR
@@ -416,9 +416,9 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 	sql = "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())"
 	stmt, err = mysql.Db.Prepare(sql)
 	if err != nil {
-		errStr := "CreateServer(): "+err.Error()
+		errStr := "CreateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
-		errStack.Push(&hccerr.HccError{ErrCode:hccerr.ViolinSQLOperationFail, ErrText: errStr})
+		errStack.Push(&hccerr.HccError{ErrCode: hccerr.ViolinSQLOperationFail, ErrText: errStr})
 
 		goto ERROR
 	}
@@ -427,16 +427,16 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 	}()
 	_, err = stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.CPU, server.Memory, server.DiskSize, server.Status, server.UserUUID)
 	if err != nil {
-		errStr := "CreateServer(): "+err.Error()
+		errStr := "CreateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
-		errStack.Push(&hccerr.HccError{ErrCode:hccerr.ViolinSQLOperationFail, ErrText: errStr})
+		errStack.Push(&hccerr.HccError{ErrCode: hccerr.ViolinSQLOperationFail, ErrText: errStr})
 
 		goto ERROR
 	}
 
 	err = doCreateServerRoutine(&server, nodes)
 	if err != nil {
-		errStack.Push(&hccerr.HccError{ErrCode:hccerr.ViolinInternalCreateServerRoutineError, ErrText: err.Error()})
+		errStack.Push(&hccerr.HccError{ErrCode: hccerr.ViolinInternalCreateServerRoutineError, ErrText: err.Error()})
 
 		goto ERROR
 	}
@@ -561,7 +561,7 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		errStr := "UpdateServer(): "+err.Error()
+		errStr := "UpdateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
 		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
@@ -571,7 +571,7 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 
 	result, err2 := stmt.Exec(server.UUID)
 	if err2 != nil {
-		errStr := "UpdateServer(): "+err2.Error()
+		errStr := "UpdateServer(): " + err2.Error()
 		logger.Logger.Println(errStr)
 		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
@@ -579,7 +579,7 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 
 	server, errCode, errStr := ReadServer(server.UUID)
 	if errCode != 0 {
-		logger.Logger.Println("UpdateServer(): "+errStr)
+		logger.Logger.Println("UpdateServer(): " + errStr)
 	}
 
 	return server, 0, ""
@@ -625,7 +625,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (string, uint64, string) {
 	sql := "delete from server where uuid = ?"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		errStr := "DeleteServer(): "+err.Error()
+		errStr := "DeleteServer(): " + err.Error()
 		logger.Logger.Println(errStr)
 		return "", hccerr.ViolinSQLOperationFail, errStr
 	}
@@ -634,7 +634,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (string, uint64, string) {
 	}()
 	_, err2 := stmt.Exec(requestedUUID)
 	if err2 != nil {
-		errStr := "DeleteServer(): "+err2.Error()
+		errStr := "DeleteServer(): " + err2.Error()
 		logger.Logger.Println(errStr)
 		return "", hccerr.ViolinSQLOperationFail, errStr
 	}
