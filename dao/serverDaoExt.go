@@ -127,9 +127,9 @@ func nodeScheduler(userquota *pb.Quota) ([]string, error) {
 }
 
 func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
-	logger.Logger.Println("[Violin Scheduler] Start Scheduling")
+	logger.Logger.Println("doGetNodes(): [Violin Scheduler] Start Scheduling")
 	nodeUUIDs, err := nodeScheduler(userQuota)
-	logger.Logger.Println("[Violin Scheduler] End Scheduling")
+	logger.Logger.Println("doGetNodes(): [Violin Scheduler] End Scheduling")
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 	var nrNodes = userQuota.NumberOfNodes
 
 	if len(nodeUUIDs) < int(nrNodes) || len(nodeUUIDs) == 0 {
-		errMsg := "createServer: not enough available nodes"
+		errMsg := "doGetNodes(): not enough available nodes"
 		logger.Logger.Println(errMsg)
 		return nil, errors.New(errMsg)
 	}
@@ -149,7 +149,7 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 			break
 		}
 
-		logger.Logger.Println("createServer: Updating nodes info to flute module")
+		logger.Logger.Println("doGetNodes(): Updating nodes info to flute module")
 
 		eachSelectedNode, err := client.RC.GetNode(nodeUUID)
 		if err != nil {
@@ -179,15 +179,15 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 			return nil, err
 		}
 
-		_, err = CreateServerNode(&pb.ReqCreateServerNode{
+		_, errCode, errStr := CreateServerNode(&pb.ReqCreateServerNode{
 			ServerNode: &pb.ServerNode{
 				ServerUUID: userQuota.ServerUUID,
 				NodeUUID:   nodeUUID,
 			},
 		})
-		if err != nil {
-			logger.Logger.Println(err)
-			return nil, err
+		if errCode != 0 {
+			logger.Logger.Println(errStr)
+			return nil, errors.New(errStr)
 		}
 
 		nodeSelected++
@@ -329,5 +329,5 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) er
 }
 
 func printLogCreateServerRoutine(serverUUID string, msg string) {
-	logger.Logger.Println("createServerRoutine: server_uuid=" + serverUUID + ": " + msg)
+	logger.Logger.Println("createServerRoutine(): server_uuid=" + serverUUID + ": " + msg)
 }

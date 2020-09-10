@@ -1,17 +1,18 @@
 package dao
 
 import (
-	"errors"
 	"github.com/golang/protobuf/ptypes"
 	gouuid "github.com/nu7hatch/gouuid"
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
+	hccerr "hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
+	"strings"
 	"time"
 )
 
 // ReadServerNode : Get infos of a server node
-func ReadServerNode(uuid string) (*pb.ServerNode, error) {
+func ReadServerNode(uuid string) (*pb.ServerNode, uint64, string) {
 	var serverNode pb.ServerNode
 	var err error
 	var serverUUID string
@@ -25,8 +26,12 @@ func ReadServerNode(uuid string) (*pb.ServerNode, error) {
 		&nodeUUID,
 		&createdAt)
 	if err != nil {
-		logger.Logger.Println(err)
-		return nil, err
+		errStr := "ReadServerNode(): " + err.Error()
+		logger.Logger.Println(errStr)
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, hccerr.ViolinSQLNoResult, errStr
+		}
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 
 	serverNode.UUID = uuid
@@ -35,19 +40,20 @@ func ReadServerNode(uuid string) (*pb.ServerNode, error) {
 
 	serverNode.CreatedAt, err = ptypes.TimestampProto(createdAt)
 	if err != nil {
-		logger.Logger.Println(err)
-		return nil, err
+		errStr := "ReadServerNode(): "+err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
 	}
 
-	return &serverNode, nil
+	return &serverNode, 0, ""
 }
 
 // ReadServerNodeList : Get list of server nodes with provided server UUID
-func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, error) {
+func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, uint64, string) {
 	serverUUID := in.GetServerUUID()
 	serverUUIDOk := len(serverUUID) != 0
 	if !serverUUIDOk {
-		return nil, errors.New("need a serverUUID argument")
+		return nil, hccerr.ViolinGrpcArgumentError, "ReadServerNodeList(): need a serverUUID argument"
 	}
 
 	var serverNodeList pb.ResGetServerNodeList
@@ -62,8 +68,9 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 
 	stmt, err := mysql.Db.Query(sql, serverUUID)
 	if err != nil {
-		logger.Logger.Println(err.Error())
-		return nil, err
+		errStr := "ReadServerNodeList(): "+err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 	defer func() {
 		_ = stmt.Close()
@@ -72,14 +79,19 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 	for stmt.Next() {
 		err := stmt.Scan(&uuid, &serverUUID, &nodeUUID, &createdAt)
 		if err != nil {
-			logger.Logger.Println(err.Error())
-			return nil, err
+			errStr := "ReadServerNodeList(): " + err.Error()
+			logger.Logger.Println(errStr)
+			if strings.Contains(err.Error(), "no rows in result set") {
+				return nil, hccerr.ViolinSQLNoResult, errStr
+			}
+			return nil, hccerr.ViolinSQLOperationFail, errStr
 		}
 
 		_createdAt, err := ptypes.TimestampProto(createdAt)
 		if err != nil {
-			logger.Logger.Println(err)
-			return nil, err
+			errStr := "ReadServerNodeList(): "+err.Error()
+			logger.Logger.Println(errStr)
+			return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
 		}
 
 		serverNodes = append(serverNodes, pb.ServerNode{
@@ -95,15 +107,15 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 
 	serverNodeList.ServerNode = pserverNodes
 
-	return &serverNodeList, nil
+	return &serverNodeList, 0, ""
 }
 
 // ReadServerNodeNum : Get the number of server nodes
-func ReadServerNodeNum(in *pb.ReqGetServerNodeNum) (*pb.ResGetServerNodeNum, error) {
+func ReadServerNodeNum(in *pb.ReqGetServerNodeNum) (*pb.ResGetServerNodeNum, uint64, string) {
 	serverUUID := in.GetServerUUID()
 	serverUUIDOk := len(serverUUID) != 0
 	if !serverUUIDOk {
-		return nil, errors.New("need a serverUUID argument")
+		return nil, hccerr.ViolinGrpcArgumentError, "ReadServerNodeNum(): need a serverUUID argument"
 	}
 
 	var serverNodeNum pb.ResGetServerNodeNum
@@ -113,12 +125,16 @@ func ReadServerNodeNum(in *pb.ReqGetServerNodeNum) (*pb.ResGetServerNodeNum, err
 	sql := "select count(*) from server_node where server_uuid = '" + serverUUID + "'"
 	err = mysql.Db.QueryRow(sql).Scan(&serverNodeNr)
 	if err != nil {
-		logger.Logger.Println(err)
-		return nil, err
+		errStr := "ReadServerNodeNum(): " + err.Error()
+		logger.Logger.Println(errStr)
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, hccerr.ViolinSQLNoResult, errStr
+		}
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 	serverNodeNum.Num = int64(serverNodeNr)
 
-	return &serverNodeNum, nil
+	return &serverNodeNum, 0, ""
 }
 
 func checkCreateServerNodeArgs(reqServerNode *pb.ServerNode) bool {
@@ -129,35 +145,36 @@ func checkCreateServerNodeArgs(reqServerNode *pb.ServerNode) bool {
 }
 
 // CreateServerNode : Create server nodes. Insert each node UUIDs with server UUID.
-func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, error) {
+func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, string) {
 	reqServerNode := in.GetServerNode()
 	if reqServerNode == nil {
-		return nil, errors.New("serverNode is nil")
+		return nil, hccerr.ViolinGrpcArgumentError, "CreateServerNode(): serverNode is nil"
 	}
 
 	out, err := gouuid.NewV4()
 	if err != nil {
 		logger.Logger.Println(err)
-		return nil, err
+		return nil, hccerr.ViolinInternalUUIDGenerationError, "CreateServerNode(): " + err.Error()
 	}
 	uuid := out.String()
 
 	if checkCreateServerNodeArgs(reqServerNode) {
-		return nil, errors.New("some of arguments are missing")
+		return nil, hccerr.ViolinGrpcArgumentError, "CreateServerNode(): some of arguments are missing"
 	}
 
-	serverNodeList, err := ReadServerNodeList(&pb.ReqGetServerNodeList{ServerUUID: reqServerNode.ServerUUID})
-	if err != nil {
-		return nil, err
+	serverNodeList, errCode, errStr := ReadServerNodeList(&pb.ReqGetServerNodeList{ServerUUID: reqServerNode.ServerUUID})
+	if errCode != 0 {
+		return nil, errCode, "CreateServerNode(): " + errStr
 	}
 	pserverNodes := serverNodeList.ServerNode
 
 	for i := range pserverNodes {
 		if pserverNodes[i].NodeUUID == reqServerNode.NodeUUID {
-			return nil, errors.New("requested ServerNode is already present in the database (" +
+			return nil, hccerr.ViolinInternalServerNodePresentError,
+			"CreateServerNode(): requested ServerNode is already present in the database (" +
 				"UUID: " + pserverNodes[i].UUID + ", " +
 				"ServerUUID: " + pserverNodes[i].ServerUUID + ", " +
-				"NodeUUID: " + pserverNodes[i].NodeUUID + ")")
+				"NodeUUID: " + pserverNodes[i].NodeUUID + ")"
 		}
 	}
 
@@ -170,8 +187,9 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, error) {
 	sql := "insert into server_node(uuid, server_uuid, node_uuid, created_at) values (?, ?, ?, now())"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		logger.Logger.Println(err)
-		return nil, err
+		errStr := "CreateServerNode(): "+err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 	defer func() {
 		_ = stmt.Close()
@@ -179,68 +197,73 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, error) {
 
 	result, err := stmt.Exec(serverNode.UUID, serverNode.ServerUUID, serverNode.NodeUUID)
 	if err != nil {
-		logger.Logger.Println(err)
-		return nil, err
+		errStr := "CreateServerNode(): "+err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 	logger.Logger.Println(result.LastInsertId())
 
-	return &serverNode, nil
+	return &serverNode, 0, ""
 }
 
 // DeleteServerNode : Delete a server node matched with provided UUID.
-func DeleteServerNode(in *pb.ReqDeleteServerNode) (string, error) {
+func DeleteServerNode(in *pb.ReqDeleteServerNode) (string, uint64, string) {
 	var err error
 
 	requestedUUID := in.GetUUID()
 	requestedUUIDOk := len(requestedUUID) != 0
 	if !requestedUUIDOk {
-		return "", errors.New("need a UUID argument")
+		return "", hccerr.ViolinGrpcArgumentError, "DeleteServerNode(): need a UUID argument"
 	}
 
 	sql := "delete from server_node where uuid = ?"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		logger.Logger.Println(err.Error())
-		return "", err
+		errStr := "DeleteServerNode(): "+err.Error()
+		logger.Logger.Println(errStr)
+		return "", hccerr.ViolinSQLOperationFail, errStr
 	}
 	defer func() {
 		_ = stmt.Close()
 	}()
 	result, err2 := stmt.Exec(requestedUUID)
 	if err2 != nil {
-		logger.Logger.Println(err2)
-		return "", err
+		errStr := "DeleteServerNode(): "+err2.Error()
+		logger.Logger.Println(errStr)
+		return "", hccerr.ViolinSQLOperationFail, errStr
 	}
 	logger.Logger.Println(result.RowsAffected())
 
-	return requestedUUID, nil
+	return requestedUUID, 0, ""
 }
 
 // DeleteServerNodeByServerUUID : Delete server nodes. Delete server nodes matched with server UUID.
-func DeleteServerNodeByServerUUID(in *pb.ReqDeleteServerNodeByServerUUID) (string, error) {
+func DeleteServerNodeByServerUUID(in *pb.ReqDeleteServerNodeByServerUUID) (string, uint64, string) {
 	var err error
 
 	requestedServerUUID := in.GetServerUUID()
 	requestedServerUUIDOk := len(requestedServerUUID) != 0
 	if !requestedServerUUIDOk {
-		return "", errors.New("need a serverUUID argument")
+		return "", hccerr.ViolinGrpcArgumentError, "DeleteServerNodeByServerUUID(): need a serverUUID argument"
 	}
 
 	sql := "delete from server_node where server_uuid = ?"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		logger.Logger.Println(err.Error())
-		return "", err
+		errStr := "DeleteServerNodeByServerUUID(): "+err.Error()
+		logger.Logger.Println(errStr)
+		return "", hccerr.ViolinSQLOperationFail, errStr
 	}
 	defer func() {
 		_ = stmt.Close()
 	}()
 	result, err2 := stmt.Exec(requestedServerUUID)
 	if err2 != nil {
-		logger.Logger.Println(err2)
-		return "", err
+		errStr := "DeleteServerNodeByServerUUID(): "+err2.Error()
+		logger.Logger.Println(errStr)
+		return "", hccerr.ViolinSQLOperationFail, errStr
 	}
 	logger.Logger.Println(result.RowsAffected())
 
-	return requestedServerUUID, nil
+	return requestedServerUUID, 0, ""
 }

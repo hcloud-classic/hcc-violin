@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"hcc/violin/action/grpc/errconv"
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/dao"
+	"hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 )
 
@@ -39,9 +41,9 @@ func returnServerNode(serverNode *pb.ServerNode) *pb.ServerNode {
 func (s *violinServer) CreateServer(_ context.Context, in *pb.ReqCreateServer) (*pb.ResCreateServer, error) {
 	logger.Logger.Println("Request received: CreateServer()")
 
-	server, err := dao.CreateServer(in)
-	if err != nil {
-		return nil, err
+	server, errStack := dao.CreateServer(in)
+	if server == nil {
+		return &pb.ResCreateServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return &pb.ResCreateServer{Server: returnServer(server)}, nil
@@ -50,9 +52,10 @@ func (s *violinServer) CreateServer(_ context.Context, in *pb.ReqCreateServer) (
 func (s *violinServer) GetServer(_ context.Context, in *pb.ReqGetServer) (*pb.ResGetServer, error) {
 	logger.Logger.Println("Request received: GetServer()")
 
-	server, err := dao.ReadServer(in.GetUUID())
-	if err != nil {
-		return nil, err
+	server, errCode, errStr := dao.ReadServer(in.GetUUID())
+	if errCode != 0 {
+		errStack := errors.ReturnHccError(errCode, errStr)
+		return &pb.ResGetServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
 	return &pb.ResGetServer{Server: returnServer(server)}, nil
@@ -61,9 +64,10 @@ func (s *violinServer) GetServer(_ context.Context, in *pb.ReqGetServer) (*pb.Re
 func (s *violinServer) GetServerList(_ context.Context, in *pb.ReqGetServerList) (*pb.ResGetServerList, error) {
 	logger.Logger.Println("Request received: GetServerList()")
 
-	serverList, err := dao.ReadServerList(in)
-	if err != nil {
-		return nil, err
+	serverList, errCode, errStr := dao.ReadServerList(in)
+	if errCode != 0 {
+		errStack := errors.ReturnHccError(errCode, errStr)
+		return &pb.ResGetServerList{Server: []*pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
 	return serverList, nil
@@ -72,9 +76,10 @@ func (s *violinServer) GetServerList(_ context.Context, in *pb.ReqGetServerList)
 func (s *violinServer) GetServerNum(_ context.Context, _ *pb.Empty) (*pb.ResGetServerNum, error) {
 	logger.Logger.Println("Request received: GetServerNum()")
 
-	serverNum, err := dao.ReadServerNum()
-	if err != nil {
-		return nil, err
+	serverNum, errCode, errStr := dao.ReadServerNum()
+	if errCode != 0 {
+		errStack := errors.ReturnHccError(errCode, errStr)
+		return &pb.ResGetServerNum{Num: 0, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
 	return serverNum, nil
@@ -83,9 +88,10 @@ func (s *violinServer) GetServerNum(_ context.Context, _ *pb.Empty) (*pb.ResGetS
 func (s *violinServer) UpdateServer(_ context.Context, in *pb.ReqUpdateServer) (*pb.ResUpdateServer, error) {
 	logger.Logger.Println("Request received: UpdateServer()")
 
-	updateServer, err := dao.UpdateServer(in)
-	if err != nil {
-		return nil, err
+	updateServer, errCode, errStr := dao.UpdateServer(in)
+	if errCode != 0 {
+		errStack := errors.ReturnHccError(errCode, errStr)
+		return &pb.ResUpdateServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
 	return &pb.ResUpdateServer{Server: updateServer}, nil
@@ -94,9 +100,10 @@ func (s *violinServer) UpdateServer(_ context.Context, in *pb.ReqUpdateServer) (
 func (s *violinServer) DeleteServer(_ context.Context, in *pb.ReqDeleteServer) (*pb.ResDeleteServer, error) {
 	logger.Logger.Println("Request received: DeleteServer()")
 
-	uuid, err := dao.DeleteServer(in)
-	if err != nil {
-		return nil, err
+	uuid, errCode, errStr := dao.DeleteServer(in)
+	if errCode != 0 {
+		errStack := errors.ReturnHccError(errCode, errStr)
+		return &pb.ResDeleteServer{UUID: "", HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
 	return &pb.ResDeleteServer{UUID: uuid}, nil
@@ -105,9 +112,10 @@ func (s *violinServer) DeleteServer(_ context.Context, in *pb.ReqDeleteServer) (
 func (s *violinServer) CreateServerNode(_ context.Context, in *pb.ReqCreateServerNode) (*pb.ResCreateServerNode, error) {
 	logger.Logger.Println("Request received: CreateServerNode()")
 
-	serverNode, err := dao.CreateServerNode(in)
-	if err != nil {
-		return nil, err
+	serverNode, errCode, errStr := dao.CreateServerNode(in)
+	if errCode != 0 {
+		errStack := errors.ReturnHccError(errCode, errStr)
+		return &pb.ResCreateServerNode{ServerNode: &pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
 	return &pb.ResCreateServerNode{ServerNode: returnServerNode(serverNode)}, nil
@@ -116,9 +124,10 @@ func (s *violinServer) CreateServerNode(_ context.Context, in *pb.ReqCreateServe
 func (s *violinServer) GetServerNode(_ context.Context, in *pb.ReqGetServerNode) (*pb.ResGetServerNode, error) {
 	logger.Logger.Println("Request received: GetServerNode()")
 
-	serverNode, err := dao.ReadServerNode(in.GetUUID())
-	if err != nil {
-		return nil, err
+	serverNode, errCode, errStr := dao.ReadServerNode(in.GetUUID())
+	if errCode != 0 {
+		errStack := errors.ReturnHccError(errCode, errStr)
+		return &pb.ResGetServerNode{ServerNode: &pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
 	return &pb.ResGetServerNode{ServerNode: returnServerNode(serverNode)}, nil
@@ -127,9 +136,10 @@ func (s *violinServer) GetServerNode(_ context.Context, in *pb.ReqGetServerNode)
 func (s *violinServer) GetServerNodeList(_ context.Context, in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, error) {
 	logger.Logger.Println("Request received: GetServerNodeList()")
 
-	serverNodeList, err := dao.ReadServerNodeList(in)
-	if err != nil {
-		return nil, err
+	serverNodeList, errCode, errStr := dao.ReadServerNodeList(in)
+	if errCode != 0 {
+		errStack := errors.ReturnHccError(errCode, errStr)
+		return &pb.ResGetServerNodeList{ServerNode: []*pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
 	return serverNodeList, nil
@@ -138,9 +148,10 @@ func (s *violinServer) GetServerNodeList(_ context.Context, in *pb.ReqGetServerN
 func (s *violinServer) GetServerNodeNum(_ context.Context, in *pb.ReqGetServerNodeNum) (*pb.ResGetServerNodeNum, error) {
 	logger.Logger.Println("Request received: GetServerNodeNum()")
 
-	serverNodeNum, err := dao.ReadServerNodeNum(in)
-	if err != nil {
-		return nil, err
+	serverNodeNum, errCode, errStr := dao.ReadServerNodeNum(in)
+	if errCode != 0 {
+		errStack := errors.ReturnHccError(errCode, errStr)
+		return &pb.ResGetServerNodeNum{Num: 0, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
 	return serverNodeNum, nil
@@ -149,9 +160,10 @@ func (s *violinServer) GetServerNodeNum(_ context.Context, in *pb.ReqGetServerNo
 func (s *violinServer) DeleteServerNode(_ context.Context, in *pb.ReqDeleteServerNode) (*pb.ResDeleteServerNode, error) {
 	logger.Logger.Println("Request received: DeleteServerNode()")
 
-	uuid, err := dao.DeleteServerNode(in)
-	if err != nil {
-		return nil, err
+	uuid, errCode, errStr := dao.DeleteServerNode(in)
+	if errCode != 0 {
+		errStack := errors.ReturnHccError(errCode, errStr)
+		return &pb.ResDeleteServerNode{UUID: "", HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
 	return &pb.ResDeleteServerNode{UUID: uuid}, nil
@@ -160,9 +172,10 @@ func (s *violinServer) DeleteServerNode(_ context.Context, in *pb.ReqDeleteServe
 func (s *violinServer) DeleteServerNodeByServerUUID(_ context.Context, in *pb.ReqDeleteServerNodeByServerUUID) (*pb.ResDeleteServerNodeByServerUUID, error) {
 	logger.Logger.Println("Request received: DeleteServerNodeByServerUUID()")
 
-	serverUUID, err := dao.DeleteServerNodeByServerUUID(in)
-	if err != nil {
-		return nil, err
+	serverUUID, errCode, errStr := dao.DeleteServerNodeByServerUUID(in)
+	if errCode != 0 {
+		errStack := errors.ReturnHccError(errCode, errStr)
+		return &pb.ResDeleteServerNodeByServerUUID{ServerUUID: "", HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
 	return &pb.ResDeleteServerNodeByServerUUID{ServerUUID: serverUUID}, nil

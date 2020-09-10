@@ -2,20 +2,21 @@ package dao
 
 import (
 	dbsql "database/sql"
-	"errors"
 	"github.com/golang/protobuf/ptypes"
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/action/rabbitmq"
 	cmdutil "hcc/violin/lib/cmdUtil"
+	hccerr "hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 )
 
 // ReadServer : Get infos of a server
-func ReadServer(uuid string) (*pb.Server, error) {
+func ReadServer(uuid string) (*pb.Server, uint64, string) {
 	var server pb.Server
 
 	var subnetUUID string
@@ -43,8 +44,12 @@ func ReadServer(uuid string) (*pb.Server, error) {
 		&userUUID,
 		&createdAt)
 	if err != nil {
-		logger.Logger.Println(err)
-		return nil, err
+		errStr := "ReadServer(): " + err.Error()
+		logger.Logger.Println(errStr)
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, hccerr.ViolinSQLNoResult, errStr
+		}
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 
 	server.UUID = uuid
@@ -60,15 +65,16 @@ func ReadServer(uuid string) (*pb.Server, error) {
 
 	server.CreatedAt, err = ptypes.TimestampProto(createdAt)
 	if err != nil {
-		logger.Logger.Println(err)
-		return nil, err
+		errStr := "ReadServer(): "+err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
 	}
 
-	return &server, nil
+	return &server, 0, ""
 }
 
 // ReadServerList : Get list of servers with selected infos
-func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, error) {
+func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, string) {
 	var serverList pb.ResGetServerList
 	var servers []pb.Server
 	var pservers []*pb.Server
@@ -95,7 +101,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, error) {
 	} else if rowOk && pageOk {
 		isLimit = true
 	} else {
-		return nil, errors.New("please insert row and page arguments or leave arguments as empty state")
+		return nil, hccerr.ViolinGrpcArgumentError, "ReadServerList(): please insert row and page arguments or leave arguments as empty state"
 	}
 
 	sql := "select * from server where status != 'Deleted'"
@@ -162,8 +168,9 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, error) {
 	}
 
 	if err != nil {
-		logger.Logger.Println(err.Error())
-		return nil, err
+		errStr := "ReadServerList(): "+err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 	defer func() {
 		_ = stmt.Close()
@@ -172,14 +179,19 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, error) {
 	for stmt.Next() {
 		err := stmt.Scan(&uuid, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
 		if err != nil {
-			logger.Logger.Println(err.Error())
-			return nil, err
+			errStr := "ReadServerList(): " + err.Error()
+			logger.Logger.Println(errStr)
+			if strings.Contains(err.Error(), "no rows in result set") {
+				return nil, hccerr.ViolinSQLNoResult, errStr
+			}
+			return nil, hccerr.ViolinSQLOperationFail, errStr
 		}
 
 		_createdAt, err := ptypes.TimestampProto(createdAt)
 		if err != nil {
-			logger.Logger.Println(err)
-			return nil, err
+			errStr := "ReadServerList(): "+err.Error()
+			logger.Logger.Println(errStr)
+			return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
 		}
 
 		servers = append(servers, pb.Server{
@@ -202,26 +214,30 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, error) {
 
 	serverList.Server = pservers
 
-	return &serverList, nil
+	return &serverList, 0, ""
 }
 
 // ReadServerNum : Get the number of servers
-func ReadServerNum() (*pb.ResGetServerNum, error) {
+func ReadServerNum() (*pb.ResGetServerNum, uint64, string) {
 	var serverNum pb.ResGetServerNum
 	var serverNr int64
 
 	sql := "select count(*) from server where status != 'Deleted'"
 	err := mysql.Db.QueryRow(sql).Scan(&serverNr)
 	if err != nil {
-		logger.Logger.Println(err)
-		return nil, err
+		errStr := "ReadServerNum(): " + err.Error()
+		logger.Logger.Println(errStr)
+		if strings.Contains(err.Error(), "no rows in result set") {
+			return nil, hccerr.ViolinSQLNoResult, errStr
+		}
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 	serverNum.Num = serverNr
 
-	return &serverNum, nil
+	return &serverNum, 0, ""
 }
 
-func doGetAvailableNodes(in *pb.ReqCreateServer) ([]pb.Node, error) {
+func doGetAvailableNodes(in *pb.ReqCreateServer) ([]pb.Node, uint64, string) {
 	var nodes []pb.Node
 	server := in.GetServer()
 
@@ -231,13 +247,13 @@ func doGetAvailableNodes(in *pb.ReqCreateServer) ([]pb.Node, error) {
 	userQuota.Memory = server.Memory
 	userQuota.NumberOfNodes = in.GetNrNode()
 
-	logger.Logger.Println("createServer: Getting available nodes from flute module")
+	logger.Logger.Println("doGetAvailableNodes(): Getting available nodes from flute module")
 	nodes, err := doGetNodes(&userQuota)
 	if err != nil {
-		return nil, err
+		return nil, hccerr.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + err.Error()
 	}
 
-	return nodes, nil
+	return nodes, 0, ""
 }
 
 func doCreateServerRoutine(server *pb.Server, nodes []pb.Node) error {
@@ -246,17 +262,17 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node) error {
 	celloParams["os"] = server.OS
 	celloParams["disk_size"] = strconv.Itoa(int(server.DiskSize))
 
-	logger.Logger.Println("createServer: Getting subnet info from harp module")
+	logger.Logger.Println("doCreateServerRoutine(): Getting subnet info from harp module")
 	serverSubnet, subnet, err := doGetSubnet(server.SubnetUUID)
 	if err != nil {
 		return err
 	}
-	logger.Logger.Println("createServer: ", serverSubnet, subnet)
+	logger.Logger.Println("doCreateServerRoutine(): ", serverSubnet, subnet)
 
-	logger.Logger.Println("createServer: Getting leaderNodeUUID from first of nodes[]")
+	logger.Logger.Println("doCreateServerRoutine(): Getting leaderNodeUUID from first of nodes[]")
 	subnet.LeaderNodeUUID = nodes[0].UUID
 
-	logger.Logger.Println("createServer: Getting IP address range")
+	logger.Logger.Println("doCreateServerRoutine(): Getting IP address range")
 	firstIP, lastIP := doGetIPRange(serverSubnet, nodes)
 
 	go func(routineServerUUID string, routineSubnet *pb.Subnet, routineNodes []pb.Node,
@@ -308,7 +324,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node) error {
 		printLogCreateServerRoutine(routineServerUUID, routineError.Error())
 		err = UpdateServerStatus(routineServerUUID, "Failed")
 		if err != nil {
-			logger.Logger.Println("createServerRoutine: Failed to update server status as failed")
+			logger.Logger.Println("doCreateServerRoutine(): Failed to update server status as failed")
 		}
 	}(server.UUID, subnet, nodes, celloParams, firstIP, lastIP)
 
@@ -329,35 +345,57 @@ func checkCreateServerArgs(reqServer *pb.Server) bool {
 }
 
 // CreateServer : Create a server
-func CreateServer(in *pb.ReqCreateServer) (*pb.Server, error) {
+func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
+	var cpuCores int32 = 0
+	var memory int32 = 0
+	var serverUUID string
+
+	var nodes []pb.Node
+	var server pb.Server
+
+	var sql string
+	var stmt *dbsql.Stmt
+
+	var err error
+	var errCode uint64
+	var errStr string
+	errStack := hccerr.NewHccErrorStack()
+
 	reqServer := in.GetServer()
 	if reqServer == nil {
-		return nil, errors.New("server is nil")
+		errStack.Push(&hccerr.HccError{ErrCode: hccerr.ViolinGrpcArgumentError, ErrText: "CreateServer(): Server is nil"})
+
+		goto ERROR
 	}
 
-	logger.Logger.Println("createServer: Generating server UUID")
-	serverUUID, err := doGenerateServerUUID()
+	logger.Logger.Println("CreateServer(): Generating server UUID")
+	serverUUID, err = doGenerateServerUUID()
 	if err != nil {
-		return nil, err
+		errStack.Push(&hccerr.HccError{ErrCode: hccerr.ViolinInternalUUIDGenerationError, ErrText: "CreateServer(): " + err.Error()})
+
+		goto ERROR
 	}
 
 	if checkCreateServerArgs(reqServer) {
-		return nil, errors.New("some of arguments are missing")
+		errStack.Push(&hccerr.HccError{ErrCode: hccerr.ViolinGrpcArgumentError, ErrText: "CreateServer(): some of arguments are missing"})
+
+		goto ERROR
 	}
 
-	nodes, err := doGetAvailableNodes(in)
-	if err != nil {
-		return nil, err
+	nodes, errCode, errStr = doGetAvailableNodes(in)
+	if errCode != 0 {
+		errStack.Push(&hccerr.HccError{ErrCode:errCode, ErrText: errStr})
+		errStack.Push(&hccerr.HccError{ErrCode: hccerr.ViolinInternalGetAvailableNodesError, ErrText: "CreateServer(): Failed to get available nodes"})
+
+		goto ERROR
 	}
 
-	var cpuCores int32 = 0
-	var memory int32 = 0
 	for i := range nodes {
 		cpuCores += nodes[i].CPUCores
 		memory += nodes[i].Memory
 	}
 
-	server := pb.Server{
+	server = pb.Server{
 		UUID:       serverUUID,
 		SubnetUUID: reqServer.GetSubnetUUID(),
 		OS:         reqServer.GetOS(),
@@ -370,28 +408,42 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, error) {
 		UserUUID:   reqServer.GetUserUUID(),
 	}
 
-	sql := "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())"
-	stmt, err := mysql.Db.Prepare(sql)
+	sql = "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())"
+	stmt, err = mysql.Db.Prepare(sql)
 	if err != nil {
-		logger.Logger.Println(err.Error())
-		return nil, err
+		errStr := "CreateServer(): "+err.Error()
+		logger.Logger.Println(errStr)
+		errStack.Push(&hccerr.HccError{ErrCode:hccerr.ViolinSQLOperationFail, ErrText: errStr})
+
+		goto ERROR
 	}
 	defer func() {
 		_ = stmt.Close()
 	}()
-	result, err := stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.CPU, server.Memory, server.DiskSize, server.Status, server.UserUUID)
+	_, err = stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.CPU, server.Memory, server.DiskSize, server.Status, server.UserUUID)
 	if err != nil {
-		logger.Logger.Println(err)
-		return nil, err
+		errStr := "CreateServer(): "+err.Error()
+		logger.Logger.Println(errStr)
+		errStack.Push(&hccerr.HccError{ErrCode:hccerr.ViolinSQLOperationFail, ErrText: errStr})
+
+		goto ERROR
 	}
-	logger.Logger.Println(result.LastInsertId())
 
 	err = doCreateServerRoutine(&server, nodes)
 	if err != nil {
-		return nil, err
+		errStack.Push(&hccerr.HccError{ErrCode:hccerr.ViolinInternalCreateServerRoutineError, ErrText: err.Error()})
+
+		goto ERROR
 	}
 
-	return &server, nil
+	return &server, errStack.ConvertReportForm()
+ERROR:
+	errStack.Push(&hccerr.HccError{
+		ErrCode: hccerr.ViolinInternalCreateServerFailed,
+		ErrText: "CreateServer(): Failed to create server",
+	})
+
+	return nil, errStack.ConvertReportForm()
 }
 
 func checkUpdateServerArgs(reqServer *pb.Server) bool {
@@ -408,23 +460,23 @@ func checkUpdateServerArgs(reqServer *pb.Server) bool {
 }
 
 // UpdateServer : Update infos of the server
-func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, error) {
+func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 	// TODO : Update server stages
 	// TODO : Currently UpdateServer() only updates infos of the server. Need some works to call other modules.
 
 	if in.Server == nil {
-		return nil, errors.New("server is nil")
+		return nil, hccerr.ViolinGrpcArgumentError, "UpdateServer(): server is nil"
 	}
 	reqServer := in.Server
 
 	requestedUUID := reqServer.GetUUID()
 	requestedUUIDOk := len(requestedUUID) != 0
 	if !requestedUUIDOk {
-		return nil, errors.New("need a uuid argument")
+		return nil, hccerr.ViolinGrpcArgumentError, "UpdateServer(): need a uuid argument"
 	}
 
 	if checkUpdateServerArgs(reqServer) {
-		return nil, errors.New("need some arguments")
+		return nil, hccerr.ViolinGrpcArgumentError, "UpdateServer(): need some arguments"
 	}
 
 	var subnetUUID string
@@ -504,8 +556,9 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, error) {
 
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		logger.Logger.Println(err.Error())
-		return nil, err
+		errStr := "UpdateServer(): "+err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 	defer func() {
 		_ = stmt.Close()
@@ -513,17 +566,18 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, error) {
 
 	result, err2 := stmt.Exec(server.UUID)
 	if err2 != nil {
-		logger.Logger.Println(err2)
-		return nil, err
+		errStr := "UpdateServer(): "+err2.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 	logger.Logger.Println(result.LastInsertId())
 
-	server, err = ReadServer(server.UUID)
-	if err != nil {
-		logger.Logger.Println(err)
+	server, errCode, errStr := ReadServer(server.UUID)
+	if errCode != 0 {
+		logger.Logger.Println("UpdateServer(): "+errStr)
 	}
 
-	return server, nil
+	return server, 0, ""
 }
 
 // UpdateServerStatus : Update status of the server
@@ -551,7 +605,7 @@ func UpdateServerStatus(serverUUID string, status string) error {
 }
 
 // DeleteServer : Delete a server by UUID
-func DeleteServer(in *pb.ReqDeleteServer) (string, error) {
+func DeleteServer(in *pb.ReqDeleteServer) (string, uint64, string) {
 	// TODO : Delete server stages
 	_ = cmdutil.RunScript("/root/script/prepare_create_server.sh")
 
@@ -560,29 +614,30 @@ func DeleteServer(in *pb.ReqDeleteServer) (string, error) {
 	requestedUUID := in.GetUUID()
 	requestedUUIDOk := len(requestedUUID) != 0
 	if !requestedUUIDOk {
-		return "", errors.New("need a uuid argument")
+		return "", hccerr.ViolinGrpcArgumentError, "DeleteServer(): need a uuid argument"
 	}
 
 	sql := "delete from server where uuid = ?"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
-		logger.Logger.Println(err.Error())
-		return "", err
+		errStr := "DeleteServer(): "+err.Error()
+		logger.Logger.Println(errStr)
+		return "", hccerr.ViolinSQLOperationFail, errStr
 	}
 	defer func() {
 		_ = stmt.Close()
 	}()
-	result, err2 := stmt.Exec(requestedUUID)
+	_, err2 := stmt.Exec(requestedUUID)
 	if err2 != nil {
-		logger.Logger.Println(err2)
-		return "", err2
+		errStr := "DeleteServer(): "+err2.Error()
+		logger.Logger.Println(errStr)
+		return "", hccerr.ViolinSQLOperationFail, errStr
 	}
-	logger.Logger.Println(result.RowsAffected())
 
-	return requestedUUID, nil
+	return requestedUUID, 0, ""
 }
 
-//func TestServer(params graphql.ResolveParams) (interface{}, error) {
+//func TestServer(params graphql.ResolveParams) (interface{}, uint64, string) {
 //	var userQuota model.Quota
 //	userQuota.ServerUUID = "COdex"
 //	logger.Logger.Println("$$$$$$$$$$$$")
@@ -592,8 +647,9 @@ func DeleteServer(in *pb.ReqDeleteServer) (string, error) {
 //	userQuota.NumberOfNodes = 2
 //	nodes, err := NodeScheduler(userQuota)
 //	if err != nil {
+//		// error must be returned as HccErrStack
 //		return nil, err
 //	}
 //
-//	return nodes, nil
+//	return nodes, 0, ""
 //}
