@@ -2,7 +2,6 @@ package dao
 
 import (
 	dbsql "database/sql"
-	"github.com/golang/protobuf/ptypes"
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/action/rabbitmq"
 	cmdutil "hcc/violin/lib/cmdUtil"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/golang/protobuf/ptypes"
 )
 
 // ReadServer : Get infos of a server
@@ -242,17 +243,17 @@ func ReadServerNum() (*pb.ResGetServerNum, uint64, string) {
 	return &serverNum, 0, ""
 }
 
-func doGetAvailableNodes(in *pb.ReqCreateServer) ([]pb.Node, uint64, string) {
+func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64, string) {
 	var nodes []pb.Node
 	server := in.GetServer()
 
 	var userQuota pb.Quota
-	userQuota.ServerUUID = server.UUID
+	userQuota.ServerUUID = UUID
 	userQuota.CPU = server.CPU
 	userQuota.Memory = server.Memory
 	userQuota.NumberOfNodes = in.GetNrNode()
 
-	logger.Logger.Println("doGetAvailableNodes(): Getting available nodes from flute module")
+	logger.Logger.Println("doGetAvailableNodes(): Getting available nodes from flute module ")
 	nodes, err := doGetNodes(&userQuota)
 	if err != nil {
 		return nil, hccerr.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + err.Error()
@@ -354,7 +355,6 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 	var cpuCores int32 = 0
 	var memory int32 = 0
 	var serverUUID string
-
 	var nodes []pb.Node
 	var server pb.Server
 
@@ -386,8 +386,8 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 
 		goto ERROR
 	}
-
-	nodes, errCode, errStr = doGetAvailableNodes(in)
+	//Scheduler
+	nodes, errCode, errStr = doGetAvailableNodes(in, serverUUID)
 	if errCode != 0 {
 		errStack.Push(&hccerr.HccError{ErrCode: errCode, ErrText: errStr})
 		errStack.Push(&hccerr.HccError{ErrCode: hccerr.ViolinInternalGetAvailableNodesError, ErrText: "CreateServer(): Failed to get available nodes"})

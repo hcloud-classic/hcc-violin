@@ -3,7 +3,7 @@ package model
 import "time"
 
 // OSDiskSize : Disk size for OS use
-var OSDiskSize = 20
+var OSDiskSize = 100
 
 // Volume - cgs
 type Volume struct {

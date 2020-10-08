@@ -2,12 +2,12 @@ package dao
 
 import (
 	"errors"
-	"github.com/apparentlymart/go-cidr/cidr"
-	uuid "github.com/nu7hatch/gouuid"
 	"hcc/violin/action/grpc/client"
+	"hcc/violin/action/grpc/pb/rpccello"
 	"hcc/violin/action/grpc/pb/rpcflute"
 	"hcc/violin/action/grpc/pb/rpcharp"
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
+	"hcc/violin/action/grpc/pb/rpcviolin_scheduler"
 	"hcc/violin/data"
 	"hcc/violin/driver"
 	"hcc/violin/lib/config"
@@ -17,6 +17,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/apparentlymart/go-cidr/cidr"
+	uuid "github.com/nu7hatch/gouuid"
 )
 
 func checkNetmask(netmask string) (net.IPMask, error) {
@@ -127,16 +130,30 @@ func nodeScheduler(userquota *pb.Quota) ([]string, error) {
 }
 
 func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
+	var reqScheduleServer rpcviolin_scheduler.ReqScheduleHandler
+	var reqServer rpcviolin_scheduler.Server
+	var reqServerStruct rpcviolin_scheduler.ScheduleServer
+
+	reqScheduleServer.Server = &reqServerStruct
+	reqScheduleServer.Server.ScheduleServer = &reqServer
+	reqScheduleServer.Server.NumOfNodes = userQuota.GetNumberOfNodes()
+	reqScheduleServer.Server.ScheduleServer.CPU = userQuota.GetCPU()
+	reqScheduleServer.Server.ScheduleServer.Memory = userQuota.GetMemory()
+	reqScheduleServer.Server.ScheduleServer.UUID = userQuota.GetServerUUID()
+
 	logger.Logger.Println("doGetNodes(): [Violin Scheduler] Start Scheduling")
-	nodeUUIDs, err := nodeScheduler(userQuota)
+	resNodes, err := client.RC.ScheduleHandler(&reqScheduleServer)
 	logger.Logger.Println("doGetNodes(): [Violin Scheduler] End Scheduling")
 	if err != nil {
 		return nil, err
 	}
 	// TODO : Currently nrNodes is hard coded to 2. Will get from Web UI (Oboe) later.
 	var nrNodes = userQuota.NumberOfNodes
+	retNodes := resNodes.GetNodes()
+	nodeList := retNodes.GetShceduledNode()
 
-	if len(nodeUUIDs) < int(nrNodes) || len(nodeUUIDs) == 0 {
+	// if len(nodeList.ShceduledNode) < int(nrNodes) || len(nodeList.ShceduledNode) == 0 {
+	if len(nodeList) == 0 {
 		errMsg := "doGetNodes(): not enough available nodes"
 		logger.Logger.Println(errMsg)
 		return nil, errors.New(errMsg)
@@ -144,21 +161,20 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 	var GatherSelectedNodes []pb.Node
 	var nodeSelected = 0
 	// fmt.Println("Nodes:   ", nodes)
-	for _, nodeUUID := range nodeUUIDs {
+	for _, nodes := range nodeList {
 		if nodeSelected > int(nrNodes) {
 			break
 		}
-
 		logger.Logger.Println("doGetNodes(): Updating nodes info to flute module")
 
-		eachSelectedNode, err := client.RC.GetNode(nodeUUID)
+		eachSelectedNode, err := client.RC.GetNode(nodes.GetUUID())
 		if err != nil {
 			logger.Logger.Println(err)
 			return nil, err
 		}
 		GatherSelectedNodes = append(GatherSelectedNodes, pb.Node{
 			UUID:        eachSelectedNode.UUID,
-			ServerUUID:  eachSelectedNode.ServerUUID,
+			ServerUUID:  userQuota.GetServerUUID(),
 			BmcMacAddr:  eachSelectedNode.BmcMacAddr,
 			BmcIP:       eachSelectedNode.BmcIP,
 			PXEMacAddr:  eachSelectedNode.PXEMacAddr,
@@ -172,7 +188,7 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 		// fmt.Println("GatherSelectedNodes\n", GatherSelectedNodes)
 		_, err = client.RC.UpdateNode(&rpcflute.ReqUpdateNode{Node: &pb.Node{
 			UUID:       eachSelectedNode.UUID,
-			ServerUUID: userQuota.ServerUUID,
+			ServerUUID: userQuota.GetServerUUID(),
 		}})
 		if err != nil {
 			logger.Logger.Println(err)
@@ -181,8 +197,8 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 
 		_, errCode, errStr := CreateServerNode(&pb.ReqCreateServerNode{
 			ServerNode: &pb.ServerNode{
-				ServerUUID: userQuota.ServerUUID,
-				NodeUUID:   nodeUUID,
+				ServerUUID: userQuota.GetServerUUID(),
+				NodeUUID:   nodes.GetUUID(),
 			},
 		})
 		if errCode != 0 {
@@ -210,13 +226,16 @@ func doGetIPRange(serverSubnet *net.IPNet, nodes []pb.Node) (net.IP, net.IP) {
 
 func doCreateVolume(serverUUID string, celloParams map[string]interface{}, useType string, firstIP net.IP, gateway string) error {
 	userUUID := celloParams["user_uuid"].(string)
-	os := celloParams["os"].(string)
 	diskSize, err := strconv.Atoi(celloParams["disk_size"].(string))
 	if err != nil {
 		return err
 	}
 
-	var volume model.Volume
+	var reqCreateVolume rpccello.ReqVolumeHandler
+	var reqVolume rpccello.Volume
+
+	reqCreateVolume.Volume = &reqVolume
+
 	var size int
 
 	switch useType {
@@ -230,19 +249,20 @@ func doCreateVolume(serverUUID string, celloParams map[string]interface{}, useTy
 		return errors.New("got invalid useType")
 	}
 
-	volume = model.Volume{
-		Size:       size,
-		Filesystem: os,
-		ServerUUID: serverUUID,
-		UseType:    useType,
-		UserUUID:   userUUID,
-		NetworkIP:  firstIP.String(),
-		GatewayIP:  gateway,
-	}
-	logger.Logger.Println("GatewayIP [", gateway, "]")
-	err = driver.CreateDisk(volume, serverUUID)
+	reqCreateVolume.Volume.ServerUUID = serverUUID
+	reqCreateVolume.Volume.Filesystem = celloParams["os"].(string)
+	strSize := strconv.Itoa(size)
+	reqCreateVolume.Volume.Size = strSize
+	reqCreateVolume.Volume.UserUUID = userUUID
+	reqCreateVolume.Volume.UseType = useType
+	reqCreateVolume.Volume.Network_IP = string(firstIP)
+	reqCreateVolume.Volume.GatewayIp = gateway
+
+	reqCreateVolume.Volume.Action = "create"
+	resCreateVolume, err := client.RC.CreateVolume(&reqCreateVolume)
+	logger.Logger.Println("[doCreateVolume] : ", resCreateVolume)
 	if err != nil {
-		logger.Logger.Println("doCreateVolume: server_uuid=" + serverUUID + ": " + err.Error())
+		logger.Logger.Println("doCreateVolume: server_uuid="+serverUUID+": "+err.Error(), "resCreateVolume : ", resCreateVolume)
 		return err
 	}
 

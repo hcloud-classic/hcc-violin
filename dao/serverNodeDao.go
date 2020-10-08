@@ -1,14 +1,15 @@
 package dao
 
 import (
-	"github.com/golang/protobuf/ptypes"
-	gouuid "github.com/nu7hatch/gouuid"
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	hccerr "hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"strings"
 	"time"
+
+	"github.com/golang/protobuf/ptypes"
+	gouuid "github.com/nu7hatch/gouuid"
 )
 
 // ReadServerNode : Get infos of a server node
@@ -140,7 +141,6 @@ func ReadServerNodeNum(in *pb.ReqGetServerNodeNum) (*pb.ResGetServerNodeNum, uin
 func checkCreateServerNodeArgs(reqServerNode *pb.ServerNode) bool {
 	serverUUIDOk := len(reqServerNode.ServerUUID) != 0
 	nodeUUIDOk := len(reqServerNode.NodeUUID) != 0
-
 	return !(serverUUIDOk && nodeUUIDOk)
 }
 
@@ -159,7 +159,7 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 	uuid := out.String()
 
 	if checkCreateServerNodeArgs(reqServerNode) {
-		return nil, hccerr.ViolinGrpcArgumentError, "CreateServerNode(): some of arguments are missing"
+		return nil, hccerr.ViolinGrpcArgumentError, "CreateServerNode(): some of arguments are missing\n"
 	}
 
 	serverNodeList, errCode, errStr := ReadServerNodeList(&pb.ReqGetServerNodeList{ServerUUID: reqServerNode.ServerUUID})
