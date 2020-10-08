@@ -195,13 +195,12 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 		_ = stmt.Close()
 	}()
 
-	result, err := stmt.Exec(serverNode.UUID, serverNode.ServerUUID, serverNode.NodeUUID)
+	_, err = stmt.Exec(serverNode.UUID, serverNode.ServerUUID, serverNode.NodeUUID)
 	if err != nil {
 		errStr := "CreateServerNode(): " + err.Error()
 		logger.Logger.Println(errStr)
 		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
-	logger.Logger.Println(result.LastInsertId())
 
 	return &serverNode, 0, ""
 }

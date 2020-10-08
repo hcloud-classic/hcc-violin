@@ -569,13 +569,12 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 		_ = stmt.Close()
 	}()
 
-	result, err2 := stmt.Exec(server.UUID)
+	_, err2 := stmt.Exec(server.UUID)
 	if err2 != nil {
 		errStr := "UpdateServer(): " + err2.Error()
 		logger.Logger.Println(errStr)
 		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
-	logger.Logger.Println(result.LastInsertId())
 
 	server, errCode, errStr := ReadServer(server.UUID)
 	if errCode != 0 {
@@ -600,12 +599,12 @@ func UpdateServerStatus(serverUUID string, status string) error {
 		_ = stmt.Close()
 	}()
 
-	result, err2 := stmt.Exec(serverUUID)
+	_, err2 := stmt.Exec(serverUUID)
 	if err2 != nil {
 		logger.Logger.Println(err2)
 		return err
 	}
-	logger.Logger.Println(result.LastInsertId())
+
 	return nil
 }
 
