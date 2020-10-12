@@ -55,6 +55,33 @@ func (rc *RPCClient) OnNode(nodeUUID string) error {
 	return nil
 }
 
+// OffNode : Turn off selected node
+func (rc *RPCClient) OffNode(nodeUUID string, forceOff bool) error {
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
+	defer cancel()
+
+	var nodes []*pb.Node
+	node := pb.Node{
+		UUID: nodeUUID,
+	}
+	nodes = append(nodes, &node)
+
+	var powerState = rpcflute.PowerState_OFF
+	if forceOff {
+		powerState = rpcflute.PowerState_FORCE_OFF
+	}
+	_, err := rc.flute.NodePowerControl(ctx, &rpcflute.ReqNodePowerControl{
+		Node:       nodes,
+		PowerState: powerState,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetNode : Get infos of the node
 func (rc *RPCClient) GetNode(uuid string) (*rpcflute.Node, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),

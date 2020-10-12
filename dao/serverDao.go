@@ -5,6 +5,7 @@ import (
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/action/rabbitmq"
 	cmdutil "hcc/violin/lib/cmdUtil"
+	"hcc/violin/lib/config"
 	hccerr "hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
@@ -308,6 +309,15 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node) error {
 		if routineError != nil {
 			goto ERROR
 		}
+
+		printLogCreateServerRoutine(routineServerUUID, "Turning off nodes")
+		routineError = doTurnOffNodes(routineServerUUID, routineNodes)
+		if routineError != nil {
+			goto ERROR
+		}
+
+		printLogCreateServerRoutine(routineServerUUID, "Waiting for turning off nodes... ("+strconv.Itoa(int(config.Flute.WaitForLeaderNodeTimeoutSec))+"sec")
+		time.Sleep(time.Second * time.Duration(config.Flute.WaitForLeaderNodeTimeoutSec))
 
 		printLogCreateServerRoutine(routineServerUUID, "Turning on nodes")
 		routineError = doTurnOnNodes(routineServerUUID, routineSubnet.LeaderNodeUUID, routineNodes)
