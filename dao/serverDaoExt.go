@@ -256,12 +256,13 @@ func doCreateVolume(serverUUID string, celloParams map[string]interface{}, useTy
 	reqCreateVolume.Volume.Size = strSize
 	reqCreateVolume.Volume.UserUUID = userUUID
 	reqCreateVolume.Volume.UseType = useType
-	reqCreateVolume.Volume.Network_IP = string(firstIP)
+	reqCreateVolume.Volume.Network_IP = firstIP.String()
 	reqCreateVolume.Volume.GatewayIp = gateway
 
 	reqCreateVolume.Volume.Action = "create"
+
+	logger.Logger.Println("[doCreateVolume] : ", reqCreateVolume.Volume)
 	resCreateVolume, err := client.RC.CreateVolume(&reqCreateVolume)
-	logger.Logger.Println("[doCreateVolume] : ", resCreateVolume)
 	if err != nil {
 		logger.Logger.Println("doCreateVolume: server_uuid="+serverUUID+": "+err.Error(), "resCreateVolume : ", resCreateVolume)
 		return err
