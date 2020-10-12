@@ -312,14 +312,26 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) er
 
 	for i := range nodes {
 		if nodes[i].UUID == leaderNodeUUID {
-			err := client.RC.OnNode(nodes[i].UUID)
+			foundLeaderNode = true
+
+			var err error
+
+			for i := 0; i < int(config.Flute.TurnOffNodesRetryCounts); i++ {
+				err = client.RC.OnNode(nodes[i].UUID)
+				if err != nil {
+					logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
+					logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": Retrying for node: " +
+						nodes[i].UUID + " " + strconv.Itoa(i+1) + "/" + strconv.Itoa(int(config.Flute.TurnOnNodesRetryCounts)))
+				} else {
+					break
+				}
+			}
+
 			if err != nil {
-				logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
 				return err
 			}
 
 			logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode: leaderNodeUUID: " + nodes[i].UUID)
-			foundLeaderNode = true
 			break
 		}
 	}
@@ -371,7 +383,7 @@ func doTurnOffNodes(serverUUID string, nodes []pb.Node) error {
 					turnOffErrStr = "doTurnOffNodes: server_uuid=" + routineServerUUID + ": OffNode error: " + err.Error()
 					logger.Logger.Println(turnOffErrStr)
 					logger.Logger.Println("doTurnOffNodes: server_uuid=" + routineServerUUID + ": Retrying for node: " +
-					 nodeUUID + " " + strconv.Itoa(i+1) + "/" + strconv.Itoa(int(config.Flute.TurnOffNodesRetryCounts)))
+						nodeUUID + " " + strconv.Itoa(i+1) + "/" + strconv.Itoa(int(config.Flute.TurnOffNodesRetryCounts)))
 				} else {
 					break
 				}

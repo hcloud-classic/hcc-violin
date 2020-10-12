@@ -128,6 +128,11 @@ func parseFlute() {
 		logger.Logger.Panicln(err)
 	}
 
+	Flute.TurnOnNodesRetryCounts, err = config.FluteConfig.Int("flute_turn_on_nodes_retry_counts")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
 	Flute.WaitForLeaderNodeTimeoutSec, err = config.FluteConfig.Int("flute_wait_for_leader_node_timeout_sec")
 	if err != nil {
 		logger.Logger.Panicln(err)
