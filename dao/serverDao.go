@@ -316,8 +316,8 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node) error {
 			goto ERROR
 		}
 
-		printLogCreateServerRoutine(routineServerUUID, "Waiting for turning off nodes... ("+strconv.Itoa(int(config.Flute.WaitForLeaderNodeTimeoutSec))+"sec")
-		time.Sleep(time.Second * time.Duration(config.Flute.WaitForLeaderNodeTimeoutSec))
+		printLogCreateServerRoutine(routineServerUUID, "Waiting for turning off nodes... ("+strconv.Itoa(int(config.Flute.TurnOffNodesWaitTimeSec))+"sec)")
+		time.Sleep(time.Second * time.Duration(config.Flute.TurnOffNodesWaitTimeSec))
 
 		printLogCreateServerRoutine(routineServerUUID, "Turning on nodes")
 		routineError = doTurnOnNodes(routineServerUUID, routineSubnet.LeaderNodeUUID, routineNodes)
