@@ -370,7 +370,7 @@ func doTurnOffNodes(serverUUID string, nodes []pb.Node) error {
 	var wait sync.WaitGroup
 	var errStr string
 
-	wait.Add(int(config.Flute.TurnOffNodesRetryCounts))
+	wait.Add(len(nodes))
 
 	for i := range nodes {
 		go func(routineServerUUID string, nodeUUID string, routineErrStr string) {
