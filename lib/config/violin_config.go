@@ -42,6 +42,10 @@ rabbitmq_port 15672
 flute_server_address 222.222.222.222
 flute_server_port 3333
 flute_request_timeout_ms 5000
+flute_turn_off_nodes_wait_time_sec 5
+flute_turn_off_nodes_retry_counts 3
+flute_turn_on_nodes_retry_counts 3
+flute_wait_for_leader_node_timeout_sec 30
 
 [cello]
 cello_server_address 222.222.222.222

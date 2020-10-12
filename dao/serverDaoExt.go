@@ -16,6 +16,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/apparentlymart/go-cidr/cidr"
@@ -307,23 +308,36 @@ func doCreateDHCPDConfig(subnetUUID string, serverUUID string, nodes []pb.Node) 
 
 func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) error {
 	printLogCreateServerRoutine(serverUUID, "Turning on leader node")
-	var i = 1
+
+	var foundLeaderNode = false
+
 	for i := range nodes {
 		if nodes[i].UUID == leaderNodeUUID {
-			err := client.RC.OnNode(nodes[i].UUID)
+			foundLeaderNode = true
+
+			var err error
+
+			for i := 0; i < int(config.Flute.TurnOffNodesRetryCounts); i++ {
+				err = client.RC.OnNode(nodes[i].UUID)
+				if err != nil {
+					logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
+					logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": Retrying for node: " +
+						nodes[i].UUID + " " + strconv.Itoa(i+1) + "/" + strconv.Itoa(int(config.Flute.TurnOnNodesRetryCounts)))
+				} else {
+					break
+				}
+			}
+
 			if err != nil {
-				logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
 				return err
 			}
 
 			logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode: leaderNodeUUID: " + nodes[i].UUID)
 			break
 		}
-
-		i++
 	}
 
-	if i > len(nodes) {
+	if !foundLeaderNode {
 		logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": " + "Failed to find leader node")
 		return errors.New("failed to find leader node")
 	}
@@ -343,7 +357,53 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) er
 			return err
 		}
 
-		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode: computeNodeUUID: " + nodes[i].UUID)
+		logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode: computeNodeUUID: " + nodes[i].UUID)
+	}
+
+	return nil
+}
+
+func doTurnOffNodes(serverUUID string, nodes []pb.Node) error {
+	printLogCreateServerRoutine(serverUUID, "Turning off nodes")
+
+	logger.Logger.Println("doTurnOffNodes: server_uuid=" + serverUUID + ": " + "Turning off all of nodes")
+
+	var wait sync.WaitGroup
+	var errStr string
+
+	wait.Add(int(config.Flute.TurnOffNodesRetryCounts))
+
+	for i := range nodes {
+		go func(routineServerUUID string, nodeUUID string, routineErrStr string) {
+			var err error
+			var turnOffErrStr string
+
+			for i := 0; i < int(config.Flute.TurnOffNodesRetryCounts); i++ {
+				err = client.RC.OffNode(nodeUUID, true)
+				if err != nil {
+					turnOffErrStr = "doTurnOffNodes: server_uuid=" + routineServerUUID + ": OffNode error: " + err.Error()
+					logger.Logger.Println(turnOffErrStr)
+					logger.Logger.Println("doTurnOffNodes: server_uuid=" + routineServerUUID + ": Retrying for node: " +
+						nodeUUID + " " + strconv.Itoa(i+1) + "/" + strconv.Itoa(int(config.Flute.TurnOffNodesRetryCounts)))
+				} else {
+					break
+				}
+			}
+
+			if err != nil {
+				routineErrStr += turnOffErrStr + "\n"
+			}
+
+			logger.Logger.Println("doTurnOffNodes: server_uuid=" + routineServerUUID + ": OffNode: NodeUUID: " + nodeUUID)
+
+			wait.Done()
+		}(serverUUID, nodes[i].UUID, errStr)
+	}
+
+	wait.Wait()
+
+	if errStr != "" {
+		return errors.New(errStr)
 	}
 
 	return nil
