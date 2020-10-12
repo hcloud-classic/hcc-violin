@@ -306,7 +306,9 @@ func doCreateDHCPDConfig(subnetUUID string, serverUUID string, nodes []pb.Node) 
 
 func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) error {
 	printLogCreateServerRoutine(serverUUID, "Turning on leader node")
-	var i = 1
+
+	var foundLeaderNode = false
+
 	for i := range nodes {
 		if nodes[i].UUID == leaderNodeUUID {
 			err := client.RC.OnNode(nodes[i].UUID)
@@ -316,13 +318,12 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) er
 			}
 
 			logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode: leaderNodeUUID: " + nodes[i].UUID)
+			foundLeaderNode = true
 			break
 		}
-
-		i++
 	}
 
-	if i > len(nodes) {
+	if !foundLeaderNode {
 		logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": " + "Failed to find leader node")
 		return errors.New("failed to find leader node")
 	}
