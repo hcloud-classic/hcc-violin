@@ -342,7 +342,7 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) er
 			return err
 		}
 
-		logger.Logger.Println("createServer_routine: server_uuid=" + serverUUID + ": OnNode: computeNodeUUID: " + nodes[i].UUID)
+		logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode: computeNodeUUID: " + nodes[i].UUID)
 	}
 
 	return nil
