@@ -153,6 +153,8 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 	retNodes := resNodes.GetNodes()
 	nodeList := retNodes.GetShceduledNode()
 
+	//fmt.Println("Nodes:   ", retNodes)
+
 	// if len(nodeList.ShceduledNode) < int(nrNodes) || len(nodeList.ShceduledNode) == 0 {
 	if len(nodeList) == 0 {
 		errMsg := "doGetNodes(): not enough available nodes"
@@ -161,8 +163,12 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 	}
 	var GatherSelectedNodes []pb.Node
 	var nodeSelected = 0
-	// fmt.Println("Nodes:   ", nodes)
+
 	for _, nodes := range nodeList {
+		if nodes.UUID == "" {
+			continue
+		}
+
 		if nodeSelected > int(nrNodes) {
 			break
 		}
