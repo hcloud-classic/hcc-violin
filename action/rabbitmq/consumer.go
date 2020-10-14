@@ -8,7 +8,7 @@ import (
 )
 
 func updateServerStatus(uuid string, status string) error {
-	sql := "update server set status = ''" + status + "'"
+	sql := "update server set status = '" + status + "' where uuid = ?"
 	stmt, err := mysql.Db.Prepare(sql)
 	if err != nil {
 		return err
