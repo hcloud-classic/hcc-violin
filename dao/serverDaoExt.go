@@ -179,28 +179,31 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 			logger.Logger.Println(err)
 			return nil, err
 		}
-		GatherSelectedNodes = append(GatherSelectedNodes, pb.Node{
-			UUID:        eachSelectedNode.UUID,
-			ServerUUID:  userQuota.GetServerUUID(),
-			BmcMacAddr:  eachSelectedNode.BmcMacAddr,
-			BmcIP:       eachSelectedNode.BmcIP,
-			PXEMacAddr:  eachSelectedNode.PXEMacAddr,
-			Status:      eachSelectedNode.Status,
-			CPUCores:    eachSelectedNode.CPUCores,
-			Memory:      eachSelectedNode.Memory,
-			Description: eachSelectedNode.Description,
-			CreatedAt:   eachSelectedNode.CreatedAt,
-			Active:      eachSelectedNode.Active,
-		})
-		// fmt.Println("GatherSelectedNodes\n", GatherSelectedNodes)
-		_, err = client.RC.UpdateNode(&rpcflute.ReqUpdateNode{Node: &pb.Node{
+
+		node, err := client.RC.UpdateNode(&rpcflute.ReqUpdateNode{Node: &pb.Node{
 			UUID:       eachSelectedNode.UUID,
+			Active:     1,
 			ServerUUID: userQuota.GetServerUUID(),
 		}})
 		if err != nil {
 			logger.Logger.Println(err)
 			return nil, err
 		}
+
+		// fmt.Println("GatherSelectedNodes\n", GatherSelectedNodes)
+		GatherSelectedNodes = append(GatherSelectedNodes, pb.Node{
+			UUID:        node.UUID,
+			ServerUUID:  userQuota.GetServerUUID(),
+			BmcMacAddr:  node.BmcMacAddr,
+			BmcIP:       node.BmcIP,
+			PXEMacAddr:  node.PXEMacAddr,
+			Status:      node.Status,
+			CPUCores:    node.CPUCores,
+			Memory:      node.Memory,
+			Description: node.Description,
+			CreatedAt:   node.CreatedAt,
+			Active:      eachSelectedNode.Active,
+		})
 
 		_, errCode, errStr := CreateServerNode(&pb.ReqCreateServerNode{
 			ServerNode: &pb.ServerNode{
