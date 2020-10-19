@@ -2,7 +2,9 @@ package client
 
 import (
 	"context"
+	errors2 "errors"
 	"google.golang.org/grpc"
+	"hcc/violin/action/grpc/errconv"
 	"hcc/violin/action/grpc/pb/rpcharp"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
@@ -36,12 +38,18 @@ func (rc *RPCClient) GetSubnet(uuid string) (*rpcharp.Subnet, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
-	subnet, err := rc.harp.GetSubnet(ctx, &rpcharp.ReqGetSubnet{UUID: uuid})
+	resGetSubnet, err := rc.harp.GetSubnet(ctx, &rpcharp.ReqGetSubnet{UUID: uuid})
 	if err != nil {
 		return nil, err
 	}
 
-	return subnet.Subnet, nil
+	hccErrStack := errconv.GrpcStackToHcc(&resGetSubnet.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return nil, errors2.New(errors[0].ErrText)
+	}
+
+	return resGetSubnet.Subnet, nil
 }
 
 // UpdateSubnet : Update infos of the subnet
@@ -49,9 +57,15 @@ func (rc *RPCClient) UpdateSubnet(in *rpcharp.ReqUpdateSubnet) error {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
-	_, err := rc.harp.UpdateSubnet(ctx, in)
+	resUpdateSubnet, err := rc.harp.UpdateSubnet(ctx, in)
 	if err != nil {
 		return err
+	}
+
+	hccErrStack := errconv.GrpcStackToHcc(&resUpdateSubnet.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return errors2.New(errors[0].ErrText)
 	}
 
 	return nil
@@ -62,12 +76,18 @@ func (rc *RPCClient) CreateDHCPDConfig(subnetUUID string, nodeUUIDs string) erro
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
-	_, err := rc.harp.CreateDHPCDConf(ctx, &rpcharp.ReqCreateDHPCDConf{
+	resCreateDHPCDConf, err := rc.harp.CreateDHPCDConf(ctx, &rpcharp.ReqCreateDHPCDConf{
 		SubnetUUID: subnetUUID,
 		NodeUUIDs:  nodeUUIDs,
 	})
 	if err != nil {
 		return err
+	}
+
+	hccErrStack := errconv.GrpcStackToHcc(&resCreateDHPCDConf.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return errors2.New(errors[0].ErrText)
 	}
 
 	return nil

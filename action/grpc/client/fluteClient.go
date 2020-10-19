@@ -101,12 +101,18 @@ func (rc *RPCClient) GetNode(uuid string) (*rpcflute.Node, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
-	node, err := rc.flute.GetNode(ctx, &rpcflute.ReqGetNode{UUID: uuid})
+	resGetNode, err := rc.flute.GetNode(ctx, &rpcflute.ReqGetNode{UUID: uuid})
 	if err != nil {
 		return nil, err
 	}
 
-	return node.Node, nil
+	hccErrStack := errconv.GrpcStackToHcc(&resGetNode.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return nil, errors2.New(errors[0].ErrText)
+	}
+
+	return resGetNode.Node, nil
 }
 
 // GetNodeList : Get the list of nodes by server UUID.
@@ -116,12 +122,18 @@ func (rc *RPCClient) GetNodeList(serverUUID string) ([]rpcflute.Node, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
-	pnodeList, err := rc.flute.GetNodeList(ctx, &rpcflute.ReqGetNodeList{Node: &rpcflute.Node{ServerUUID: serverUUID}})
+	resGetNodeList, err := rc.flute.GetNodeList(ctx, &rpcflute.ReqGetNodeList{Node: &rpcflute.Node{ServerUUID: serverUUID}})
 	if err != nil {
 		return nil, err
 	}
 
-	for _, pnode := range pnodeList.Node {
+	hccErrStack := errconv.GrpcStackToHcc(&resGetNodeList.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return nil, errors2.New(errors[0].ErrText)
+	}
+
+	for _, pnode := range resGetNodeList.Node {
 		nodeList = append(nodeList, rpcflute.Node{
 			UUID:        pnode.UUID,
 			ServerUUID:  pnode.ServerUUID,
@@ -145,10 +157,16 @@ func (rc *RPCClient) UpdateNode(in *rpcflute.ReqUpdateNode) (*rpcflute.Node, err
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
-	node, err := rc.flute.UpdateNode(ctx, in)
+	resUpdateNode, err := rc.flute.UpdateNode(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 
-	return node.Node, nil
+	hccErrStack := errconv.GrpcStackToHcc(&resUpdateNode.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return nil, errors2.New(errors[0].ErrText)
+	}
+
+	return resUpdateNode.Node, nil
 }
