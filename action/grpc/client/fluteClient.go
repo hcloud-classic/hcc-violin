@@ -2,7 +2,9 @@ package client
 
 import (
 	"context"
+	errors2 "errors"
 	"google.golang.org/grpc"
+	"hcc/violin/action/grpc/errconv"
 	"hcc/violin/action/grpc/pb/rpcflute"
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/lib/config"
@@ -44,12 +46,18 @@ func (rc *RPCClient) OnNode(nodeUUID string) error {
 	}
 	nodes = append(nodes, &node)
 
-	_, err := rc.flute.NodePowerControl(ctx, &rpcflute.ReqNodePowerControl{
+	resNodePowerControl, err := rc.flute.NodePowerControl(ctx, &rpcflute.ReqNodePowerControl{
 		Node:       nodes,
 		PowerState: rpcflute.PowerState_ON,
 	})
 	if err != nil {
 		return err
+	}
+
+	hccErrStack := errconv.GrpcStackToHcc(&resNodePowerControl.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return errors2.New(errors[0].ErrText)
 	}
 
 	return nil
@@ -71,12 +79,18 @@ func (rc *RPCClient) OffNode(nodeUUID string, forceOff bool) error {
 	if forceOff {
 		powerState = rpcflute.PowerState_FORCE_OFF
 	}
-	_, err := rc.flute.NodePowerControl(ctx, &rpcflute.ReqNodePowerControl{
+	resNodePowerControl, err := rc.flute.NodePowerControl(ctx, &rpcflute.ReqNodePowerControl{
 		Node:       nodes,
 		PowerState: powerState,
 	})
 	if err != nil {
 		return err
+	}
+
+	hccErrStack := errconv.GrpcStackToHcc(&resNodePowerControl.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return errors2.New(errors[0].ErrText)
 	}
 
 	return nil
