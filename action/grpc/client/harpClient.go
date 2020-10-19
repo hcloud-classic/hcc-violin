@@ -52,6 +52,25 @@ func (rc *RPCClient) GetSubnet(uuid string) (*rpcharp.Subnet, error) {
 	return resGetSubnet.Subnet, nil
 }
 
+// GetSubnetByServer : Get infos of the subnet by server UUID
+func (rc *RPCClient) GetSubnetByServer(serverUUID string) (*rpcharp.Subnet, error) {
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
+	defer cancel()
+	resGetSubnetByServer, err := rc.harp.GetSubnetByServer(ctx, &rpcharp.ReqGetSubnetByServer{ServerUUID: serverUUID})
+	if err != nil {
+		return nil, err
+	}
+
+	hccErrStack := errconv.GrpcStackToHcc(&resGetSubnetByServer.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return nil, errors2.New(errors[0].ErrText)
+	}
+
+	return resGetSubnetByServer.Subnet, nil
+}
+
 // UpdateSubnet : Update infos of the subnet
 func (rc *RPCClient) UpdateSubnet(in *rpcharp.ReqUpdateSubnet) error {
 	ctx, cancel := context.WithTimeout(context.Background(),
@@ -76,7 +95,7 @@ func (rc *RPCClient) CreateDHCPDConfig(subnetUUID string, nodeUUIDs string) erro
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
-	resCreateDHPCDConf, err := rc.harp.CreateDHPCDConf(ctx, &rpcharp.ReqCreateDHPCDConf{
+	resCreateDHCPDConf, err := rc.harp.CreateDHCPDConf(ctx, &rpcharp.ReqCreateDHCPDConf{
 		SubnetUUID: subnetUUID,
 		NodeUUIDs:  nodeUUIDs,
 	})
@@ -84,11 +103,51 @@ func (rc *RPCClient) CreateDHCPDConfig(subnetUUID string, nodeUUIDs string) erro
 		return err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resCreateDHPCDConf.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(&resCreateDHCPDConf.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm()
 	if len(errors) != 0 && errors[0].ErrCode != 0 {
 		return errors2.New(errors[0].ErrText)
 	}
 
 	return nil
+}
+
+// DeleteDHCPDConfig : Do dhcpd config file deletion works
+func (rc *RPCClient) DeleteDHCPDConfig(subnetUUID string) error {
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
+	defer cancel()
+	resDeleteDHCPDConf, err := rc.harp.DeleteDHCPDConf(ctx, &rpcharp.ReqDeleteDHCPDConf{
+		SubnetUUID: subnetUUID,
+	})
+	if err != nil {
+		return err
+	}
+
+	hccErrStack := errconv.GrpcStackToHcc(&resDeleteDHCPDConf.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return errors2.New(errors[0].ErrText)
+	}
+
+	return nil
+}
+
+// DeleteAdaptiveIPServer : Delete of the adaptiveIP server
+func (rc *RPCClient) DeleteAdaptiveIPServer(serverUUID string) (*rpcharp.ResDeleteAdaptiveIPServer, error) {
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
+	defer cancel()
+	resDeleteAdaptiveIPServer, err := rc.harp.DeleteAdaptiveIPServer(ctx, &rpcharp.ReqDeleteAdaptiveIPServer{ServerUUID: serverUUID})
+	if err != nil {
+		return nil, err
+	}
+
+	hccErrStack := errconv.GrpcStackToHcc(&resDeleteAdaptiveIPServer.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return nil, errors2.New(errors[0].ErrText)
+	}
+
+	return resDeleteAdaptiveIPServer, nil
 }
