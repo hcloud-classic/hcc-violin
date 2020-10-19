@@ -25,7 +25,7 @@ func initScheduler() error {
 	}
 
 	RC.scheduler = rpcviolin_scheduler.NewSchedulerClient(schedulerConn)
-	logger.Logger.Println("gRPC violin client ready")
+	logger.Logger.Println("gRPC violin-scheduler client ready")
 
 	return nil
 }
