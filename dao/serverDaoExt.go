@@ -326,7 +326,7 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) er
 
 			var err error
 
-			for i := 0; i < int(config.Flute.TurnOffNodesRetryCounts); i++ {
+			for i := 0; i < int(config.Flute.TurnOnNodesRetryCounts); i++ {
 				err = client.RC.OnNode(nodes[i].UUID)
 				if err != nil {
 					logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
