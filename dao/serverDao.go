@@ -660,8 +660,8 @@ func DeleteServer(in *pb.ReqDeleteServer) (string, uint64, string) {
 	err = client.RC.UpdateSubnet(&rpcharp.ReqUpdateSubnet{
 		Subnet: &pb.Subnet{
 			UUID: subnet.UUID,
-			ServerUUID: "",
-			LeaderNodeUUID: "",
+			ServerUUID: "-",
+			LeaderNodeUUID: "-",
 		},
 	})
 	if err != nil {
