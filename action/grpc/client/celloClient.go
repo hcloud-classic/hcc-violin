@@ -2,6 +2,8 @@ package client
 
 import (
 	"context"
+	errors2 "errors"
+	"hcc/violin/action/grpc/errconv"
 	"hcc/violin/action/grpc/pb/rpccello"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
@@ -40,6 +42,12 @@ func (rc *RPCClient) Volhandler(in *rpccello.ReqVolumeHandler) (*rpccello.ResVol
 	resVolhandle, err := rc.cello.VolumeHandler(ctx, in)
 	if err != nil {
 		return nil, err
+	}
+
+	hccErrStack := errconv.GrpcStackToHcc(&resVolhandle.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm()
+	if len(errors) != 0 && errors[0].ErrCode != 0 {
+		return nil, errors2.New(errors[0].ErrText)
 	}
 
 	return resVolhandle, nil
