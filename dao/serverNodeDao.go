@@ -206,13 +206,18 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 }
 
 // DeleteServerNode : Delete a server node matched with provided UUID.
-func DeleteServerNode(in *pb.ReqDeleteServerNode) (string, uint64, string) {
+func DeleteServerNode(in *pb.ReqDeleteServerNode) (*pb.ServerNode, uint64, string) {
 	var err error
 
 	requestedUUID := in.GetUUID()
 	requestedUUIDOk := len(requestedUUID) != 0
 	if !requestedUUIDOk {
-		return "", hccerr.ViolinGrpcArgumentError, "DeleteServerNode(): need a UUID argument"
+		return nil, hccerr.ViolinGrpcArgumentError, "DeleteServerNode(): need a UUID argument"
+	}
+
+	serverNode, errCode, errText := ReadServerNode(requestedUUID)
+	if errCode != 0 {
+		return nil, hccerr.ViolinGrpcRequestError, "DeleteServerNode(): " + errText
 	}
 
 	sql := "delete from server_node where uuid = ?"
@@ -220,7 +225,7 @@ func DeleteServerNode(in *pb.ReqDeleteServerNode) (string, uint64, string) {
 	if err != nil {
 		errStr := "DeleteServerNode(): " + err.Error()
 		logger.Logger.Println(errStr)
-		return "", hccerr.ViolinSQLOperationFail, errStr
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 	defer func() {
 		_ = stmt.Close()
@@ -229,11 +234,11 @@ func DeleteServerNode(in *pb.ReqDeleteServerNode) (string, uint64, string) {
 	if err2 != nil {
 		errStr := "DeleteServerNode(): " + err2.Error()
 		logger.Logger.Println(errStr)
-		return "", hccerr.ViolinSQLOperationFail, errStr
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 	logger.Logger.Println(result.RowsAffected())
 
-	return requestedUUID, 0, ""
+	return serverNode, 0, ""
 }
 
 // DeleteServerNodeByServerUUID : Delete server nodes. Delete server nodes matched with server UUID.

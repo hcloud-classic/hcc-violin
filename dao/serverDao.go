@@ -621,13 +621,18 @@ func UpdateServerStatus(serverUUID string, status string) error {
 }
 
 // DeleteServer : Delete a server by UUID
-func DeleteServer(in *pb.ReqDeleteServer) (string, uint64, string) {
+func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	var err error
 
 	requestedUUID := in.GetUUID()
 	requestedUUIDOk := len(requestedUUID) != 0
 	if !requestedUUIDOk {
-		return "", hccerr.ViolinGrpcArgumentError, "DeleteServer(): Need a uuid argument"
+		return nil, hccerr.ViolinGrpcArgumentError, "DeleteServer(): Need a uuid argument"
+	}
+
+	server, errCode, errText := ReadServer(requestedUUID)
+	if errCode != 0 {
+		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): " + errText
 	}
 
 	logger.Logger.Println("DeleteServer(): Deleting the server (ServerUUID: " + requestedUUID + ")")
@@ -635,25 +640,25 @@ func DeleteServer(in *pb.ReqDeleteServer) (string, uint64, string) {
 	logger.Logger.Println("DeleteServer(): Getting nodes list (ServerUUID: " + requestedUUID + ")")
 	nodes, err := client.RC.GetNodeList(requestedUUID)
 	if err != nil {
-		return "", hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to get nodes (" + err.Error() + ")"
+		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to get nodes (" + err.Error() + ")"
 	}
 
 	logger.Logger.Println("DeleteServer(): Getting subnet info (ServerUUID: " + requestedUUID + ")")
 	subnet, err := client.RC.GetSubnetByServer(requestedUUID)
 	if err != nil {
-		return "", hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to get subnet info (" + err.Error() + ")"
+		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to get subnet info (" + err.Error() + ")"
 	}
 
 	logger.Logger.Println("DeleteServer(): Turning off nodes (ServerUUID: " + requestedUUID + ")")
 	err = doTurnOffNodes(requestedUUID, nodes)
 	if err != nil {
-		return "", hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to turning off nodes (" + err.Error() + ")"
+		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to turning off nodes (" + err.Error() + ")"
 	}
 
 	logger.Logger.Println("DeleteServer(): Deleting DHCPD configuration (ServerUUID: " + requestedUUID + ")")
 	err = client.RC.DeleteDHCPDConfig(subnet.UUID)
 	if err != nil {
-		return "", hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to delete DHCPD configuration (" + err.Error() + ")"
+		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to delete DHCPD configuration (" + err.Error() + ")"
 	}
 
 	logger.Logger.Println("DeleteServer(): Re-setting subnet info (ServerUUID: " + requestedUUID + ")")
@@ -665,13 +670,13 @@ func DeleteServer(in *pb.ReqDeleteServer) (string, uint64, string) {
 		},
 	})
 	if err != nil {
-		return "", hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to re-setting subnet info (" + err.Error() + ")"
+		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to re-setting subnet info (" + err.Error() + ")"
 	}
 
 	logger.Logger.Println("DeleteServer(): Deleting AdaptiveIP (ServerUUID: " + requestedUUID + ")")
 	_, err = client.RC.DeleteAdaptiveIPServer(requestedUUID)
 	if err != nil {
-		return "", hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to delete AdaptiveIP (" + err.Error() + ")"
+		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to delete AdaptiveIP (" + err.Error() + ")"
 	}
 
 	// TODO : Delete volumes of the server
@@ -687,7 +692,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (string, uint64, string) {
 			},
 		})
 		if err != nil {
-			return "", hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to re-setting nodes info (" + err.Error() + ")"
+			return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to re-setting nodes info (" + err.Error() + ")"
 		}
 	}
 
@@ -697,7 +702,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (string, uint64, string) {
 	if err != nil {
 		errStr := "DeleteServer(): Failed to deleting the server info from the database (" + err.Error() + ")"
 		logger.Logger.Println(errStr)
-		return "", hccerr.ViolinSQLOperationFail, errStr
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 	defer func() {
 		_ = stmt.Close()
@@ -706,25 +711,8 @@ func DeleteServer(in *pb.ReqDeleteServer) (string, uint64, string) {
 	if err2 != nil {
 		errStr := "DeleteServer(): Failed to deleting the server info from the database (" + err2.Error() + ")"
 		logger.Logger.Println(errStr)
-		return "", hccerr.ViolinSQLOperationFail, errStr
+		return nil, hccerr.ViolinSQLOperationFail, errStr
 	}
 
-	return requestedUUID, 0, ""
+	return server, 0, ""
 }
-
-//func TestServer(params graphql.ResolveParams) (interface{}, uint64, string) {
-//	var userQuota model.Quota
-//	userQuota.ServerUUID = "COdex"
-//	logger.Logger.Println("$$$$$$$$$$$$")
-//
-//	userQuota.CPU = 0
-//	userQuota.Memory = 0
-//	userQuota.NumberOfNodes = 2
-//	nodes, err := NodeScheduler(userQuota)
-//	if err != nil {
-//		// error must be returned as HccErrStack
-//		return nil, err
-//	}
-//
-//	return nodes, 0, ""
-//}

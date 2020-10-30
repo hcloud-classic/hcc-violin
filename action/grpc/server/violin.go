@@ -100,13 +100,13 @@ func (s *violinServer) UpdateServer(_ context.Context, in *pb.ReqUpdateServer) (
 func (s *violinServer) DeleteServer(_ context.Context, in *pb.ReqDeleteServer) (*pb.ResDeleteServer, error) {
 	logger.Logger.Println("Request received: DeleteServer()")
 
-	uuid, errCode, errStr := dao.DeleteServer(in)
+	deleteServer, errCode, errStr := dao.DeleteServer(in)
 	if errCode != 0 {
 		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResDeleteServer{UUID: "", HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		return &pb.ResDeleteServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
-	return &pb.ResDeleteServer{UUID: uuid}, nil
+	return &pb.ResDeleteServer{Server: deleteServer}, nil
 }
 
 func (s *violinServer) CreateServerNode(_ context.Context, in *pb.ReqCreateServerNode) (*pb.ResCreateServerNode, error) {
@@ -160,13 +160,13 @@ func (s *violinServer) GetServerNodeNum(_ context.Context, in *pb.ReqGetServerNo
 func (s *violinServer) DeleteServerNode(_ context.Context, in *pb.ReqDeleteServerNode) (*pb.ResDeleteServerNode, error) {
 	logger.Logger.Println("Request received: DeleteServerNode()")
 
-	uuid, errCode, errStr := dao.DeleteServerNode(in)
+	deleteServerNode, errCode, errStr := dao.DeleteServerNode(in)
 	if errCode != 0 {
 		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResDeleteServerNode{UUID: "", HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		return &pb.ResDeleteServerNode{ServerNode: &pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
 	}
 
-	return &pb.ResDeleteServerNode{UUID: uuid}, nil
+	return &pb.ResDeleteServerNode{ServerNode: deleteServerNode}, nil
 }
 
 func (s *violinServer) DeleteServerNodeByServerUUID(_ context.Context, in *pb.ReqDeleteServerNodeByServerUUID) (*pb.ResDeleteServerNodeByServerUUID, error) {
