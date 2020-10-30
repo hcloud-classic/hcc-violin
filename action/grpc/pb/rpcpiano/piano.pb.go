@@ -52,6 +52,7 @@ type Quota = rpcmsgType.Quota
 type VNC = rpcmsgType.VNC
 type Volume = rpcmsgType.Volume
 type VolumeAttachment = rpcmsgType.VolumeAttachment
+type Pool = rpcmsgType.Pool
 type AdaptiveIPSetting = rpcmsgType.AdaptiveIPSetting
 type AdaptiveIPAvailableIPList = rpcmsgType.AdaptiveIPAvailableIPList
 type AdaptiveIPServer = rpcmsgType.AdaptiveIPServer
@@ -66,6 +67,7 @@ type Control = rpcmsgType.Control
 type Controls = rpcmsgType.Controls
 type ScheduledNodes = rpcmsgType.ScheduledNodes
 type ScheduleServer = rpcmsgType.ScheduleServer
+type ServerAction = rpcmsgType.ServerAction
 
 type ReqMetricInfo struct {
 	state         protoimpl.MessageState
