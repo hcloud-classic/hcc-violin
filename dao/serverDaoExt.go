@@ -234,6 +234,52 @@ func doGetIPRange(serverSubnet *net.IPNet, nodes []pb.Node) (net.IP, net.IP) {
 	return firstIP, lastIP
 }
 
+func doDeleteVolume(serverUUID string, celloParams map[string]interface{}, useType string, firstIP net.IP, gateway string) error {
+	userUUID := celloParams["user_uuid"].(string)
+	diskSize, err := strconv.Atoi(celloParams["disk_size"].(string))
+	if err != nil {
+		return err
+	}
+
+	var reqCreateVolume rpccello.ReqVolumeHandler
+	var reqVolume rpccello.Volume
+
+	reqCreateVolume.Volume = &reqVolume
+
+	var size int
+
+	switch useType {
+	case "os":
+		size = model.OSDiskSize
+		break
+	case "data":
+		size = diskSize
+		break
+	default:
+		return errors.New("got invalid useType")
+	}
+
+	reqCreateVolume.Volume.ServerUUID = serverUUID
+	reqCreateVolume.Volume.Filesystem = celloParams["os"].(string)
+	strSize := strconv.Itoa(size)
+	reqCreateVolume.Volume.Size = strSize
+	reqCreateVolume.Volume.UserUUID = userUUID
+	reqCreateVolume.Volume.UseType = useType
+	reqCreateVolume.Volume.Network_IP = firstIP.String()
+	reqCreateVolume.Volume.GatewayIp = gateway
+
+	reqCreateVolume.Volume.Action = "create"
+
+	logger.Logger.Println("[doCreateVolume] : ", reqCreateVolume.Volume)
+	resCreateVolume, err := client.RC.Volhandler(&reqCreateVolume)
+	if err != nil {
+		logger.Logger.Println("doCreateVolume: server_uuid="+serverUUID+": "+err.Error(), "resCreateVolume : ", resCreateVolume)
+		return err
+	}
+
+	return nil
+}
+
 func doCreateVolume(serverUUID string, celloParams map[string]interface{}, useType string, firstIP net.IP, gateway string) error {
 	userUUID := celloParams["user_uuid"].(string)
 	diskSize, err := strconv.Atoi(celloParams["disk_size"].(string))
@@ -271,7 +317,7 @@ func doCreateVolume(serverUUID string, celloParams map[string]interface{}, useTy
 	reqCreateVolume.Volume.Action = "create"
 
 	logger.Logger.Println("[doCreateVolume] : ", reqCreateVolume.Volume)
-	resCreateVolume, err := client.RC.CreateVolume(&reqCreateVolume)
+	resCreateVolume, err := client.RC.Volhandler(&reqCreateVolume)
 	if err != nil {
 		logger.Logger.Println("doCreateVolume: server_uuid="+serverUUID+": "+err.Error(), "resCreateVolume : ", resCreateVolume)
 		return err

@@ -34,21 +34,21 @@ func closeCello() {
 	_ = celloConn.Close()
 }
 
-// CreateVolume : Create a server
-func (rc *RPCClient) CreateVolume(in *rpccello.ReqVolumeHandler) (*rpccello.ResVolumeHandler, error) {
+// Volhandler : Create a server
+func (rc *RPCClient) Volhandler(in *rpccello.ReqVolumeHandler) (*rpccello.ResVolumeHandler, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Cello.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
-	resCreateVolume, err := rc.cello.VolumeHandler(ctx, in)
+	resVolhandle, err := rc.cello.VolumeHandler(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resCreateVolume.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(&resVolhandle.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm()
 	if len(errors) != 0 && errors[0].ErrCode != 0 {
 		return nil, errors2.New(errors[0].ErrText)
 	}
 
-	return resCreateVolume, nil
+	return resVolhandle, nil
 }
