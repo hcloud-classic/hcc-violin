@@ -13,6 +13,7 @@ type violinConfig struct {
 	CelloConfig     *goconf.Section
 	HarpConfig      *goconf.Section
 	SchedulerConfig *goconf.Section
+	PiccoloConfig   *goconf.Section
 }
 
 /*-----------------------------------

@@ -265,7 +265,7 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 	return nodes, 0, ""
 }
 
-func doCreateServerRoutine(server *pb.Server, nodes []pb.Node) error {
+func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) error {
 	celloParams := make(map[string]interface{})
 	celloParams["user_uuid"] = server.UserUUID
 	celloParams["os"] = server.OS
@@ -276,6 +276,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node) error {
 	if err != nil {
 		return err
 	}
+
 	logger.Logger.Println("doCreateServerRoutine(): ", serverSubnet, subnet)
 
 	logger.Logger.Println("doCreateServerRoutine(): Getting leaderNodeUUID from first of nodes[]")
@@ -291,32 +292,97 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node) error {
 		printLogCreateServerRoutine(routineServerUUID, "Creating os volume")
 		routineError = doCreateVolume(routineServerUUID, celloParams, "os", routineFirstIP, routineSubnet.Gateway)
 		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"cello / create_volume (OS)",
+				"Failed",
+				routineError.Error(),
+				token)
+
 			goto ERROR
 		}
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"cello / create_volume (OS)",
+			"Success",
+			"",
+			token)
 
 		printLogCreateServerRoutine(routineServerUUID, "Creating data volume")
 		routineError = doCreateVolume(routineServerUUID, celloParams, "data", routineFirstIP, routineSubnet.Gateway)
 		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"cello / create_volume (Data)",
+				"Failed",
+				routineError.Error(),
+				token)
+
 			goto ERROR
 		}
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"cello / create_volume (Data)",
+			"Success",
+			"",
+			token)
 
 		printLogCreateServerRoutine(routineServerUUID, "Updating subnet info")
 		routineError = doUpdateSubnet(routineSubnet.UUID, routineSubnet.LeaderNodeUUID, routineServerUUID)
 		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"harp / update_subnet",
+				"Failed",
+				routineError.Error(),
+				token)
+
 			goto ERROR
 		}
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"harp / update_subnet",
+			"Success",
+			"",
+			token)
 
 		printLogCreateServerRoutine(routineServerUUID, "Creating DHCPD config file")
 		routineError = doCreateDHCPDConfig(routineSubnet.UUID, routineServerUUID, routineNodes)
 		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"harp / create_dhcpd_conf",
+				"Failed",
+				routineError.Error(),
+				token)
+
 			goto ERROR
 		}
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"harp / create_dhcpd_conf",
+			"Success",
+			"",
+			token)
 
 		printLogCreateServerRoutine(routineServerUUID, "Turning off nodes")
 		routineError = doTurnOffNodes(routineServerUUID, routineNodes)
 		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"flute / off_node",
+				"Failed",
+				routineError.Error(),
+				token)
+
 			goto ERROR
 		}
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"flute / off_node",
+			"Success",
+			"",
+			token)
 
 		printLogCreateServerRoutine(routineServerUUID, "Waiting for turning off nodes... ("+strconv.Itoa(int(config.Flute.TurnOffNodesWaitTimeSec))+"sec)")
 		time.Sleep(time.Second * time.Duration(config.Flute.TurnOffNodesWaitTimeSec))
@@ -324,16 +390,43 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node) error {
 		printLogCreateServerRoutine(routineServerUUID, "Turning on nodes")
 		routineError = doTurnOnNodes(routineServerUUID, routineSubnet.LeaderNodeUUID, routineNodes)
 		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"flute / on_node",
+				"Failed",
+				routineError.Error(),
+				token)
+
 			goto ERROR
 		}
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"flute / on_node",
+			"Success",
+			"",
+			token)
 
 		printLogCreateServerRoutine(routineServerUUID, "Preparing controlAction")
 
 		printLogCreateServerRoutine(routineServerUUID, "Running Hcc CLI")
 		routineError = rabbitmq.HccCLI(routineServerUUID, routineFirstIP, routineLastIP)
 		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"viola / HCC_CLI",
+				"Failed",
+				routineError.Error(),
+				token)
+
 			goto ERROR
 		}
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"viola / HCC_CLI",
+			"Success",
+			"",
+			token)
+
 		// while checking Cello DB cluster status is runnig in N times, until retry is expired
 
 		return
@@ -446,7 +539,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 		goto ERROR
 	}
 
-	err = doCreateServerRoutine(&server, nodes)
+	err = doCreateServerRoutine(&server, nodes, in.GetToken())
 	if err != nil {
 		errStack.Push(&hccerr.HccError{ErrCode: hccerr.ViolinInternalCreateServerRoutineError, ErrText: err.Error()})
 
@@ -664,8 +757,8 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	logger.Logger.Println("DeleteServer(): Re-setting subnet info (ServerUUID: " + requestedUUID + ")")
 	err = client.RC.UpdateSubnet(&rpcharp.ReqUpdateSubnet{
 		Subnet: &pb.Subnet{
-			UUID: subnet.UUID,
-			ServerUUID: "-",
+			UUID:           subnet.UUID,
+			ServerUUID:     "-",
 			LeaderNodeUUID: "-",
 		},
 	})
@@ -685,7 +778,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	for i := range nodes {
 		_, err = client.RC.UpdateNode(&rpcflute.ReqUpdateNode{
 			Node: &pb.Node{
-				UUID: nodes[i].UUID,
+				UUID:       nodes[i].UUID,
 				ServerUUID: "",
 				// gRPC use 0 value for unset. So I will use 9 value for inactive. - ish
 				Active: 9,
