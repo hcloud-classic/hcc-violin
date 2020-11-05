@@ -7,6 +7,7 @@ import (
 	"hcc/violin/action/grpc/pb/rpcharp"
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/action/rabbitmq"
+	"hcc/violin/lib/config"
 	hccerr "hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
@@ -364,46 +365,46 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 			"",
 			token)
 
-		//printLogCreateServerRoutine(routineServerUUID, "Turning off nodes")
-		//routineError = doTurnOffNodes(routineServerUUID, routineNodes)
-		//if routineError != nil {
-		//	_ = client.RC.WriteServerAction(
-		//		routineServerUUID,
-		//		"flute / off_node",
-		//		"Failed",
-		//		routineError.Error(),
-		//		token)
-		//
-		//	goto ERROR
-		//}
-		//_ = client.RC.WriteServerAction(
-		//	routineServerUUID,
-		//	"flute / off_node",
-		//	"Success",
-		//	"",
-		//	token)
-		//
-		//printLogCreateServerRoutine(routineServerUUID, "Waiting for turning off nodes... ("+strconv.Itoa(int(config.Flute.TurnOffNodesWaitTimeSec))+"sec)")
-		//time.Sleep(time.Second * time.Duration(config.Flute.TurnOffNodesWaitTimeSec))
-		//
-		//printLogCreateServerRoutine(routineServerUUID, "Turning on nodes")
-		//routineError = doTurnOnNodes(routineServerUUID, routineSubnet.LeaderNodeUUID, routineNodes)
-		//if routineError != nil {
-		//	_ = client.RC.WriteServerAction(
-		//		routineServerUUID,
-		//		"flute / on_node",
-		//		"Failed",
-		//		routineError.Error(),
-		//		token)
-		//
-		//	goto ERROR
-		//}
-		//_ = client.RC.WriteServerAction(
-		//	routineServerUUID,
-		//	"flute / on_node",
-		//	"Success",
-		//	"",
-		//	token)
+		printLogCreateServerRoutine(routineServerUUID, "Turning off nodes")
+		routineError = doTurnOffNodes(routineServerUUID, routineNodes)
+		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"flute / off_node",
+				"Failed",
+				routineError.Error(),
+				token)
+
+			goto ERROR
+		}
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"flute / off_node",
+			"Success",
+			"",
+			token)
+
+		printLogCreateServerRoutine(routineServerUUID, "Waiting for turning off nodes... ("+strconv.Itoa(int(config.Flute.TurnOffNodesWaitTimeSec))+"sec)")
+		time.Sleep(time.Second * time.Duration(config.Flute.TurnOffNodesWaitTimeSec))
+
+		printLogCreateServerRoutine(routineServerUUID, "Turning on nodes")
+		routineError = doTurnOnNodes(routineServerUUID, routineSubnet.LeaderNodeUUID, routineNodes)
+		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"flute / on_node",
+				"Failed",
+				routineError.Error(),
+				token)
+
+			goto ERROR
+		}
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"flute / on_node",
+			"Success",
+			"",
+			token)
 
 		printLogCreateServerRoutine(routineServerUUID, "Preparing controlAction")
 
@@ -741,11 +742,11 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to get subnet info (" + err.Error() + ")"
 	}
 
-	//logger.Logger.Println("DeleteServer(): Turning off nodes (ServerUUID: " + requestedUUID + ")")
-	//err = doTurnOffNodes(requestedUUID, nodes)
-	//if err != nil {
-	//	return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to turning off nodes (" + err.Error() + ")"
-	//}
+	logger.Logger.Println("DeleteServer(): Turning off nodes (ServerUUID: " + requestedUUID + ")")
+	err = doTurnOffNodes(requestedUUID, nodes)
+	if err != nil {
+		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to turning off nodes (" + err.Error() + ")"
+	}
 
 	logger.Logger.Println("DeleteServer(): Deleting DHCPD configuration (ServerUUID: " + requestedUUID + ")")
 	err = client.RC.DeleteDHCPDConfig(subnet.UUID)
