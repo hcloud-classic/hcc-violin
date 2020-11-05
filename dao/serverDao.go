@@ -760,6 +760,25 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 		if err != nil {
 			logger.Logger.Println("DeleteServer(): Failed to turning off nodes (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
 		}
+
+		for i := 10; i >= 1; i-- {
+			var isAllNodesTurnedOff = true
+
+			logger.Logger.Println("DeleteServer(): Wait for turning off nodes... (Remained time: " + strconv.FormatInt(int64(i), 10) + "sec, ServerUUID: " + requestedUUID + ")")
+			for i := range nodes {
+				resGetNodePowerState, _ := client.RC.GetNodePowerState(nodes[i].UUID)
+				if strings.ToLower(resGetNodePowerState.Result) == "on" {
+					isAllNodesTurnedOff = false
+					break
+				}
+			}
+
+			if isAllNodesTurnedOff {
+				break
+			}
+
+			time.Sleep(time.Second * time.Duration(1))
+		}
 	}
 
 	if !subnetIsInactive && subnet != nil {

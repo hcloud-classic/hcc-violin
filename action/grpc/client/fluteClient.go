@@ -96,6 +96,22 @@ func (rc *RPCClient) OffNode(nodeUUID string, forceOff bool) error {
 	return nil
 }
 
+// GetNodePowerState : Get power state of selected node
+func (rc *RPCClient) GetNodePowerState(uuid string) (*rpcflute.ResNodePowerState, error) {
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
+	defer cancel()
+
+	resNodePowerState, err := rc.flute.GetNodePowerState(ctx, &rpcflute.ReqNodePowerState{
+		UUID: uuid,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resNodePowerState, nil
+}
+
 // GetNode : Get infos of the node
 func (rc *RPCClient) GetNode(uuid string) (*rpcflute.Node, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
