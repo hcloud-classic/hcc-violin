@@ -769,7 +769,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	logger.Logger.Println("DeleteServer(): Deleting AdaptiveIP (ServerUUID: " + requestedUUID + ")")
 	_, err = client.RC.DeleteAdaptiveIPServer(requestedUUID)
 	if err != nil {
-		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to delete AdaptiveIP (" + err.Error() + ")"
+		logger.Logger.Println("DeleteServer(): Failed to delete AdaptiveIP (" + err.Error() + ")")
 	}
 
 	logger.Logger.Println("DeleteServer(): Deleting volumes (ServerUUID: " + requestedUUID + ")")
