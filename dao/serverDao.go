@@ -771,13 +771,10 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to delete AdaptiveIP (" + err.Error() + ")"
 	}
 
-	// TODO : Delete volumes of the server
-
-	logger.Logger.Println("DeleteServer(): Deleting AdaptiveIP (ServerUUID: " + requestedUUID + ")")
-
+	logger.Logger.Println("DeleteServer(): Deleting volumes (ServerUUID: " + requestedUUID + ")")
 	err = doDeleteVolume(requestedUUID)
 	if err != nil {
-		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to delete Volume (" + err.Error() + ")"
+		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to delete volumes (" + err.Error() + ")"
 	}
 
 	logger.Logger.Println("DeleteServer(): Re-setting nodes info (ServerUUID: " + requestedUUID + ")")
