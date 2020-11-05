@@ -148,7 +148,7 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO : Currently nrNodes is hard coded to 2. Will get from Web UI (Oboe) later.
+
 	var nrNodes = userQuota.NumberOfNodes
 	retNodes := resNodes.GetNodes()
 	nodeList := retNodes.GetShceduledNode()
