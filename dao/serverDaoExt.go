@@ -234,46 +234,26 @@ func doGetIPRange(serverSubnet *net.IPNet, nodes []pb.Node) (net.IP, net.IP) {
 	return firstIP, lastIP
 }
 
-func doDeleteVolume(serverUUID string, celloParams map[string]interface{}, useType string, firstIP net.IP, gateway string) error {
-	userUUID := celloParams["user_uuid"].(string)
-	diskSize, err := strconv.Atoi(celloParams["disk_size"].(string))
-	if err != nil {
-		return err
-	}
+func doDeleteVolume(serverUUID string) error {
+	// userUUID := celloParams["user_uuid"].(string)
+	// diskSize, err := strconv.Atoi(celloParams["disk_size"].(string))
+	// if err != nil {
+	// 	return err
+	// }
 
-	var reqCreateVolume rpccello.ReqVolumeHandler
+	var reqDeleteVolume rpccello.ReqVolumeHandler
 	var reqVolume rpccello.Volume
 
-	reqCreateVolume.Volume = &reqVolume
+	reqDeleteVolume.Volume = &reqVolume
 
-	var size int
+	reqDeleteVolume.Volume.ServerUUID = serverUUID
+	reqDeleteVolume.Volume.UseType = "os"
+	reqDeleteVolume.Volume.Action = "delete"
 
-	switch useType {
-	case "os":
-		size = model.OSDiskSize
-		break
-	case "data":
-		size = diskSize
-		break
-	default:
-		return errors.New("got invalid useType")
-	}
-
-	reqCreateVolume.Volume.ServerUUID = serverUUID
-	reqCreateVolume.Volume.Filesystem = celloParams["os"].(string)
-	strSize := strconv.Itoa(size)
-	reqCreateVolume.Volume.Size = strSize
-	reqCreateVolume.Volume.UserUUID = userUUID
-	reqCreateVolume.Volume.UseType = useType
-	reqCreateVolume.Volume.Network_IP = firstIP.String()
-	reqCreateVolume.Volume.GatewayIp = gateway
-
-	reqCreateVolume.Volume.Action = "create"
-
-	logger.Logger.Println("[doCreateVolume] : ", reqCreateVolume.Volume)
-	resCreateVolume, err := client.RC.Volhandler(&reqCreateVolume)
+	logger.Logger.Println("[doDeleteVolume] : ", reqDeleteVolume.Volume)
+	resDeleteVolume, err := client.RC.Volhandler(&reqDeleteVolume)
 	if err != nil {
-		logger.Logger.Println("doCreateVolume: server_uuid="+serverUUID+": "+err.Error(), "resCreateVolume : ", resCreateVolume)
+		logger.Logger.Println("doDeleteVolume: server_uuid="+serverUUID+": "+err.Error(), "resCreateVolume : ", resDeleteVolume)
 		return err
 	}
 

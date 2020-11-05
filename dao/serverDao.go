@@ -773,6 +773,13 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 
 	// TODO : Delete volumes of the server
 
+	logger.Logger.Println("DeleteServer(): Deleting AdaptiveIP (ServerUUID: " + requestedUUID + ")")
+
+	err = doDeleteVolume(requestedUUID)
+	if err != nil {
+		return nil, hccerr.ViolinGrpcRequestError, "DeleteServer(): Failed to delete Volume (" + err.Error() + ")"
+	}
+
 	logger.Logger.Println("DeleteServer(): Re-setting nodes info (ServerUUID: " + requestedUUID + ")")
 	for i := range nodes {
 		_, err = client.RC.UpdateNode(&rpcflute.ReqUpdateNode{
