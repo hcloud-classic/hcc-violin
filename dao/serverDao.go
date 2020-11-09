@@ -761,7 +761,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 			logger.Logger.Println("DeleteServer(): Failed to turning off nodes (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
 		}
 
-		for i := 10; i >= 1; i-- {
+		for i := config.Flute.TurnOffNodesWaitTimeSec; i >= 1; i-- {
 			var isAllNodesTurnedOff = true
 
 			logger.Logger.Println("DeleteServer(): Wait for turning off nodes... (Remained time: " + strconv.FormatInt(int64(i), 10) + "sec, ServerUUID: " + requestedUUID + ")")
