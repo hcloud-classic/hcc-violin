@@ -384,8 +384,24 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 			"",
 			token)
 
-		printLogCreateServerRoutine(routineServerUUID, "Waiting for turning off nodes... ("+strconv.Itoa(int(config.Flute.TurnOffNodesWaitTimeSec))+"sec)")
-		time.Sleep(time.Second * time.Duration(config.Flute.TurnOffNodesWaitTimeSec))
+		for i := config.Flute.TurnOffNodesWaitTimeSec; i >= 1; i-- {
+			var isAllNodesTurnedOff = true
+
+			printLogCreateServerRoutine(routineServerUUID, "Waiting for turning off nodes... (Remained time: " + strconv.FormatInt(i, 10) + "sec)")
+			for i := range nodes {
+				resGetNodePowerState, _ := client.RC.GetNodePowerState(nodes[i].UUID)
+				if strings.ToLower(resGetNodePowerState.Result) == "on" {
+					isAllNodesTurnedOff = false
+					break
+				}
+			}
+
+			if isAllNodesTurnedOff {
+				break
+			}
+
+			time.Sleep(time.Second * time.Duration(1))
+		}
 
 		printLogCreateServerRoutine(routineServerUUID, "Turning on nodes")
 		routineError = doTurnOnNodes(routineServerUUID, routineSubnet.LeaderNodeUUID, routineNodes)
