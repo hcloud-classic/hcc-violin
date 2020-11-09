@@ -7,11 +7,11 @@ import (
 	"hcc/violin/action/grpc/pb/rpcharp"
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/action/rabbitmq"
+	"hcc/violin/daoext"
 	"hcc/violin/lib/config"
 	hccerr "hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
-	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -257,7 +257,7 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 	userQuota.NumberOfNodes = in.GetNrNode()
 
 	logger.Logger.Println("doGetAvailableNodes(): Getting available nodes from flute module ")
-	nodes, err := doGetNodes(&userQuota)
+	nodes, err := daoext.DoGetNodes(&userQuota)
 	if err != nil {
 		return nil, hccerr.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + err.Error()
 	}
@@ -272,7 +272,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	celloParams["disk_size"] = strconv.Itoa(int(server.DiskSize))
 
 	logger.Logger.Println("doCreateServerRoutine(): Getting subnet info from harp module")
-	serverSubnet, subnet, err := doGetSubnet(server.SubnetUUID)
+	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID)
 	if err != nil {
 		return err
 	}
@@ -283,177 +283,12 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	subnet.LeaderNodeUUID = nodes[0].UUID
 
 	logger.Logger.Println("doCreateServerRoutine(): Getting IP address range")
-	firstIP, lastIP := doGetIPRange(serverSubnet, nodes)
+	firstIP, lastIP := daoext.DoGetIPRange(serverSubnet, nodes)
 
-	go func(routineServerUUID string, routineSubnet *pb.Subnet, routineNodes []pb.Node,
-		celloParams map[string]interface{}, routineFirstIP net.IP, routineLastIP net.IP) {
-		var routineError error
-
-		printLogCreateServerRoutine(routineServerUUID, "Creating os volume")
-		routineError = doCreateVolume(routineServerUUID, celloParams, "os", routineFirstIP, routineSubnet.Gateway)
-		if routineError != nil {
-			_ = client.RC.WriteServerAction(
-				routineServerUUID,
-				"cello / create_volume (OS)",
-				"Failed",
-				routineError.Error(),
-				token)
-
-			goto ERROR
-		}
-		_ = client.RC.WriteServerAction(
-			routineServerUUID,
-			"cello / create_volume (OS)",
-			"Success",
-			"",
-			token)
-
-		printLogCreateServerRoutine(routineServerUUID, "Creating data volume")
-		routineError = doCreateVolume(routineServerUUID, celloParams, "data", routineFirstIP, routineSubnet.Gateway)
-		if routineError != nil {
-			_ = client.RC.WriteServerAction(
-				routineServerUUID,
-				"cello / create_volume (Data)",
-				"Failed",
-				routineError.Error(),
-				token)
-
-			goto ERROR
-		}
-		_ = client.RC.WriteServerAction(
-			routineServerUUID,
-			"cello / create_volume (Data)",
-			"Success",
-			"",
-			token)
-
-		printLogCreateServerRoutine(routineServerUUID, "Updating subnet info")
-		routineError = doUpdateSubnet(routineSubnet.UUID, routineSubnet.LeaderNodeUUID, routineServerUUID)
-		if routineError != nil {
-			_ = client.RC.WriteServerAction(
-				routineServerUUID,
-				"harp / update_subnet",
-				"Failed",
-				routineError.Error(),
-				token)
-
-			goto ERROR
-		}
-		_ = client.RC.WriteServerAction(
-			routineServerUUID,
-			"harp / update_subnet",
-			"Success",
-			"",
-			token)
-
-		printLogCreateServerRoutine(routineServerUUID, "Creating DHCPD config file")
-		routineError = doCreateDHCPDConfig(routineSubnet.UUID, routineServerUUID, routineNodes)
-		if routineError != nil {
-			_ = client.RC.WriteServerAction(
-				routineServerUUID,
-				"harp / create_dhcpd_conf",
-				"Failed",
-				routineError.Error(),
-				token)
-
-			goto ERROR
-		}
-		_ = client.RC.WriteServerAction(
-			routineServerUUID,
-			"harp / create_dhcpd_conf",
-			"Success",
-			"",
-			token)
-
-		printLogCreateServerRoutine(routineServerUUID, "Turning off nodes")
-		routineError = doTurnOffNodes(routineServerUUID, routineNodes)
-		if routineError != nil {
-			_ = client.RC.WriteServerAction(
-				routineServerUUID,
-				"flute / off_node",
-				"Failed",
-				routineError.Error(),
-				token)
-
-			goto ERROR
-		}
-		_ = client.RC.WriteServerAction(
-			routineServerUUID,
-			"flute / off_node",
-			"Success",
-			"",
-			token)
-
-		for i := config.Flute.TurnOffNodesWaitTimeSec; i >= 1; i-- {
-			var isAllNodesTurnedOff = true
-
-			printLogCreateServerRoutine(routineServerUUID, "Waiting for turning off nodes... (Remained time: " + strconv.FormatInt(i, 10) + "sec)")
-			for i := range nodes {
-				resGetNodePowerState, _ := client.RC.GetNodePowerState(nodes[i].UUID)
-				if strings.ToLower(resGetNodePowerState.Result) == "on" {
-					isAllNodesTurnedOff = false
-					break
-				}
-			}
-
-			if isAllNodesTurnedOff {
-				break
-			}
-
-			time.Sleep(time.Second * time.Duration(1))
-		}
-
-		printLogCreateServerRoutine(routineServerUUID, "Turning on nodes")
-		routineError = doTurnOnNodes(routineServerUUID, routineSubnet.LeaderNodeUUID, routineNodes)
-		if routineError != nil {
-			_ = client.RC.WriteServerAction(
-				routineServerUUID,
-				"flute / on_node",
-				"Failed",
-				routineError.Error(),
-				token)
-
-			goto ERROR
-		}
-		_ = client.RC.WriteServerAction(
-			routineServerUUID,
-			"flute / on_node",
-			"Success",
-			"",
-			token)
-
-		printLogCreateServerRoutine(routineServerUUID, "Preparing controlAction")
-
-		printLogCreateServerRoutine(routineServerUUID, "Running Hcc CLI")
-		routineError = rabbitmq.HccCLI(routineServerUUID, routineFirstIP, routineLastIP)
-		if routineError != nil {
-			_ = client.RC.WriteServerAction(
-				routineServerUUID,
-				"viola / HCC_CLI",
-				"Failed",
-				routineError.Error(),
-				token)
-
-			goto ERROR
-		}
-		_ = client.RC.WriteServerAction(
-			routineServerUUID,
-			"viola / HCC_CLI",
-			"Success",
-			"",
-			token)
-
-		// while checking Cello DB cluster status is runnig in N times, until retry is expired
-
-		return
-
-	ERROR:
-		printLogCreateServerRoutine(routineServerUUID, routineError.Error())
-		err = UpdateServerStatus(routineServerUUID, "Failed")
-		if err != nil {
-			logger.Logger.Println("doCreateServerRoutine(): Failed to update server status as failed")
-		}
-	}(server.UUID, subnet, nodes, celloParams, firstIP, lastIP)
+	err = rabbitmq.QueueCreateServer(server.UUID, subnet, nodes, celloParams, firstIP, lastIP, token)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -495,7 +330,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 	}
 
 	logger.Logger.Println("CreateServer(): Generating server UUID")
-	serverUUID, err = doGenerateServerUUID()
+	serverUUID, err = daoext.DoGenerateServerUUID()
 	if err != nil {
 		errStack.Push(&hccerr.HccError{ErrCode: hccerr.ViolinInternalUUIDGenerationError, ErrText: "CreateServer(): " + err.Error()})
 
@@ -705,30 +540,6 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 	return server, 0, ""
 }
 
-// UpdateServerStatus : Update status of the server
-func UpdateServerStatus(serverUUID string, status string) error {
-	sql := "update server set status = '" + status + "' where uuid = ?"
-
-	logger.Logger.Println("UpdateServerStatus sql : ", sql)
-
-	stmt, err := mysql.Db.Prepare(sql)
-	if err != nil {
-		logger.Logger.Println(err.Error())
-		return err
-	}
-	defer func() {
-		_ = stmt.Close()
-	}()
-
-	_, err2 := stmt.Exec(serverUUID)
-	if err2 != nil {
-		logger.Logger.Println(err2)
-		return err
-	}
-
-	return nil
-}
-
 // DeleteServer : Delete a server by UUID
 func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	var err error
@@ -772,7 +583,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 
 	if len(nodes) != 0 {
 		logger.Logger.Println("DeleteServer(): Turning off nodes (ServerUUID: " + requestedUUID + ")")
-		err = doTurnOffNodes(requestedUUID, nodes)
+		err = daoext.DoTurnOffNodes(requestedUUID, nodes)
 		if err != nil {
 			logger.Logger.Println("DeleteServer(): Failed to turning off nodes (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
 		}
@@ -824,7 +635,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	}
 
 	logger.Logger.Println("DeleteServer(): Deleting volumes (ServerUUID: " + requestedUUID + ")")
-	err = doDeleteVolume(requestedUUID)
+	err = daoext.DoDeleteVolume(requestedUUID)
 	if err != nil {
 		logger.Logger.Println("DeleteServer(): Failed to delete volumes  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
 	}

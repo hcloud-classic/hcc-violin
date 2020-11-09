@@ -1,7 +1,8 @@
-package dao
+package daoext
 
 import (
 	"errors"
+	"github.com/golang/protobuf/ptypes"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/grpc/pb/rpccello"
 	"hcc/violin/action/grpc/pb/rpcflute"
@@ -11,7 +12,9 @@ import (
 	"hcc/violin/data"
 	"hcc/violin/driver"
 	"hcc/violin/lib/config"
+	hccerr "hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
+	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
 	"net"
 	"strconv"
@@ -20,7 +23,7 @@ import (
 	"time"
 
 	"github.com/apparentlymart/go-cidr/cidr"
-	uuid "github.com/nu7hatch/gouuid"
+	gouuid "github.com/nu7hatch/gouuid"
 )
 
 func checkNetmask(netmask string) (net.IPMask, error) {
@@ -57,7 +60,8 @@ func checkNetmask(netmask string) (net.IPMask, error) {
 	return mask, err
 }
 
-func doGetSubnet(subnetUUID string) (*net.IPNet, *pb.Subnet, error) {
+// DoGetSubnet : Get the subnet infos
+func DoGetSubnet(subnetUUID string) (*net.IPNet, *pb.Subnet, error) {
 	var ipNet net.IPNet
 
 	subnet, err := client.RC.GetSubnet(subnetUUID)
@@ -97,8 +101,9 @@ func doGetSubnet(subnetUUID string) (*net.IPNet, *pb.Subnet, error) {
 	return &ipNet, subnet, nil
 }
 
-func doGenerateServerUUID() (string, error) {
-	out, err := uuid.NewV4()
+// DoGenerateServerUUID : Generate a UUID for the server
+func DoGenerateServerUUID() (string, error) {
+	out, err := gouuid.NewV4()
 	if err != nil {
 		logger.Logger.Println(err)
 		return "", err
@@ -130,7 +135,138 @@ func nodeScheduler(userquota *pb.Quota) ([]string, error) {
 	return testqwe.Data.ScheduledNode.NodeList, nil
 }
 
-func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
+// ReadServerNodeList : Get list of server nodes with provided server UUID
+func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, uint64, string) {
+	serverUUID := in.GetServerUUID()
+	serverUUIDOk := len(serverUUID) != 0
+	if !serverUUIDOk {
+		return nil, hccerr.ViolinGrpcArgumentError, "ReadServerNodeList(): need a serverUUID argument"
+	}
+
+	var serverNodeList pb.ResGetServerNodeList
+	var serverNodes []pb.ServerNode
+	var pserverNodes []*pb.ServerNode
+
+	var uuid string
+	var nodeUUID string
+	var createdAt time.Time
+
+	sql := "select * from server_node where server_uuid = ?"
+
+	stmt, err := mysql.Db.Query(sql, serverUUID)
+	if err != nil {
+		errStr := "ReadServerNodeList(): " + err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+
+	for stmt.Next() {
+		err := stmt.Scan(&uuid, &serverUUID, &nodeUUID, &createdAt)
+		if err != nil {
+			errStr := "ReadServerNodeList(): " + err.Error()
+			logger.Logger.Println(errStr)
+			if strings.Contains(err.Error(), "no rows in result set") {
+				return nil, hccerr.ViolinSQLNoResult, errStr
+			}
+			return nil, hccerr.ViolinSQLOperationFail, errStr
+		}
+
+		_createdAt, err := ptypes.TimestampProto(createdAt)
+		if err != nil {
+			errStr := "ReadServerNodeList(): " + err.Error()
+			logger.Logger.Println(errStr)
+			return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
+		}
+
+		serverNodes = append(serverNodes, pb.ServerNode{
+			UUID:       uuid,
+			ServerUUID: serverUUID,
+			NodeUUID:   nodeUUID,
+			CreatedAt:  _createdAt})
+	}
+
+	for i := range serverNodes {
+		pserverNodes = append(pserverNodes, &serverNodes[i])
+	}
+
+	serverNodeList.ServerNode = pserverNodes
+
+	return &serverNodeList, 0, ""
+}
+
+// CheckCreateServerNodeArgs : Check arguments of creating a server node
+func CheckCreateServerNodeArgs(reqServerNode *pb.ServerNode) bool {
+	serverUUIDOk := len(reqServerNode.ServerUUID) != 0
+	nodeUUIDOk := len(reqServerNode.NodeUUID) != 0
+	return !(serverUUIDOk && nodeUUIDOk)
+}
+
+// CreateServerNode : Create server nodes. Insert each node UUIDs with server UUID.
+func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, string) {
+	reqServerNode := in.GetServerNode()
+	if reqServerNode == nil {
+		return nil, hccerr.ViolinGrpcArgumentError, "CreateServerNode(): serverNode is nil"
+	}
+
+	out, err := gouuid.NewV4()
+	if err != nil {
+		logger.Logger.Println(err)
+		return nil, hccerr.ViolinInternalUUIDGenerationError, "CreateServerNode(): " + err.Error()
+	}
+	uuid := out.String()
+
+	if CheckCreateServerNodeArgs(reqServerNode) {
+		return nil, hccerr.ViolinGrpcArgumentError, "CreateServerNode(): some of arguments are missing\n"
+	}
+
+	serverNodeList, errCode, errStr := ReadServerNodeList(&pb.ReqGetServerNodeList{ServerUUID: reqServerNode.ServerUUID})
+	if errCode != 0 {
+		return nil, errCode, "CreateServerNode(): " + errStr
+	}
+	pserverNodes := serverNodeList.ServerNode
+
+	for i := range pserverNodes {
+		if pserverNodes[i].NodeUUID == reqServerNode.NodeUUID {
+			return nil, hccerr.ViolinInternalServerNodePresentError,
+				"CreateServerNode(): requested ServerNode is already present in the database (" +
+					"UUID: " + pserverNodes[i].UUID + ", " +
+					"ServerUUID: " + pserverNodes[i].ServerUUID + ", " +
+					"NodeUUID: " + pserverNodes[i].NodeUUID + ")"
+		}
+	}
+
+	serverNode := pb.ServerNode{
+		UUID:       uuid,
+		ServerUUID: reqServerNode.ServerUUID,
+		NodeUUID:   reqServerNode.NodeUUID,
+	}
+
+	sql := "insert into server_node(uuid, server_uuid, node_uuid, created_at) values (?, ?, ?, now())"
+	stmt, err := mysql.Db.Prepare(sql)
+	if err != nil {
+		errStr := "CreateServerNode(): " + err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+
+	_, err = stmt.Exec(serverNode.UUID, serverNode.ServerUUID, serverNode.NodeUUID)
+	if err != nil {
+		errStr := "CreateServerNode(): " + err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
+	}
+
+	return &serverNode, 0, ""
+}
+
+// DoGetNodes : Get scheduled nodes
+func DoGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 	var reqScheduleServer rpcviolin_scheduler.ReqScheduleHandler
 	var reqServer rpcviolin_scheduler.Server
 	var reqServerStruct rpcviolin_scheduler.ScheduleServer
@@ -222,7 +358,8 @@ func doGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 	return GatherSelectedNodes, nil
 }
 
-func doGetIPRange(serverSubnet *net.IPNet, nodes []pb.Node) (net.IP, net.IP) {
+// DoGetIPRange : Get IP range of the subnet
+func DoGetIPRange(serverSubnet *net.IPNet, nodes []pb.Node) (net.IP, net.IP) {
 	firstIP, _ := cidr.AddressRange(serverSubnet)
 	firstIP = cidr.Inc(firstIP)
 	lastIP := firstIP
@@ -234,7 +371,8 @@ func doGetIPRange(serverSubnet *net.IPNet, nodes []pb.Node) (net.IP, net.IP) {
 	return firstIP, lastIP
 }
 
-func doDeleteVolume(serverUUID string) error {
+// DoDeleteVolume : Delete the volume
+func DoDeleteVolume(serverUUID string) error {
 	// userUUID := celloParams["user_uuid"].(string)
 	// diskSize, err := strconv.Atoi(celloParams["disk_size"].(string))
 	// if err != nil {
@@ -260,7 +398,8 @@ func doDeleteVolume(serverUUID string) error {
 	return nil
 }
 
-func doCreateVolume(serverUUID string, celloParams map[string]interface{}, useType string, firstIP net.IP, gateway string) error {
+// DoCreateVolume : Create volumes of os and data
+func DoCreateVolume(serverUUID string, celloParams map[string]interface{}, useType string, firstIP net.IP, gateway string) error {
 	userUUID := celloParams["user_uuid"].(string)
 	diskSize, err := strconv.Atoi(celloParams["disk_size"].(string))
 	if err != nil {
@@ -306,7 +445,8 @@ func doCreateVolume(serverUUID string, celloParams map[string]interface{}, useTy
 	return nil
 }
 
-func doUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string) error {
+// DoUpdateSubnet : Update the subnet's leader node UUID and server UUID infos
+func DoUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string) error {
 	err := client.RC.UpdateSubnet(&rpcharp.ReqUpdateSubnet{
 		Subnet: &rpcharp.Subnet{
 			UUID:           subnetUUID,
@@ -322,7 +462,8 @@ func doUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string)
 	return nil
 }
 
-func doCreateDHCPDConfig(subnetUUID string, serverUUID string, nodes []pb.Node) error {
+// DoCreateDHCPDConfig : Create a DHCPD config file for the server
+func DoCreateDHCPDConfig(subnetUUID string, serverUUID string, nodes []pb.Node) error {
 	var nodeUUIDsStr = ""
 	for i := range nodes {
 		nodeUUIDsStr += nodes[i].UUID
@@ -341,7 +482,8 @@ func doCreateDHCPDConfig(subnetUUID string, serverUUID string, nodes []pb.Node) 
 	return nil
 }
 
-func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) error {
+// DoTurnOnNodes : Turn on selected nodes
+func DoTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) error {
 	printLogCreateServerRoutine(serverUUID, "Turning on leader node")
 
 	var foundLeaderNode = false
@@ -398,7 +540,8 @@ func doTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) er
 	return nil
 }
 
-func doTurnOffNodes(serverUUID string, nodes []pb.Node) error {
+// DoTurnOffNodes : Turn off selected nodes
+func DoTurnOffNodes(serverUUID string, nodes []pb.Node) error {
 	printLogCreateServerRoutine(serverUUID, "Turning off nodes")
 
 	logger.Logger.Println("doTurnOffNodes: server_uuid=" + serverUUID + ": " + "Turning off all of nodes")

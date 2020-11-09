@@ -5,6 +5,7 @@ import (
 	"hcc/violin/action/grpc/errconv"
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/dao"
+	"hcc/violin/daoext"
 	"hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 )
@@ -136,7 +137,7 @@ func (s *violinServer) GetServerNode(_ context.Context, in *pb.ReqGetServerNode)
 func (s *violinServer) GetServerNodeList(_ context.Context, in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, error) {
 	logger.Logger.Println("Request received: GetServerNodeList()")
 
-	serverNodeList, errCode, errStr := dao.ReadServerNodeList(in)
+	serverNodeList, errCode, errStr := daoext.ReadServerNodeList(in)
 	if errCode != 0 {
 		errStack := errors.ReturnHccError(errCode, errStr)
 		return &pb.ResGetServerNodeList{ServerNode: []*pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil

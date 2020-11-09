@@ -3,27 +3,8 @@ package rabbitmq
 import (
 	"encoding/json"
 	"hcc/violin/lib/logger"
-	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
 )
-
-func updateServerStatus(uuid string, status string) error {
-	sql := "update server set status = '" + status + "' where uuid = ?"
-	stmt, err := mysql.Db.Prepare(sql)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = stmt.Close()
-	}()
-
-	_, err = stmt.Exec(uuid)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func violaToViolin() error {
 	qCreate, err := Channel.QueueDeclare(
@@ -87,6 +68,54 @@ func violaToViolin() error {
 			// 	CreateVnc, actionerr := driver.VncControl()
 			// }
 
+		}
+	}()
+
+	return nil
+}
+
+// ConsumeCreateServer : Consume server creating queues from RabbitMQ channel
+func ConsumeCreateServer() error {
+	qCreate, err := Channel.QueueDeclare(
+		"create_server",
+		false,
+		false,
+		false,
+		false,
+		nil)
+	if err != nil {
+		logger.Logger.Println("QueueCreateServer: Failed to get create_server")
+		return err
+	}
+
+	msgsCreate, err := Channel.Consume(
+		qCreate.Name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		logger.Logger.Println("QueueCreateServer: Failed to register create_server")
+		return err
+	}
+
+	go func() {
+		for d := range msgsCreate {
+			logger.Logger.Printf("QueueCreateServer: Received a create message: %s\n", d.Body)
+
+			var data createServerDataStruct
+			err = json.Unmarshal(d.Body, &data)
+			if err != nil {
+				logger.Logger.Println("QueueCreateServer: Failed to unmarshal create_server data")
+				return
+			}
+
+			logger.Logger.Println("QueueCreateServer: Creating server for " + data.RoutineServerUUID)
+			DoCreateServerRoutineQueue(data.RoutineServerUUID, &data.RoutineSubnet, data.RoutineNodes,
+				data.CelloParams, data.RoutineFirstIP, data.RoutineLastIP, data.Token)
 		}
 	}()
 

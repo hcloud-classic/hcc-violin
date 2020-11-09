@@ -16,6 +16,11 @@ func Init() error {
 		return err
 	}
 
+	err = ConsumeCreateServer()
+	if err != nil {
+		return err
+	}
+
 	go func() {
 		forever := make(chan bool)
 		logger.Logger.Println("RabbitMQ forever channel ready.")

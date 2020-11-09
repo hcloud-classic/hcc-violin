@@ -2,6 +2,7 @@ package dao
 
 import (
 	pb "hcc/violin/action/grpc/pb/rpcviolin"
+	"hcc/violin/daoext"
 	hccerr "hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
@@ -49,68 +50,6 @@ func ReadServerNode(uuid string) (*pb.ServerNode, uint64, string) {
 	return &serverNode, 0, ""
 }
 
-// ReadServerNodeList : Get list of server nodes with provided server UUID
-func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, uint64, string) {
-	serverUUID := in.GetServerUUID()
-	serverUUIDOk := len(serverUUID) != 0
-	if !serverUUIDOk {
-		return nil, hccerr.ViolinGrpcArgumentError, "ReadServerNodeList(): need a serverUUID argument"
-	}
-
-	var serverNodeList pb.ResGetServerNodeList
-	var serverNodes []pb.ServerNode
-	var pserverNodes []*pb.ServerNode
-
-	var uuid string
-	var nodeUUID string
-	var createdAt time.Time
-
-	sql := "select * from server_node where server_uuid = ?"
-
-	stmt, err := mysql.Db.Query(sql, serverUUID)
-	if err != nil {
-		errStr := "ReadServerNodeList(): " + err.Error()
-		logger.Logger.Println(errStr)
-		return nil, hccerr.ViolinSQLOperationFail, errStr
-	}
-	defer func() {
-		_ = stmt.Close()
-	}()
-
-	for stmt.Next() {
-		err := stmt.Scan(&uuid, &serverUUID, &nodeUUID, &createdAt)
-		if err != nil {
-			errStr := "ReadServerNodeList(): " + err.Error()
-			logger.Logger.Println(errStr)
-			if strings.Contains(err.Error(), "no rows in result set") {
-				return nil, hccerr.ViolinSQLNoResult, errStr
-			}
-			return nil, hccerr.ViolinSQLOperationFail, errStr
-		}
-
-		_createdAt, err := ptypes.TimestampProto(createdAt)
-		if err != nil {
-			errStr := "ReadServerNodeList(): " + err.Error()
-			logger.Logger.Println(errStr)
-			return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
-		}
-
-		serverNodes = append(serverNodes, pb.ServerNode{
-			UUID:       uuid,
-			ServerUUID: serverUUID,
-			NodeUUID:   nodeUUID,
-			CreatedAt:  _createdAt})
-	}
-
-	for i := range serverNodes {
-		pserverNodes = append(pserverNodes, &serverNodes[i])
-	}
-
-	serverNodeList.ServerNode = pserverNodes
-
-	return &serverNodeList, 0, ""
-}
-
 // ReadServerNodeNum : Get the number of server nodes
 func ReadServerNodeNum(in *pb.ReqGetServerNodeNum) (*pb.ResGetServerNodeNum, uint64, string) {
 	serverUUID := in.GetServerUUID()
@@ -138,12 +77,6 @@ func ReadServerNodeNum(in *pb.ReqGetServerNodeNum) (*pb.ResGetServerNodeNum, uin
 	return &serverNodeNum, 0, ""
 }
 
-func checkCreateServerNodeArgs(reqServerNode *pb.ServerNode) bool {
-	serverUUIDOk := len(reqServerNode.ServerUUID) != 0
-	nodeUUIDOk := len(reqServerNode.NodeUUID) != 0
-	return !(serverUUIDOk && nodeUUIDOk)
-}
-
 // CreateServerNode : Create server nodes. Insert each node UUIDs with server UUID.
 func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, string) {
 	reqServerNode := in.GetServerNode()
@@ -158,11 +91,11 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 	}
 	uuid := out.String()
 
-	if checkCreateServerNodeArgs(reqServerNode) {
+	if daoext.CheckCreateServerNodeArgs(reqServerNode) {
 		return nil, hccerr.ViolinGrpcArgumentError, "CreateServerNode(): some of arguments are missing\n"
 	}
 
-	serverNodeList, errCode, errStr := ReadServerNodeList(&pb.ReqGetServerNodeList{ServerUUID: reqServerNode.ServerUUID})
+	serverNodeList, errCode, errStr := daoext.ReadServerNodeList(&pb.ReqGetServerNodeList{ServerUUID: reqServerNode.ServerUUID})
 	if errCode != 0 {
 		return nil, errCode, "CreateServerNode(): " + errStr
 	}
