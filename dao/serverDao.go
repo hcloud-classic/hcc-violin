@@ -645,7 +645,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 		_, err = client.RC.UpdateNode(&rpcflute.ReqUpdateNode{
 			Node: &pb.Node{
 				UUID:       nodes[i].UUID,
-				ServerUUID: "",
+				ServerUUID: "-",
 				// gRPC use 0 value for unset. So I will use 9 value for inactive. - ish
 				Active: 9,
 			},
