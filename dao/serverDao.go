@@ -12,6 +12,7 @@ import (
 	hccerr "hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
+	"hcc/violin/model"
 	"strconv"
 	"strings"
 	"time"
@@ -368,6 +369,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 		Status:     "Creating",
 		UserUUID:   reqServer.GetUserUUID(),
 	}
+	server.DiskSize += int32(model.OSDiskSize)
 
 	sql = "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())"
 	stmt, err = mysql.Db.Prepare(sql)
