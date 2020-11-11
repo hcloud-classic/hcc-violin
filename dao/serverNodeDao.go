@@ -22,7 +22,8 @@ func ReadServerNode(uuid string) (*pb.ServerNode, uint64, string) {
 	var createdAt time.Time
 
 	sql := "select * from server_node where uuid = ?"
-	err = mysql.Db.QueryRow(sql, uuid).Scan(
+	row := mysql.Db.QueryRow(sql, uuid)
+	err = mysql.QueryRowScan(row,
 		&uuid,
 		&serverUUID,
 		&nodeUUID,
@@ -63,7 +64,8 @@ func ReadServerNodeNum(in *pb.ReqGetServerNodeNum) (*pb.ResGetServerNodeNum, uin
 	var err error
 
 	sql := "select count(*) from server_node where server_uuid = '" + serverUUID + "'"
-	err = mysql.Db.QueryRow(sql).Scan(&serverNodeNr)
+	row := mysql.Db.QueryRow(sql)
+	err = mysql.QueryRowScan(row, &serverNodeNr)
 	if err != nil {
 		errStr := "ReadServerNodeNum(): " + err.Error()
 		logger.Logger.Println(errStr)
@@ -118,7 +120,7 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 	}
 
 	sql := "insert into server_node(uuid, server_uuid, node_uuid, created_at) values (?, ?, ?, now())"
-	stmt, err := mysql.Db.Prepare(sql)
+	stmt, err := mysql.Prepare(sql)
 	if err != nil {
 		errStr := "CreateServerNode(): " + err.Error()
 		logger.Logger.Println(errStr)
@@ -154,7 +156,7 @@ func DeleteServerNode(in *pb.ReqDeleteServerNode) (*pb.ServerNode, uint64, strin
 	}
 
 	sql := "delete from server_node where uuid = ?"
-	stmt, err := mysql.Db.Prepare(sql)
+	stmt, err := mysql.Prepare(sql)
 	if err != nil {
 		errStr := "DeleteServerNode(): " + err.Error()
 		logger.Logger.Println(errStr)
@@ -185,7 +187,7 @@ func DeleteServerNodeByServerUUID(in *pb.ReqDeleteServerNodeByServerUUID) (strin
 	}
 
 	sql := "delete from server_node where server_uuid = ?"
-	stmt, err := mysql.Db.Prepare(sql)
+	stmt, err := mysql.Prepare(sql)
 	if err != nil {
 		errStr := "DeleteServerNodeByServerUUID(): " + err.Error()
 		logger.Logger.Println(errStr)

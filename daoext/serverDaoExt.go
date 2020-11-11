@@ -153,7 +153,7 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 
 	sql := "select * from server_node where server_uuid = ?"
 
-	stmt, err := mysql.Db.Query(sql, serverUUID)
+	stmt, err := mysql.Query(sql, serverUUID)
 	if err != nil {
 		errStr := "ReadServerNodeList(): " + err.Error()
 		logger.Logger.Println(errStr)
@@ -245,7 +245,7 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 	}
 
 	sql := "insert into server_node(uuid, server_uuid, node_uuid, created_at) values (?, ?, ?, now())"
-	stmt, err := mysql.Db.Prepare(sql)
+	stmt, err := mysql.Prepare(sql)
 	if err != nil {
 		errStr := "CreateServerNode(): " + err.Error()
 		logger.Logger.Println(errStr)

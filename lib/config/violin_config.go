@@ -26,6 +26,8 @@ password pass
 address 111.111.111.111
 port 9999
 database db_name
+connection_retry_count 5
+connection_retry_interval_ms 500
 
 [grpc]
 port 7500

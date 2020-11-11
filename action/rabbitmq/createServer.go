@@ -32,7 +32,7 @@ func updateServerStatus(serverUUID string, status string) error {
 
 	logger.Logger.Println("UpdateServerStatus sql : ", sql)
 
-	stmt, err := mysql.Db.Prepare(sql)
+	stmt, err := mysql.Prepare(sql)
 	if err != nil {
 		logger.Logger.Println(err.Error())
 		return err

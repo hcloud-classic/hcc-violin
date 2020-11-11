@@ -36,7 +36,8 @@ func ReadServer(uuid string) (*pb.Server, uint64, string) {
 	var createdAt time.Time
 
 	sql := "select * from server where uuid = ?"
-	err := mysql.Db.QueryRow(sql, uuid).Scan(
+	row := mysql.Db.QueryRow(sql, uuid)
+	err := mysql.QueryRowScan(row,
 		&uuid,
 		&subnetUUID,
 		&os,
@@ -171,10 +172,10 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 	var err error
 	if isLimit {
 		sql += " order by created_at desc limit ? offset ?"
-		stmt, err = mysql.Db.Query(sql, row, row*(page-1))
+		stmt, err = mysql.Query(sql, row, row*(page-1))
 	} else {
 		sql += " order by created_at desc"
-		stmt, err = mysql.Db.Query(sql)
+		stmt, err = mysql.Query(sql)
 	}
 
 	if err != nil {
@@ -233,7 +234,8 @@ func ReadServerNum() (*pb.ResGetServerNum, uint64, string) {
 	var serverNr int64
 
 	sql := "select count(*) from server where status != 'Deleted'"
-	err := mysql.Db.QueryRow(sql).Scan(&serverNr)
+	row := mysql.Db.QueryRow(sql)
+	err := mysql.QueryRowScan(row, &serverNr)
 	if err != nil {
 		errStr := "ReadServerNum(): " + err.Error()
 		logger.Logger.Println(errStr)
@@ -375,7 +377,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 	totalDiskSize = int32(model.OSDiskSize) + reqServer.GetDiskSize()
 
 	sql = "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())"
-	stmt, err = mysql.Db.Prepare(sql)
+	stmt, err = mysql.Prepare(sql)
 	if err != nil {
 		errStr := "CreateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
@@ -520,7 +522,7 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 
 	logger.Logger.Println("update_server sql : ", sql)
 
-	stmt, err := mysql.Db.Prepare(sql)
+	stmt, err := mysql.Prepare(sql)
 	if err != nil {
 		errStr := "UpdateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
@@ -663,7 +665,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 
 	logger.Logger.Println("DeleteServer(): Deleting the server info from the database (UUID: " + requestedUUID + ")")
 	sql := "delete from server where uuid = ?"
-	stmt, err := mysql.Db.Prepare(sql)
+	stmt, err := mysql.Prepare(sql)
 	if err != nil {
 		errStr := "DeleteServer(): Failed to deleting the server info from the database  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")"
 		logger.Logger.Println(errStr)
