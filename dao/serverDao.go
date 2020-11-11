@@ -315,6 +315,8 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 	var nodes []pb.Node
 	var server pb.Server
 
+	var totalDiskSize int32
+
 	var sql string
 	var stmt *dbsql.Stmt
 
@@ -369,7 +371,8 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 		Status:     "Creating",
 		UserUUID:   reqServer.GetUserUUID(),
 	}
-	server.DiskSize += int32(model.OSDiskSize)
+
+	totalDiskSize = int32(model.OSDiskSize) + reqServer.GetDiskSize()
 
 	sql = "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())"
 	stmt, err = mysql.Db.Prepare(sql)
@@ -383,7 +386,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 	defer func() {
 		_ = stmt.Close()
 	}()
-	_, err = stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.CPU, server.Memory, server.DiskSize, server.Status, server.UserUUID)
+	_, err = stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.CPU, server.Memory, totalDiskSize, server.Status, server.UserUUID)
 	if err != nil {
 		errStr := "CreateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
