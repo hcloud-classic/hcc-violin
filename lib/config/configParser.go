@@ -186,8 +186,8 @@ func parseScheduler() {
 	}
 }
 
-// Init : Parse config file and initialize config structure
-func Init() {
+// Parser : Parse config file
+func Parser() {
 	if err = conf.Parse(configLocation); err != nil {
 		logger.Logger.Panicln(err)
 	}
