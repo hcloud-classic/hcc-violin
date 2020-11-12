@@ -2,34 +2,16 @@ package main
 
 import (
 	"hcc/violin/action/graphql"
-	"hcc/violin/action/rabbitmq"
+	violinEnd "hcc/violin/end"
+	violinInit "hcc/violin/init"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
-	"hcc/violin/lib/mysql"
-	"hcc/violin/lib/syscheck"
 	"net/http"
 	"strconv"
 )
 
 func init() {
-	err := syscheck.CheckRoot()
-	if err != nil {
-		panic(err)
-	}
-
-	err = logger.Init()
-	if err != nil {
-		panic(err)
-	}
-
-	config.Init()
-
-	err = mysql.Init()
-	if err != nil {
-		panic(err)
-	}
-
-	err = rabbitmq.Init()
+	err := violinInit.MainInit()
 	if err != nil {
 		panic(err)
 	}
@@ -37,10 +19,9 @@ func init() {
 
 func main() {
 	defer func() {
-		rabbitmq.End()
-		mysql.End()
-		logger.End()
+		violinEnd.MainEnd()
 	}()
+
 	http.Handle("/graphql", graphql.GraphqlHandler)
 	logger.Logger.Println("Opening server on port " + strconv.Itoa(int(config.HTTP.Port)) + "...")
 	err := http.ListenAndServe(":"+strconv.Itoa(int(config.HTTP.Port)), nil)
