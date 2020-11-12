@@ -1,6 +1,7 @@
 package dao
 
 import (
+	dbsql "database/sql"
 	"errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
@@ -9,6 +10,7 @@ import (
 	"time"
 )
 
+// ReadServer - cgs
 func ReadServer(args map[string]interface{}) (interface{}, error) {
 	var server model.Server
 	var err error
@@ -57,6 +59,7 @@ func ReadServer(args map[string]interface{}) (interface{}, error) {
 	return server, nil
 }
 
+// ReadServerList - cgs
 func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	var servers []model.Server
 	var rxUUID string
@@ -132,6 +135,7 @@ func ReadServerList(args map[string]interface{}) (interface{}, error) {
 	return servers, nil
 }
 
+// ReadServerAll - cgs
 func ReadServerAll(args map[string]interface{}) (interface{}, error) {
 	var servers []model.Server
 	var uuid string
@@ -192,7 +196,7 @@ func ReadServerNum() (model.ServerNum, error) {
 	var serverNr int
 	var err error
 
-	sql := "select count(*) from server where status != 'Deleted'"
+	sql := "select count(*) from server"
 	err = mysql.Db.QueryRow(sql).Scan(&serverNr)
 	if err != nil {
 		logger.Logger.Println(err)
@@ -203,6 +207,7 @@ func ReadServerNum() (model.ServerNum, error) {
 	return serverNum, nil
 }
 
+// CreateServer - cgs
 func CreateServer(serverUUID string, args map[string]interface{}) (interface{}, error) {
 	server := model.Server{
 		UUID:       serverUUID,
@@ -250,117 +255,93 @@ func checkUpdateServerArgs(args map[string]interface{}) bool {
 	return !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !statusOk && !userUUIDOk
 }
 
-func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, error) {
+// UpdateServer - cgs
+func UpdateServer(args map[string]interface{}) (interface{}, error) {
+	requestedUUID, requestedUUIDOk := args["uuid"].(string)
+	subnetUUID, subnetUUIDOk := args["subnet_uuid"].(string)
+	os, osOk := args["os"].(string)
+	serverName, serverNameOk := args["server_name"].(string)
+	serverDesc, serverDescOk := args["server_desc"].(string)
+	cpu, cpuOk := args["cpu"].(int)
+	memory, memoryOk := args["memory"].(int)
+	diskSize, diskSizeOk := args["disk_size"].(int)
+	status, statusOk := args["status"].(string)
+	userUUID, userUUIDOk := args["user_uuid"].(string)
 
-	if in.Server == nil {
-		return nil, errors.New("server is nil")
-	}
-	reqServer := in.Server
-
-	requestedUUID := reqServer.GetUUID()
-	requestedUUIDOk := len(requestedUUID) != 0
-	if !requestedUUIDOk {
-		return nil, errors.New("need a uuid argument")
-	}
-
-	if checkUpdateServerArgs(reqServer) {
-		return nil, errors.New("need some arguments")
-	}
-
-	var subnetUUID string
-	var os string
-	var serverName string
-	var serverDesc string
-	var cpu int
-	var memory int
-	var diskSize int
-	var status string
-	var userUUID string
-
-	subnetUUID = reqServer.SubnetUUID
-	subnetUUIDOk := len(subnetUUID) != 0
-	os = reqServer.OS
-	osOk := len(os) != 0
-	serverName = reqServer.ServerName
-	serverNameOk := len(serverName) != 0
-	serverDesc = reqServer.ServerDesc
-	serverDescOk := len(serverDesc) != 0
-	cpu = int(reqServer.CPU)
-	cpuOk := cpu != 0
-	memory = int(reqServer.Memory)
-	memoryOk := memory != 0
-	diskSize = int(reqServer.DiskSize)
-	diskSizeOk := diskSize != 0
-	status = reqServer.Status
-	statusOk := len(status) != 0
-	userUUID = reqServer.UserUUID
-	userUUIDOk := len(userUUID) != 0
-
-	server := new(pb.Server)
+	server := new(model.Server)
 	server.UUID = requestedUUID
 	server.SubnetUUID = subnetUUID
 	server.OS = os
 	server.ServerName = serverName
 	server.ServerDesc = serverDesc
-	server.CPU = int32(cpu)
-	server.Memory = int32(memory)
-	server.DiskSize = int32(diskSize)
+	server.CPU = cpu
+	server.Memory = memory
+	server.DiskSize = diskSize
 	server.Status = status
 	server.UserUUID = userUUID
 
-	sql := "update server set"
-	var updateSet = ""
-	if subnetUUIDOk {
-		updateSet += " subnet_uuid = '" + server.SubnetUUID + "', "
-	}
-	if osOk {
-		updateSet += " os = '" + server.OS + "', "
-	}
-	if serverNameOk {
-		updateSet += " server_name = '" + server.ServerName + "', "
-	}
-	if serverDescOk {
-		updateSet += " server_desc = '" + server.ServerDesc + "', "
-	}
-	if cpuOk {
-		updateSet += " cpu = " + strconv.Itoa(int(server.CPU)) + ", "
-	}
-	if memoryOk {
-		updateSet += " memory = " + strconv.Itoa(int(server.Memory)) + ", "
-	}
-	if diskSizeOk {
-		updateSet += " disk_size = " + strconv.Itoa(int(server.DiskSize)) + ", "
-	}
-	if statusOk {
-		updateSet += " status = '" + server.Status + "', "
-	}
-	if userUUIDOk {
-		updateSet += " user_uuid = " + server.UserUUID + "', "
+	if requestedUUIDOk {
+		if checkUpdateServerArgs(args) {
+			return nil, errors.New("need some arguments")
+		}
+
+		sql := "update server set"
+		var updateSet = ""
+		if subnetUUIDOk {
+			updateSet += " subnet_uuid = '" + server.SubnetUUID + "', "
+		}
+		if osOk {
+			updateSet += " os = '" + server.OS + "', "
+		}
+		if serverNameOk {
+			updateSet += " server_name = '" + server.ServerName + "', "
+		}
+		if serverDescOk {
+			updateSet += " server_desc = '" + server.ServerDesc + "', "
+		}
+		if cpuOk {
+			updateSet += " cpu = " + strconv.Itoa(server.CPU) + ", "
+		}
+		if memoryOk {
+			updateSet += " memory = " + strconv.Itoa(server.Memory) + ", "
+		}
+		if diskSizeOk {
+			updateSet += " disk_size = " + strconv.Itoa(server.DiskSize) + ", "
+		}
+		if statusOk {
+			updateSet += " status = '" + server.Status + "', "
+		}
+		if userUUIDOk {
+			updateSet += " user_uuid = " + server.UserUUID + "', "
+		}
+
+		sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
+
+		logger.Logger.Println("update_server sql : ", sql)
+
+		stmt, err := mysql.Db.Prepare(sql)
+		if err != nil {
+			logger.Logger.Println(err.Error())
+			return nil, err
+		}
+		defer func() {
+			_ = stmt.Close()
+		}()
+
+		result, err2 := stmt.Exec(server.UUID)
+		if err2 != nil {
+			logger.Logger.Println(err2)
+			return nil, err
+		}
+		logger.Logger.Println(result.LastInsertId())
+		return server, nil
 	}
 
-	sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
-
-	logger.Logger.Println("update_server sql : ", sql)
-
-	stmt, err := mysql.Db.Prepare(sql)
-	if err != nil {
-		logger.Logger.Println(err.Error())
-		return nil, err
-	}
-	defer func() {
-		_ = stmt.Close()
-	}()
-
-	result, err2 := stmt.Exec(server.UUID)
-	if err2 != nil {
-		logger.Logger.Println(err2)
-		return nil, err
-	}
-	logger.Logger.Println(result.LastInsertId())
-	return server, nil
+	return nil, errors.New("uuid argument is missing")
 }
 
-func UpdateServerStatus(serverUUID string, status string) error {
+// UpdateServerStatus : Update status of the server
+func UpdateServerStatus(server_uuid string, status string) (error) {
 	sql := "update server set status = '" + status + "' where uuid = ?"
 
 	logger.Logger.Println("UpdateServerStatus sql : ", sql)
@@ -374,7 +355,7 @@ func UpdateServerStatus(serverUUID string, status string) error {
 		_ = stmt.Close()
 	}()
 
-	result, err2 := stmt.Exec(serverUUID)
+	result, err2 := stmt.Exec(server_uuid)
 	if err2 != nil {
 		logger.Logger.Println(err2)
 		return err
@@ -383,32 +364,32 @@ func UpdateServerStatus(serverUUID string, status string) error {
 	return nil
 }
 
-func DeleteServer(in *pb.ReqDeleteServer) (string, error) {
-	_ = cmdutil.RunScript("/root/script/prepare_create_server.sh")
-
+// DeleteServer - cgs
+func DeleteServer(args map[string]interface{}) (interface{}, error) {
 	var err error
 
-	requestedUUID := in.GetUUID()
-	requestedUUIDOk := len(requestedUUID) != 0
-	if !requestedUUIDOk {
-		return "", errors.New("need a uuid argument")
+	var server model.Server
+	requestedUUID, ok := args["uuid"].(string)
+	server.UUID = requestedUUID
+	if ok {
+		sql := "delete from server where uuid = ?"
+		stmt, err := mysql.Db.Prepare(sql)
+		if err != nil {
+			logger.Logger.Println(err.Error())
+			return nil, err
+		}
+		defer func() {
+			_ = stmt.Close()
+		}()
+		result, err2 := stmt.Exec(requestedUUID)
+		if err2 != nil {
+			logger.Logger.Println(err2)
+			return nil, err2
+		}
+		logger.Logger.Println(result.RowsAffected())
+
+		return server, nil
 	}
 
-	sql := "delete from server where uuid = ?"
-	stmt, err := mysql.Db.Prepare(sql)
-	if err != nil {
-		logger.Logger.Println(err.Error())
-		return "", err
-	}
-	defer func() {
-		_ = stmt.Close()
-	}()
-	result, err2 := stmt.Exec(requestedUUID)
-	if err2 != nil {
-		logger.Logger.Println(err2)
-		return "", err2
-	}
-	logger.Logger.Println(result.RowsAffected())
-
-	return requestedUUID, nil
+	return nil, err
 }
