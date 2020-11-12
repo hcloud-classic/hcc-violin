@@ -8,7 +8,9 @@ import (
 	"strconv"
 )
 
+//  VncControl : codex
 func VncControl(vncOpt model.Vnc) (interface{}, error) {
+	// Json Type
 	query := "mutation _{\n" +
 		"	control_vnc(server_uuid:\"" + vncOpt.ServerUUID + "\", target_ip:" + vncOpt.TargetIP + ", target_port:" + vncOpt.TargetPort + ", action:" + vncOpt.ActionClassify + ") {\n" +
 		" 	 node_uuid\n" +
@@ -33,11 +35,17 @@ func VncControl(vncOpt model.Vnc) (interface{}, error) {
 }
 
 func SchedulingNodes(userquota model.Quota) (interface{}, error) {
+	// Json Type
 	query := "mutation _{\n" +
 		"	schedule_nodes(server_uuid:\"" + userquota.ServerUUID + "\", cpu:" + strconv.Itoa(userquota.CPU) + ", memory:" + strconv.Itoa(userquota.Memory) + ", nr_node:" + strconv.Itoa(userquota.NumberOfNodes) + ") {\n" +
 		" 	 node_uuid\n" +
 		"	  }" +
 		"}"
+
+	//String
+	// query := "mutation _{\n" +
+	// 	"	selected_nodes (server_uuid:\"" + userquota.ServerUUID + "\", cpu:" + strconv.Itoa(userquota.CPU) + ", memory:" + strconv.Itoa(userquota.Memory) + ", nr_node:" + strconv.Itoa(userquota.NumberOfNodes) + ") " +
+	// 	"}"
 
 	var SchedulingNodes data.ScheduledNodeData
 

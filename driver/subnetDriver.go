@@ -7,6 +7,7 @@ import (
 	"hcc/violin/model"
 )
 
+// GetSubnet : Get subnet info from harp module
 func GetSubnet(subnetUUID string) (model.Subnet, error) {
 	query := "query {\n" +
 		"	subnet(uuid:\"" + subnetUUID + "\"){\n" +
@@ -35,6 +36,7 @@ func GetSubnet(subnetUUID string) (model.Subnet, error) {
 	return result.(data.SubnetData).Data.Subnet, nil
 }
 
+// UpdateSubnet : Add server_uuid to subnet
 func UpdateSubnet(subnetUUID string, serverUUID string) (interface{}, error) {
 	query := "mutation _ {\n" +
 		"	update_subnet(uuid: \"" + subnetUUID + "\", server_uuid: \"" + serverUUID + "\"){\n" +
@@ -53,6 +55,7 @@ func UpdateSubnet(subnetUUID string, serverUUID string) (interface{}, error) {
 	return result.(data.SubnetData).Data.Subnet, nil
 }
 
+// CreateDHCPDConfig : Add server_uuid to subnet
 func CreateDHCPDConfig(subnetUUID string, nodeUUIDsStr string) error {
 	query := "mutation _ {\n" +
 		"	create_dhcpd_conf(subnet_uuid: \"" + subnetUUID + "\", node_uuids: \"" + nodeUUIDsStr + "\")\n" +
