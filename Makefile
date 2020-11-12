@@ -2,7 +2,7 @@ ROOT_PROJECT_NAME := "hcc"
 PROJECT_NAME := "violin"
 PKG_LIST := $(shell go list ${ROOT_PROJECT_NAME}/${PROJECT_NAME}/...)
 
-.PHONY: all build clean gofmt test race coverage coverhtml lint
+.PHONY: all build docker clean gofmt goreport goreport_deb test coverage coverhtml lint
 
 all: build
 
@@ -34,8 +34,25 @@ coverhtml: coverage ## Generate global code coverage report in HTML
 gofmt: ## Run gofmt for go files
 	@find -name '*.go' -exec $(GOROOT)/bin/gofmt -s -w {} \;
 
+goreport_dep: ## Get the dependencies for goreport
+	@$(GOROOT)/bin/go get -u github.com/gojp/goreportcard/cmd/goreportcard-cli
+	@$(GOROOT)/bin/go install github.com/gojp/goreportcard/cmd/goreportcard-cli
+
+goreport: goreport_dep ## Make goreport
+	@git submodule sync --recursive
+	@git submodule update --init --recursive
+	@git --git-dir=$(PWD)/hcloud-badge/.git fetch --all
+	@git --git-dir=$(PWD)/hcloud-badge/.git checkout feature/dev
+	@git --git-dir=$(PWD)/hcloud-badge/.git pull origin feature/dev
+	@./hcloud-badge/hcloud_badge.sh $(PROJECT_NAME)
+
 build: ## Build the binary file
 	@$(GOROOT)/bin/go build -o $(PROJECT_NAME) main.go
+
+docker: ## Build docker image and push it to private docker registry
+	@sudo docker build -t $(PROJECT_NAME) .
+	@sudo docker tag ${ROOT_PROJECT_NAME}_$(PROJECT_NAME):latest 192.168.110.250:5000/$(PROJECT_NAME):latest
+	@sudo docker push 192.168.110.250:5000/$(PROJECT_NAME):latest
 
 clean: ## Remove previous build
 	@rm -f $(PROJECT_NAME)

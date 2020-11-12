@@ -63,6 +63,7 @@ func DoHTTPRequest(moduleName string, needData bool, data interface{}, query str
 	}()
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+		// Check response
 		respBody, err := ioutil.ReadAll(resp.Body)
 		if err == nil {
 			result := string(respBody)
@@ -81,6 +82,8 @@ func DoHTTPRequest(moduleName string, needData bool, data interface{}, query str
 					if singleData {
 						NodeData := data.(violinData.SingleNodeData)
 						err = json.Unmarshal([]byte(result), &NodeData)
+
+						// fmt.Println("result : ", result)
 
 						if err != nil {
 							return nil, err
@@ -112,6 +115,7 @@ func DoHTTPRequest(moduleName string, needData bool, data interface{}, query str
 					if err != nil {
 						return nil, err
 					}
+					// fmt.Println("\nscheduledList: ", scheduledList)
 
 					return scheduledList, nil
 				case "violin_novnc":

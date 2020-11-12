@@ -14,8 +14,3 @@ type ServerNode struct {
 type ServerNodes struct {
 	Server []Server `json:"server_node"`
 }
-
-// ServerNodeNum - ish
-type ServerNodeNum struct {
-	Number int `json:"number"`
-}
