@@ -15,6 +15,12 @@ type HccAction struct {
 
 //Action : Any Action
 type Action struct {
+	//ActionType is Classified type of action that Executable shell command name ex) ls or cp or mkdir...
+	// hcc ,normal(Precompleted Action)
+	// Ex )
+	// hcc =>  cludter control action
+	// normal => ls -al
+	// normal => scp xxx root@123.456.789.123:/root/
 	ActionType   string       `json:"action_type"`
 	NormalType   NormalAction `json:"normal_action"`
 	HccType      HccAction    `json:"hcc_action"`
