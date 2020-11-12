@@ -2,6 +2,7 @@ package data
 
 import "hcc/violin/model"
 
+// AllNodeData : Data structure of all_node
 type AllNodeData struct {
 	Data struct {
 		AllNode []model.Node `json:"all_node"`
@@ -25,3 +26,9 @@ type VncNodeData struct {
 		ScheduledNode model.Vnc `json:"control_vnc"`
 	} `json:"data"`
 }
+
+// type ScheduledNodeData struct {
+// 	Data struct {
+// 		NodeList []string `json:"selected_nodes"`
+// 	} `json:"data"`
+// }
