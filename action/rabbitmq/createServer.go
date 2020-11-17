@@ -188,6 +188,11 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineSubnet *pb.Subn
 		"",
 		token)
 
+	routineError = updateServerStatus(routineServerUUID, "Booting")
+	if routineError != nil {
+		logger.Logger.Println("DoCreateServerRoutineQueue(): Failed to update server status as booting")
+	}
+
 	printLogDoCreateServerRoutineQueue(routineServerUUID, "Preparing controlAction")
 
 	printLogDoCreateServerRoutineQueue(routineServerUUID, "Running Hcc CLI")
