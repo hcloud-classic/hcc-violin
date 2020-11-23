@@ -1,11 +1,13 @@
 package dao
 
 import (
-	gouuid "github.com/nu7hatch/gouuid"
+	"errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
 	"time"
+
+	gouuid "github.com/nu7hatch/gouuid"
 )
 
 // ReadServerNode - cgs
@@ -104,6 +106,30 @@ func ReadServerNodeAll() (interface{}, error) {
 
 	return serverNodes, nil
 }
+
+// ReadServerNodeNum - ish
+func ReadServerNodeNum(args map[string]interface{}) (interface{}, error) {
+	logger.Logger.Println("serverNodeDao: ReadServerNodeNum")
+	var serverNodeNum model.ServerNodeNum
+	var serverNodeNr int
+	var err error
+
+	serverUUID, serverUUIDOk := args["server_uuid"].(string)
+	if !serverUUIDOk {
+		return nil, errors.New("need a server_uuid argument")
+	}
+
+	sql := "select count(*) from server_node where server_uuid = '" + serverUUID + "'"
+	err = mysql.Db.QueryRow(sql).Scan(&serverNodeNr)
+	if err != nil {
+		logger.Logger.Println(err)
+		return nil, err
+	}
+	serverNodeNum.Number = serverNodeNr
+
+	return serverNodeNum, nil
+}
+
 
 // CreateServerNode - cgs
 func CreateServerNode(args map[string]interface{}) (interface{}, error) {
