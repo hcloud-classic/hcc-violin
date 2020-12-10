@@ -1,33 +1,62 @@
 package main
 
 import (
-	"hcc/violin/action/graphql"
-	violinEnd "hcc/violin/end"
-	violinInit "hcc/violin/init"
+	"fmt"
+	"hcc/violin/action/grpc/client"
+	"hcc/violin/action/grpc/server"
+	"hcc/violin/action/rabbitmq"
 	"hcc/violin/lib/config"
+	"hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
-	"net/http"
-	"strconv"
+	"hcc/violin/lib/mysql"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func init() {
-	err := violinInit.MainInit()
+	err := logger.Init()
 	if err != nil {
-		panic(err)
+		errors.SetErrLogger(logger.Logger)
+		errors.NewHccError(errors.ViolinInternalInitFail, "logger.Init(): "+err.Error()).Fatal()
+	}
+	errors.SetErrLogger(logger.Logger)
+
+	config.Init()
+
+	err = mysql.Init()
+	if err != nil {
+		errors.NewHccError(errors.ViolinInternalInitFail, "mysql.Init(): "+err.Error()).Fatal()
+	}
+
+	err = rabbitmq.Init()
+	if err != nil {
+		errors.NewHccError(errors.ViolinInternalInitFail, "rabbitmq.Init(): "+err.Error()).Fatal()
+	}
+
+	err = client.Init()
+	if err != nil {
+		errors.NewHccError(errors.ViolinInternalInitFail, "client.Init(): "+err.Error()).Fatal()
 	}
 }
 
+func end() {
+	client.End()
+	rabbitmq.End()
+	mysql.End()
+	logger.End()
+}
+
 func main() {
-	defer func() {
-		violinEnd.MainEnd()
+	// Catch the exit signal
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		end()
+		fmt.Println("Exiting violin module...")
+		os.Exit(0)
 	}()
 
-	http.Handle("/graphql", graphql.GraphqlHandler)
-	logger.Logger.Println("Opening server on port " + strconv.Itoa(int(config.HTTP.Port)) + "...")
-	err := http.ListenAndServe(":"+strconv.Itoa(int(config.HTTP.Port)), nil)
-	if err != nil {
-		logger.Logger.Println(err)
-		logger.Logger.Println("Failed to prepare http server!")
-		return
-	}
+	server.Init()
 }

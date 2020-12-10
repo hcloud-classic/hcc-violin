@@ -1,0 +1,592 @@
+package daoext
+
+import (
+	"errors"
+	"github.com/golang/protobuf/ptypes"
+	"hcc/violin/action/grpc/client"
+	"hcc/violin/action/grpc/pb/rpccello"
+	"hcc/violin/action/grpc/pb/rpcflute"
+	"hcc/violin/action/grpc/pb/rpcharp"
+	pb "hcc/violin/action/grpc/pb/rpcviolin"
+	"hcc/violin/action/grpc/pb/rpcviolin_scheduler"
+	"hcc/violin/data"
+	"hcc/violin/driver"
+	"hcc/violin/lib/config"
+	hccerr "hcc/violin/lib/errors"
+	"hcc/violin/lib/logger"
+	"hcc/violin/lib/mysql"
+	"hcc/violin/model"
+	"net"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/apparentlymart/go-cidr/cidr"
+	gouuid "github.com/nu7hatch/gouuid"
+)
+
+func checkNetmask(netmask string) (net.IPMask, error) {
+	var err error
+
+	var maskPartsStr = strings.Split(netmask, ".")
+	if len(maskPartsStr) != 4 {
+		return nil, errors.New(netmask + " is invalid, netmask should be X.X.X.X form")
+	}
+
+	var maskParts [4]int
+	for i := range maskPartsStr {
+		maskParts[i], err = strconv.Atoi(maskPartsStr[i])
+		if err != nil {
+			return nil, errors.New("netmask contained none integer value")
+		}
+	}
+
+	var mask = net.IPv4Mask(
+		byte(maskParts[0]),
+		byte(maskParts[1]),
+		byte(maskParts[2]),
+		byte(maskParts[3]))
+
+	maskSizeOne, maskSizeBit := mask.Size()
+	if maskSizeOne == 0 && maskSizeBit == 0 {
+		return nil, errors.New("invalid netmask")
+	}
+
+	if maskSizeOne > 30 {
+		return nil, errors.New("netmask bit should be equal or smaller than 30")
+	}
+
+	return mask, err
+}
+
+// DoGetSubnet : Get the subnet infos
+func DoGetSubnet(subnetUUID string) (*net.IPNet, *pb.Subnet, error) {
+	var ipNet net.IPNet
+
+	subnet, err := client.RC.GetSubnet(subnetUUID)
+	if err != nil {
+		logger.Logger.Println(err)
+		return nil, nil, err
+	}
+
+	if len(subnet.ServerUUID) != 0 {
+		errMsg := "createServer: Selected subnet (subnetUUID=" + subnetUUID +
+			") is used by one of server (serverUUID=" + subnet.ServerUUID + ")"
+		logger.Logger.Println(errMsg)
+		return nil, nil, errors.New(errMsg)
+	}
+	logger.Logger.Println("createServer: subnet info: network IP=" + subnet.NetworkIP +
+		", netmask=" + subnet.Netmask)
+
+	netIPnetworkIP := net.ParseIP(subnet.NetworkIP).To4()
+	if netIPnetworkIP == nil {
+		errMsg := "createServer: got wrong network IP"
+		logger.Logger.Println(errMsg)
+		return nil, nil, errors.New(errMsg)
+	}
+
+	mask, err := checkNetmask(subnet.Netmask)
+	if err != nil {
+		errMsg := "createServer: got wrong subnet mask"
+		logger.Logger.Println(errMsg)
+		return nil, nil, errors.New(errMsg)
+	}
+
+	ipNet = net.IPNet{
+		IP:   netIPnetworkIP,
+		Mask: mask,
+	}
+
+	return &ipNet, subnet, nil
+}
+
+// DoGenerateServerUUID : Generate a UUID for the server
+func DoGenerateServerUUID() (string, error) {
+	out, err := gouuid.NewV4()
+	if err != nil {
+		logger.Logger.Println(err)
+		return "", err
+	}
+
+	serverUUID := out.String()
+
+	return serverUUID, nil
+}
+
+func nodeScheduler(userquota *pb.Quota) ([]string, error) {
+	allNodeData, err := driver.SchedulingNodes(userquota)
+	// testqwe := allNodeData.(data.ScheduledNodeData).Data.ScheduledNode
+	testqwe := allNodeData.(data.ScheduledNodeData)
+	if err != nil {
+		return nil, err
+	}
+
+	// for index := 0; index < len(testqwe.Data.ScheduledNode.NodeList); index++ {
+	// 	fmt.Println("++++>", testqwe.Data.ScheduledNode.NodeList[index])
+	// }
+
+	//Debug for selected node mutation
+
+	// fmt.Println(testqwe.Data.NodeList)
+	// for index := 0; index < len(testqwe.Data.NodeList); index++ {
+	// 	fmt.Println(testqwe.Data.NodeList[index])
+	// }
+	return testqwe.Data.ScheduledNode.NodeList, nil
+}
+
+// ReadServerNodeList : Get list of server nodes with provided server UUID
+func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, uint64, string) {
+	serverUUID := in.GetServerUUID()
+	serverUUIDOk := len(serverUUID) != 0
+	if !serverUUIDOk {
+		return nil, hccerr.ViolinGrpcArgumentError, "ReadServerNodeList(): need a serverUUID argument"
+	}
+
+	var serverNodeList pb.ResGetServerNodeList
+	var serverNodes []pb.ServerNode
+	var pserverNodes []*pb.ServerNode
+
+	var uuid string
+	var nodeUUID string
+	var createdAt time.Time
+
+	sql := "select * from server_node where server_uuid = ?"
+
+	stmt, err := mysql.Query(sql, serverUUID)
+	if err != nil {
+		errStr := "ReadServerNodeList(): " + err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+
+	for stmt.Next() {
+		err := stmt.Scan(&uuid, &serverUUID, &nodeUUID, &createdAt)
+		if err != nil {
+			errStr := "ReadServerNodeList(): " + err.Error()
+			logger.Logger.Println(errStr)
+			if strings.Contains(err.Error(), "no rows in result set") {
+				return nil, hccerr.ViolinSQLNoResult, errStr
+			}
+			return nil, hccerr.ViolinSQLOperationFail, errStr
+		}
+
+		_createdAt, err := ptypes.TimestampProto(createdAt)
+		if err != nil {
+			errStr := "ReadServerNodeList(): " + err.Error()
+			logger.Logger.Println(errStr)
+			return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
+		}
+
+		serverNodes = append(serverNodes, pb.ServerNode{
+			UUID:       uuid,
+			ServerUUID: serverUUID,
+			NodeUUID:   nodeUUID,
+			CreatedAt:  _createdAt})
+	}
+
+	for i := range serverNodes {
+		pserverNodes = append(pserverNodes, &serverNodes[i])
+	}
+
+	serverNodeList.ServerNode = pserverNodes
+
+	return &serverNodeList, 0, ""
+}
+
+// CheckCreateServerNodeArgs : Check arguments of creating a server node
+func CheckCreateServerNodeArgs(reqServerNode *pb.ServerNode) bool {
+	serverUUIDOk := len(reqServerNode.ServerUUID) != 0
+	nodeUUIDOk := len(reqServerNode.NodeUUID) != 0
+	return !(serverUUIDOk && nodeUUIDOk)
+}
+
+// CreateServerNode : Create server nodes. Insert each node UUIDs with server UUID.
+func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, string) {
+	reqServerNode := in.GetServerNode()
+	if reqServerNode == nil {
+		return nil, hccerr.ViolinGrpcArgumentError, "CreateServerNode(): serverNode is nil"
+	}
+
+	out, err := gouuid.NewV4()
+	if err != nil {
+		logger.Logger.Println(err)
+		return nil, hccerr.ViolinInternalUUIDGenerationError, "CreateServerNode(): " + err.Error()
+	}
+	uuid := out.String()
+
+	if CheckCreateServerNodeArgs(reqServerNode) {
+		return nil, hccerr.ViolinGrpcArgumentError, "CreateServerNode(): some of arguments are missing\n"
+	}
+
+	serverNodeList, errCode, errStr := ReadServerNodeList(&pb.ReqGetServerNodeList{ServerUUID: reqServerNode.ServerUUID})
+	if errCode != 0 {
+		return nil, errCode, "CreateServerNode(): " + errStr
+	}
+	pserverNodes := serverNodeList.ServerNode
+
+	for i := range pserverNodes {
+		if pserverNodes[i].NodeUUID == reqServerNode.NodeUUID {
+			return nil, hccerr.ViolinInternalServerNodePresentError,
+				"CreateServerNode(): requested ServerNode is already present in the database (" +
+					"UUID: " + pserverNodes[i].UUID + ", " +
+					"ServerUUID: " + pserverNodes[i].ServerUUID + ", " +
+					"NodeUUID: " + pserverNodes[i].NodeUUID + ")"
+		}
+	}
+
+	serverNode := pb.ServerNode{
+		UUID:       uuid,
+		ServerUUID: reqServerNode.ServerUUID,
+		NodeUUID:   reqServerNode.NodeUUID,
+	}
+
+	sql := "insert into server_node(uuid, server_uuid, node_uuid, created_at) values (?, ?, ?, now())"
+	stmt, err := mysql.Prepare(sql)
+	if err != nil {
+		errStr := "CreateServerNode(): " + err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+
+	_, err = stmt.Exec(serverNode.UUID, serverNode.ServerUUID, serverNode.NodeUUID)
+	if err != nil {
+		errStr := "CreateServerNode(): " + err.Error()
+		logger.Logger.Println(errStr)
+		return nil, hccerr.ViolinSQLOperationFail, errStr
+	}
+
+	return &serverNode, 0, ""
+}
+
+// DoGetNodes : Get scheduled nodes
+func DoGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
+	var reqScheduleServer rpcviolin_scheduler.ReqScheduleHandler
+	var reqServer rpcviolin_scheduler.Server
+	var reqServerStruct rpcviolin_scheduler.ScheduleServer
+
+	reqScheduleServer.Server = &reqServerStruct
+	reqScheduleServer.Server.ScheduleServer = &reqServer
+	reqScheduleServer.Server.NumOfNodes = userQuota.GetNumberOfNodes()
+	reqScheduleServer.Server.ScheduleServer.CPU = userQuota.GetCPU()
+	reqScheduleServer.Server.ScheduleServer.Memory = userQuota.GetMemory()
+	reqScheduleServer.Server.ScheduleServer.UUID = userQuota.GetServerUUID()
+
+	logger.Logger.Println("doGetNodes(): [Violin Scheduler] Start Scheduling")
+	resNodes, err := client.RC.ScheduleHandler(&reqScheduleServer)
+	logger.Logger.Println("doGetNodes(): [Violin Scheduler] End Scheduling")
+	if err != nil {
+		return nil, err
+	}
+
+	var nrNodes = userQuota.NumberOfNodes
+	retNodes := resNodes.GetNodes()
+	nodeList := retNodes.GetShceduledNode()
+
+	//fmt.Println("Nodes:   ", retNodes)
+
+	// if len(nodeList.ShceduledNode) < int(nrNodes) || len(nodeList.ShceduledNode) == 0 {
+	if len(nodeList) == 0 {
+		errMsg := "doGetNodes(): not enough available nodes"
+		logger.Logger.Println(errMsg)
+		return nil, errors.New(errMsg)
+	}
+	var GatherSelectedNodes []pb.Node
+	var nodeSelected = 0
+
+	for _, nodes := range nodeList {
+		if nodes.UUID == "" {
+			continue
+		}
+
+		if nodeSelected > int(nrNodes) {
+			break
+		}
+		logger.Logger.Println("doGetNodes(): Updating nodes info to flute module")
+
+		eachSelectedNode, err := client.RC.GetNode(nodes.GetUUID())
+		if err != nil {
+			logger.Logger.Println(err)
+			return nil, err
+		}
+
+		node, err := client.RC.UpdateNode(&rpcflute.ReqUpdateNode{Node: &pb.Node{
+			UUID:       eachSelectedNode.UUID,
+			Active:     1,
+			ServerUUID: userQuota.GetServerUUID(),
+		}})
+		if err != nil {
+			logger.Logger.Println(err)
+			return nil, err
+		}
+
+		// fmt.Println("GatherSelectedNodes\n", GatherSelectedNodes)
+		GatherSelectedNodes = append(GatherSelectedNodes, pb.Node{
+			UUID:        node.UUID,
+			ServerUUID:  userQuota.GetServerUUID(),
+			BmcMacAddr:  node.BmcMacAddr,
+			BmcIP:       node.BmcIP,
+			PXEMacAddr:  node.PXEMacAddr,
+			Status:      node.Status,
+			CPUCores:    node.CPUCores,
+			Memory:      node.Memory,
+			Description: node.Description,
+			CreatedAt:   node.CreatedAt,
+			Active:      eachSelectedNode.Active,
+		})
+
+		_, errCode, errStr := CreateServerNode(&pb.ReqCreateServerNode{
+			ServerNode: &pb.ServerNode{
+				ServerUUID: userQuota.GetServerUUID(),
+				NodeUUID:   nodes.GetUUID(),
+			},
+		})
+		if errCode != 0 {
+			logger.Logger.Println(errStr)
+			return nil, errors.New(errStr)
+		}
+
+		nodeSelected++
+	}
+
+	return GatherSelectedNodes, nil
+}
+
+// DoGetIPRange : Get IP range of the subnet
+func DoGetIPRange(serverSubnet *net.IPNet, nodes []pb.Node) (net.IP, net.IP) {
+	firstIP, _ := cidr.AddressRange(serverSubnet)
+	firstIP = cidr.Inc(firstIP)
+	lastIP := firstIP
+
+	for i := 0; i < len(nodes)-1; i++ {
+		lastIP = cidr.Inc(lastIP)
+	}
+
+	return firstIP, lastIP
+}
+
+// DoDeleteVolume : Delete the volume
+func DoDeleteVolume(serverUUID string) error {
+	// userUUID := celloParams["user_uuid"].(string)
+	// diskSize, err := strconv.Atoi(celloParams["disk_size"].(string))
+	// if err != nil {
+	// 	return err
+	// }
+
+	var reqDeleteVolume rpccello.ReqVolumeHandler
+	var reqVolume rpccello.Volume
+
+	reqDeleteVolume.Volume = &reqVolume
+
+	reqDeleteVolume.Volume.ServerUUID = serverUUID
+	reqDeleteVolume.Volume.UseType = "os"
+	reqDeleteVolume.Volume.Action = "delete"
+
+	logger.Logger.Println("[doDeleteVolume] : ", reqDeleteVolume.Volume)
+	resDeleteVolume, err := client.RC.Volhandler(&reqDeleteVolume)
+	if err != nil {
+		logger.Logger.Println("doDeleteVolume: server_uuid="+serverUUID+": "+err.Error(), "resCreateVolume : ", resDeleteVolume)
+		return err
+	}
+
+	return nil
+}
+
+// DoCreateVolume : Create volumes of os and data
+func DoCreateVolume(serverUUID string, celloParams map[string]interface{}, useType string, firstIP net.IP, gateway string) error {
+	userUUID := celloParams["user_uuid"].(string)
+	diskSize, err := strconv.Atoi(celloParams["disk_size"].(string))
+	if err != nil {
+		return err
+	}
+
+	var reqCreateVolume rpccello.ReqVolumeHandler
+	var reqVolume rpccello.Volume
+
+	reqCreateVolume.Volume = &reqVolume
+
+	var size int
+
+	switch useType {
+	case "os":
+		size = model.OSDiskSize
+		break
+	case "data":
+		size = diskSize
+		break
+	default:
+		return errors.New("got invalid useType")
+	}
+
+	reqCreateVolume.Volume.ServerUUID = serverUUID
+	reqCreateVolume.Volume.Filesystem = celloParams["os"].(string)
+	strSize := strconv.Itoa(size)
+	reqCreateVolume.Volume.Size = strSize
+	reqCreateVolume.Volume.UserUUID = userUUID
+	reqCreateVolume.Volume.UseType = useType
+	reqCreateVolume.Volume.Network_IP = firstIP.String()
+	reqCreateVolume.Volume.GatewayIp = gateway
+
+	reqCreateVolume.Volume.Action = "create"
+
+	logger.Logger.Println("[doCreateVolume] : ", reqCreateVolume.Volume)
+	resCreateVolume, err := client.RC.Volhandler(&reqCreateVolume)
+	if err != nil {
+		logger.Logger.Println("doCreateVolume: server_uuid="+serverUUID+": "+err.Error(), "resCreateVolume : ", resCreateVolume)
+		return err
+	}
+
+	return nil
+}
+
+// DoUpdateSubnet : Update the subnet's leader node UUID and server UUID infos
+func DoUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string) error {
+	err := client.RC.UpdateSubnet(&rpcharp.ReqUpdateSubnet{
+		Subnet: &rpcharp.Subnet{
+			UUID:           subnetUUID,
+			LeaderNodeUUID: leaderNodeUUID,
+			ServerUUID:     serverUUID,
+		},
+	})
+	if err != nil {
+		logger.Logger.Println("doUpdateSubnet: server_uuid=" + serverUUID + " UpdateSubnet: " + err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// DoCreateDHCPDConfig : Create a DHCPD config file for the server
+func DoCreateDHCPDConfig(subnetUUID string, serverUUID string, nodes []pb.Node) error {
+	var nodeUUIDsStr = ""
+	for i := range nodes {
+		nodeUUIDsStr += nodes[i].UUID
+		if i != len(nodes)-1 {
+			nodeUUIDsStr += ","
+		}
+	}
+	logger.Logger.Println("doCreateDHCPDConfig: server_uuid=" + serverUUID + " nodeUUIDsStr: " + nodeUUIDsStr)
+
+	err := client.RC.CreateDHCPDConfig(subnetUUID, nodeUUIDsStr)
+	if err != nil {
+		logger.Logger.Println("doCreateDHCPDConfig: server_uuid=" + serverUUID + " CreateDHCPDConfig: " + err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// DoTurnOnNodes : Turn on selected nodes
+func DoTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) error {
+	printLogCreateServerRoutine(serverUUID, "Turning on leader node")
+
+	var foundLeaderNode = false
+
+	for i := range nodes {
+		if nodes[i].UUID == leaderNodeUUID {
+			foundLeaderNode = true
+
+			var err error
+
+			for i := 0; i < int(config.Flute.TurnOnNodesRetryCounts); i++ {
+				err = client.RC.OnNode(nodes[i].UUID)
+				if err != nil {
+					logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
+					logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": Retrying for node: " +
+						nodes[i].UUID + " " + strconv.Itoa(i+1) + "/" + strconv.Itoa(int(config.Flute.TurnOnNodesRetryCounts)))
+				} else {
+					break
+				}
+			}
+
+			if err != nil {
+				return err
+			}
+
+			logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode: leaderNodeUUID: " + nodes[i].UUID)
+			break
+		}
+	}
+
+	if !foundLeaderNode {
+		logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": " + "Failed to find leader node")
+		return errors.New("failed to find leader node")
+	}
+
+	// Wait for leader node to turned on
+	time.Sleep(time.Second * time.Duration(config.Flute.WaitForLeaderNodeTimeoutSec))
+
+	logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": " + "Turning on compute nodes")
+	for i := range nodes {
+		if nodes[i].UUID == leaderNodeUUID {
+			continue
+		}
+
+		err := client.RC.OnNode(nodes[i].UUID)
+		if err != nil {
+			logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode error: " + err.Error())
+			return err
+		}
+
+		logger.Logger.Println("doTurnOnNodes: server_uuid=" + serverUUID + ": OnNode: computeNodeUUID: " + nodes[i].UUID)
+	}
+
+	return nil
+}
+
+// DoTurnOffNodes : Turn off selected nodes
+func DoTurnOffNodes(serverUUID string, nodes []pb.Node) error {
+	printLogCreateServerRoutine(serverUUID, "Turning off nodes")
+
+	logger.Logger.Println("doTurnOffNodes: server_uuid=" + serverUUID + ": " + "Turning off all of nodes")
+
+	var wait sync.WaitGroup
+	var errStr string
+
+	wait.Add(len(nodes))
+
+	for i := range nodes {
+		go func(routineServerUUID string, nodeUUID string, routineErrStr string) {
+			var err error
+			var turnOffErrStr string
+
+			for i := 0; i < int(config.Flute.TurnOffNodesRetryCounts); i++ {
+				err = client.RC.OffNode(nodeUUID, true)
+				if err != nil {
+					turnOffErrStr = "doTurnOffNodes: server_uuid=" + routineServerUUID + ": OffNode error: " + err.Error()
+					logger.Logger.Println(turnOffErrStr)
+					logger.Logger.Println("doTurnOffNodes: server_uuid=" + routineServerUUID + ": Retrying for node: " +
+						nodeUUID + " " + strconv.Itoa(i+1) + "/" + strconv.Itoa(int(config.Flute.TurnOffNodesRetryCounts)))
+				} else {
+					break
+				}
+			}
+
+			if err != nil {
+				routineErrStr += turnOffErrStr + "\n"
+			}
+
+			logger.Logger.Println("doTurnOffNodes: server_uuid=" + routineServerUUID + ": OffNode: NodeUUID: " + nodeUUID)
+
+			wait.Done()
+		}(serverUUID, nodes[i].UUID, errStr)
+	}
+
+	wait.Wait()
+
+	if errStr != "" {
+		return errors.New(errStr)
+	}
+
+	return nil
+}
+
+func printLogCreateServerRoutine(serverUUID string, msg string) {
+	logger.Logger.Println("createServerRoutine(): server_uuid=" + serverUUID + ": " + msg)
+}

@@ -41,6 +41,28 @@ func parseMysql() {
 	if err != nil {
 		logger.Logger.Panicln(err)
 	}
+
+	Mysql.ConnectionRetryCount, err = config.MysqlConfig.Int("connection_retry_count")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Mysql.ConnectionRetryIntervalMs, err = config.MysqlConfig.Int("connection_retry_interval_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+}
+
+func parseGrpc() {
+	config.GrpcConfig = conf.Get("grpc")
+	if config.GrpcConfig == nil {
+		logger.Logger.Panicln("no grpc section")
+	}
+
+	Grpc.Port, err = config.GrpcConfig.Int("port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
 }
 
 func parseHTTP() {
@@ -50,12 +72,7 @@ func parseHTTP() {
 	}
 
 	HTTP = http{}
-	HTTP.Port, err = config.HTTPConfig.Int("port")
-	if err != nil {
-		logger.Logger.Panicln(err)
-	}
-
-	HTTP.Port, err = config.HTTPConfig.Int("port")
+	HTTP.RequestTimeoutMs, err = config.HTTPConfig.Int("request_timeout_ms")
 	if err != nil {
 		logger.Logger.Panicln(err)
 	}
@@ -107,6 +124,21 @@ func parseFlute() {
 	}
 
 	Flute.RequestTimeoutMs, err = config.FluteConfig.Int("flute_request_timeout_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Flute.TurnOffNodesWaitTimeSec, err = config.FluteConfig.Int("flute_turn_off_nodes_wait_time_sec")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Flute.TurnOffNodesRetryCounts, err = config.FluteConfig.Int("flute_turn_off_nodes_retry_counts")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Flute.TurnOnNodesRetryCounts, err = config.FluteConfig.Int("flute_turn_on_nodes_retry_counts")
 	if err != nil {
 		logger.Logger.Panicln(err)
 	}
@@ -169,7 +201,7 @@ func parseScheduler() {
 		logger.Logger.Panicln("no violin_scheduler section")
 	}
 
-	ViolinScheduler = violin_scheduler{}
+	ViolinScheduler = violinScheduler{}
 	ViolinScheduler.ServerAddress, err = config.SchedulerConfig.String("violin_scheduler_server_address")
 	if err != nil {
 		logger.Logger.Panicln(err)
@@ -186,17 +218,42 @@ func parseScheduler() {
 	}
 }
 
-// Parser : Parse config file
-func Parser() {
+func parsePiccolo() {
+	config.PiccoloConfig = conf.Get("piccolo")
+	if config.PiccoloConfig == nil {
+		logger.Logger.Panicln("no piccolo section")
+	}
+
+	Piccolo = piccolo{}
+	Piccolo.ServerAddress, err = config.PiccoloConfig.String("piccolo_server_address")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Piccolo.ServerPort, err = config.PiccoloConfig.Int("piccolo_server_port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Piccolo.RequestTimeoutMs, err = config.PiccoloConfig.Int("piccolo_request_timeout_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+}
+
+// Init : Parse config file and initialize config structure
+func Init() {
 	if err = conf.Parse(configLocation); err != nil {
 		logger.Logger.Panicln(err)
 	}
 
 	parseMysql()
+	parseGrpc()
 	parseHTTP()
 	parseRabbitMQ()
 	parseFlute()
 	parseCello()
 	parseHarp()
 	parseScheduler()
+	parsePiccolo()
 }

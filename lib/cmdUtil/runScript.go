@@ -1,10 +1,11 @@
-package cmdUtil
+package cmdutil
 
 import (
 	"hcc/violin/lib/logger"
 	"os/exec"
 )
 
+// RunScript : Run a script file
 func RunScript(filepath string) error {
 	logger.Logger.Println("Running script file: " + filepath)
 

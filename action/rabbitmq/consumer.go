@@ -2,13 +2,11 @@ package rabbitmq
 
 import (
 	"encoding/json"
-	"hcc/violin/dao"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
 )
 
-// ViolaToViolin : Consume Viola command
-func ViolaToViolin() error {
+func violaToViolin() error {
 	qCreate, err := Channel.QueueDeclare(
 		"viola_to_violin",
 		false,
@@ -51,13 +49,15 @@ func ViolaToViolin() error {
 			// update cluster status at cello DB's status
 			//*************************** */
 			//
-			args := make(map[string]interface{})
-			args["uuid"] = control.Control.HccType.ServerUUID
-			args["status"] = control.Control.ActionResult // Running, Failed
+			uuid := control.Control.HccType.ServerUUID
+			status := control.Control.ActionResult // Running, Failed
 			//TODO: queue get_nodes to flute module
-			_, err = dao.UpdateServer(args)
+			err = updateServerStatus(uuid, status)
+			if err != nil {
+				logger.Logger.Println("ViolaToViolin: " + err.Error())
+			}
 
-			logger.Logger.Println(" UUID = " + control.Control.HccType.ServerUUID + ": " + control.Control.ActionResult)
+			logger.Logger.Println("ViolaToViolin: UUID = " + control.Control.HccType.ServerUUID + ": " + control.Control.ActionResult)
 
 			// vntOpt := model.Vnc{
 			// 	ServerUUID=args["uuid"].(string)
@@ -68,6 +68,54 @@ func ViolaToViolin() error {
 			// 	CreateVnc, actionerr := driver.VncControl()
 			// }
 
+		}
+	}()
+
+	return nil
+}
+
+// ConsumeCreateServer : Consume server creating queues from RabbitMQ channel
+func ConsumeCreateServer() error {
+	qCreate, err := Channel.QueueDeclare(
+		"create_server",
+		false,
+		false,
+		false,
+		false,
+		nil)
+	if err != nil {
+		logger.Logger.Println("QueueCreateServer: Failed to get create_server")
+		return err
+	}
+
+	msgsCreate, err := Channel.Consume(
+		qCreate.Name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		logger.Logger.Println("QueueCreateServer: Failed to register create_server")
+		return err
+	}
+
+	go func() {
+		for d := range msgsCreate {
+			logger.Logger.Printf("QueueCreateServer: Received a create message: %s\n", d.Body)
+
+			var data createServerDataStruct
+			err = json.Unmarshal(d.Body, &data)
+			if err != nil {
+				logger.Logger.Println("QueueCreateServer: Failed to unmarshal create_server data")
+				return
+			}
+
+			logger.Logger.Println("QueueCreateServer: Creating server for " + data.RoutineServerUUID)
+			DoCreateServerRoutineQueue(data.RoutineServerUUID, &data.RoutineSubnet, data.RoutineNodes,
+				data.CelloParams, data.RoutineFirstIP, data.RoutineLastIP, data.Token)
 		}
 	}()
 

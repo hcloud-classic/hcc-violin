@@ -15,8 +15,7 @@ var Connection *amqp.Connection
 // Channel : RabbitMQ channel variable
 var Channel *amqp.Channel
 
-// PrepareChannel : Connect to RabbitMQ server and create channel.
-func PrepareChannel() error {
+func prepareChannel() error {
 	Connection, err := amqp.Dial("amqp://" + config.RabbitMQ.ID + ":" + config.RabbitMQ.Password + "@" +
 		config.RabbitMQ.Address + ":" + strconv.Itoa(int(config.RabbitMQ.Port)))
 	if err != nil {
