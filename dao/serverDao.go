@@ -406,6 +406,9 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hccerr.HccErrorStack) {
 
 	return &server, errStack.ConvertReportForm()
 ERROR:
+	logger.Logger.Println("CreateServer(): Failed to create server")
+	logger.Logger.Println("CreateServer(): errStack: ", errStack)
+
 	errStack.Push(&hccerr.HccError{
 		ErrCode: hccerr.ViolinInternalCreateServerFailed,
 		ErrText: "CreateServer(): Failed to create server",
