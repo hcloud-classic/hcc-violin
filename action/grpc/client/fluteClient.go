@@ -3,10 +3,9 @@ package client
 import (
 	"context"
 	errors2 "errors"
+	"github.com/hcloud-classic/pb"
 	"google.golang.org/grpc"
 	"hcc/violin/action/grpc/errconv"
-	"hcc/violin/action/grpc/pb/rpcflute"
-	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"strconv"
@@ -24,7 +23,7 @@ func initFlute() error {
 		return err
 	}
 
-	RC.flute = rpcflute.NewFluteClient(fluteConn)
+	RC.flute = pb.NewFluteClient(fluteConn)
 	logger.Logger.Println("gRPC flute client ready")
 
 	return nil
@@ -46,18 +45,18 @@ func (rc *RPCClient) OnNode(nodeUUID string) error {
 	}
 	nodes = append(nodes, &node)
 
-	resNodePowerControl, err := rc.flute.NodePowerControl(ctx, &rpcflute.ReqNodePowerControl{
+	resNodePowerControl, err := rc.flute.NodePowerControl(ctx, &pb.ReqNodePowerControl{
 		Node:       nodes,
-		PowerState: rpcflute.PowerState_ON,
+		PowerState: pb.PowerState_ON,
 	})
 	if err != nil {
 		return err
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(&resNodePowerControl.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm()
-	if len(errors) != 0 && errors[0].ErrCode != 0 {
-		return errors2.New(errors[0].ErrText)
+	errors := *hccErrStack.ConvertReportForm().Stack()
+	if len(errors) != 0 && errors[0].Code() != 0 {
+		return errors2.New(errors[0].Text())
 	}
 
 	return nil
@@ -75,11 +74,11 @@ func (rc *RPCClient) OffNode(nodeUUID string, forceOff bool) error {
 	}
 	nodes = append(nodes, &node)
 
-	var powerState = rpcflute.PowerState_OFF
+	var powerState = pb.PowerState_OFF
 	if forceOff {
-		powerState = rpcflute.PowerState_FORCE_OFF
+		powerState = pb.PowerState_FORCE_OFF
 	}
-	resNodePowerControl, err := rc.flute.NodePowerControl(ctx, &rpcflute.ReqNodePowerControl{
+	resNodePowerControl, err := rc.flute.NodePowerControl(ctx, &pb.ReqNodePowerControl{
 		Node:       nodes,
 		PowerState: powerState,
 	})
@@ -88,21 +87,21 @@ func (rc *RPCClient) OffNode(nodeUUID string, forceOff bool) error {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(&resNodePowerControl.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm()
-	if len(errors) != 0 && errors[0].ErrCode != 0 {
-		return errors2.New(errors[0].ErrText)
+	errors := *hccErrStack.ConvertReportForm().Stack()
+	if len(errors) != 0 && errors[0].Code() != 0 {
+		return errors2.New(errors[0].Text())
 	}
 
 	return nil
 }
 
 // GetNodePowerState : Get power state of selected node
-func (rc *RPCClient) GetNodePowerState(uuid string) (*rpcflute.ResNodePowerState, error) {
+func (rc *RPCClient) GetNodePowerState(uuid string) (*pb.ResNodePowerState, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
 
-	resNodePowerState, err := rc.flute.GetNodePowerState(ctx, &rpcflute.ReqNodePowerState{
+	resNodePowerState, err := rc.flute.GetNodePowerState(ctx, &pb.ReqNodePowerState{
 		UUID: uuid,
 	})
 	if err != nil {
@@ -113,44 +112,44 @@ func (rc *RPCClient) GetNodePowerState(uuid string) (*rpcflute.ResNodePowerState
 }
 
 // GetNode : Get infos of the node
-func (rc *RPCClient) GetNode(uuid string) (*rpcflute.Node, error) {
+func (rc *RPCClient) GetNode(uuid string) (*pb.Node, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
-	resGetNode, err := rc.flute.GetNode(ctx, &rpcflute.ReqGetNode{UUID: uuid})
+	resGetNode, err := rc.flute.GetNode(ctx, &pb.ReqGetNode{UUID: uuid})
 	if err != nil {
 		return nil, err
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(&resGetNode.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm()
-	if len(errors) != 0 && errors[0].ErrCode != 0 {
-		return nil, errors2.New(errors[0].ErrText)
+	errors := *hccErrStack.ConvertReportForm().Stack()
+	if len(errors) != 0 && errors[0].Code() != 0 {
+		return nil, errors2.New(errors[0].Text())
 	}
 
 	return resGetNode.Node, nil
 }
 
 // GetNodeList : Get the list of nodes by server UUID.
-func (rc *RPCClient) GetNodeList(serverUUID string) ([]rpcflute.Node, error) {
-	var nodeList []rpcflute.Node
+func (rc *RPCClient) GetNodeList(serverUUID string) ([]pb.Node, error) {
+	var nodeList []pb.Node
 
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
-	resGetNodeList, err := rc.flute.GetNodeList(ctx, &rpcflute.ReqGetNodeList{Node: &rpcflute.Node{ServerUUID: serverUUID}})
+	resGetNodeList, err := rc.flute.GetNodeList(ctx, &pb.ReqGetNodeList{Node: &pb.Node{ServerUUID: serverUUID}})
 	if err != nil {
 		return nil, err
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(&resGetNodeList.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm()
-	if len(errors) != 0 && errors[0].ErrCode != 0 {
-		return nil, errors2.New(errors[0].ErrText)
+	errors := *hccErrStack.ConvertReportForm().Stack()
+	if len(errors) != 0 && errors[0].Code() != 0 {
+		return nil, errors2.New(errors[0].Text())
 	}
 
 	for _, pnode := range resGetNodeList.Node {
-		nodeList = append(nodeList, rpcflute.Node{
+		nodeList = append(nodeList, pb.Node{
 			UUID:        pnode.UUID,
 			ServerUUID:  pnode.ServerUUID,
 			BmcMacAddr:  pnode.BmcMacAddr,
@@ -169,7 +168,7 @@ func (rc *RPCClient) GetNodeList(serverUUID string) ([]rpcflute.Node, error) {
 }
 
 // UpdateNode : Update infos of the node
-func (rc *RPCClient) UpdateNode(in *rpcflute.ReqUpdateNode) (*rpcflute.Node, error) {
+func (rc *RPCClient) UpdateNode(in *pb.ReqUpdateNode) (*pb.Node, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Flute.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
@@ -179,9 +178,9 @@ func (rc *RPCClient) UpdateNode(in *rpcflute.ReqUpdateNode) (*rpcflute.Node, err
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(&resUpdateNode.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm()
-	if len(errors) != 0 && errors[0].ErrCode != 0 {
-		return nil, errors2.New(errors[0].ErrText)
+	errors := *hccErrStack.ConvertReportForm().Stack()
+	if len(errors) != 0 && errors[0].Code() != 0 {
+		return nil, errors2.New(errors[0].Text())
 	}
 
 	return resUpdateNode.Node, nil

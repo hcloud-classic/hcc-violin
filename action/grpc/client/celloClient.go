@@ -3,8 +3,8 @@ package client
 import (
 	"context"
 	errors2 "errors"
+	"github.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/errconv"
-	"hcc/violin/action/grpc/pb/rpccello"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"strconv"
@@ -24,7 +24,7 @@ func initCello() error {
 		return err
 	}
 
-	RC.cello = rpccello.NewCelloClient(celloConn)
+	RC.cello = pb.NewCelloClient(celloConn)
 	logger.Logger.Println("gRPC violin client ready")
 
 	return nil
@@ -35,7 +35,7 @@ func closeCello() {
 }
 
 // Volhandler : Create a server
-func (rc *RPCClient) Volhandler(in *rpccello.ReqVolumeHandler) (*rpccello.ResVolumeHandler, error) {
+func (rc *RPCClient) Volhandler(in *pb.ReqVolumeHandler) (*pb.ResVolumeHandler, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Cello.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
@@ -45,9 +45,9 @@ func (rc *RPCClient) Volhandler(in *rpccello.ReqVolumeHandler) (*rpccello.ResVol
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(&resVolhandle.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm()
-	if len(errors) != 0 && errors[0].ErrCode != 0 {
-		return nil, errors2.New(errors[0].ErrText)
+	errors := *hccErrStack.ConvertReportForm().Stack()
+	if len(errors) != 0 && errors[0].Code() != 0 {
+		return nil, errors2.New(errors[0].Text())
 	}
 
 	return resVolhandle, nil
