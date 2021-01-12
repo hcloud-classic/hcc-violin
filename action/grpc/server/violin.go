@@ -2,11 +2,11 @@ package server
 
 import (
 	"context"
+	"github.com/hcloud-classic/hcc_errors"
+	"github.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/errconv"
-	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/dao"
 	"hcc/violin/daoext"
-	"hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 )
 
@@ -55,8 +55,8 @@ func (s *violinServer) GetServer(_ context.Context, in *pb.ReqGetServer) (*pb.Re
 
 	server, errCode, errStr := dao.ReadServer(in.GetUUID())
 	if errCode != 0 {
-		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResGetServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResGetServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return &pb.ResGetServer{Server: returnServer(server)}, nil
@@ -67,8 +67,8 @@ func (s *violinServer) GetServerList(_ context.Context, in *pb.ReqGetServerList)
 
 	serverList, errCode, errStr := dao.ReadServerList(in)
 	if errCode != 0 {
-		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResGetServerList{Server: []*pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResGetServerList{Server: []*pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return serverList, nil
@@ -79,8 +79,8 @@ func (s *violinServer) GetServerNum(_ context.Context, _ *pb.Empty) (*pb.ResGetS
 
 	serverNum, errCode, errStr := dao.ReadServerNum()
 	if errCode != 0 {
-		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResGetServerNum{Num: 0, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResGetServerNum{Num: 0, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return serverNum, nil
@@ -91,8 +91,8 @@ func (s *violinServer) UpdateServer(_ context.Context, in *pb.ReqUpdateServer) (
 
 	updateServer, errCode, errStr := dao.UpdateServer(in)
 	if errCode != 0 {
-		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResUpdateServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResUpdateServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return &pb.ResUpdateServer{Server: updateServer}, nil
@@ -103,8 +103,8 @@ func (s *violinServer) DeleteServer(_ context.Context, in *pb.ReqDeleteServer) (
 
 	deleteServer, errCode, errStr := dao.DeleteServer(in)
 	if errCode != 0 {
-		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResDeleteServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResDeleteServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return &pb.ResDeleteServer{Server: deleteServer}, nil
@@ -115,8 +115,8 @@ func (s *violinServer) CreateServerNode(_ context.Context, in *pb.ReqCreateServe
 
 	serverNode, errCode, errStr := dao.CreateServerNode(in)
 	if errCode != 0 {
-		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResCreateServerNode{ServerNode: &pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResCreateServerNode{ServerNode: &pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return &pb.ResCreateServerNode{ServerNode: returnServerNode(serverNode)}, nil
@@ -127,8 +127,8 @@ func (s *violinServer) GetServerNode(_ context.Context, in *pb.ReqGetServerNode)
 
 	serverNode, errCode, errStr := dao.ReadServerNode(in.GetUUID())
 	if errCode != 0 {
-		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResGetServerNode{ServerNode: &pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResGetServerNode{ServerNode: &pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return &pb.ResGetServerNode{ServerNode: returnServerNode(serverNode)}, nil
@@ -139,8 +139,8 @@ func (s *violinServer) GetServerNodeList(_ context.Context, in *pb.ReqGetServerN
 
 	serverNodeList, errCode, errStr := daoext.ReadServerNodeList(in)
 	if errCode != 0 {
-		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResGetServerNodeList{ServerNode: []*pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResGetServerNodeList{ServerNode: []*pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return serverNodeList, nil
@@ -151,8 +151,8 @@ func (s *violinServer) GetServerNodeNum(_ context.Context, in *pb.ReqGetServerNo
 
 	serverNodeNum, errCode, errStr := dao.ReadServerNodeNum(in)
 	if errCode != 0 {
-		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResGetServerNodeNum{Num: 0, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResGetServerNodeNum{Num: 0, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return serverNodeNum, nil
@@ -163,8 +163,8 @@ func (s *violinServer) DeleteServerNode(_ context.Context, in *pb.ReqDeleteServe
 
 	deleteServerNode, errCode, errStr := dao.DeleteServerNode(in)
 	if errCode != 0 {
-		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResDeleteServerNode{ServerNode: &pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResDeleteServerNode{ServerNode: &pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return &pb.ResDeleteServerNode{ServerNode: deleteServerNode}, nil
@@ -175,8 +175,8 @@ func (s *violinServer) DeleteServerNodeByServerUUID(_ context.Context, in *pb.Re
 
 	serverUUID, errCode, errStr := dao.DeleteServerNodeByServerUUID(in)
 	if errCode != 0 {
-		errStack := errors.ReturnHccError(errCode, errStr)
-		return &pb.ResDeleteServerNodeByServerUUID{ServerUUID: "", HccErrorStack: errconv.HccStackToGrpc(&errStack)}, nil
+		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResDeleteServerNodeByServerUUID{ServerUUID: "", HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
 	return &pb.ResDeleteServerNodeByServerUUID{ServerUUID: serverUUID}, nil

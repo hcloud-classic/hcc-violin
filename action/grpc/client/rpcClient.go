@@ -1,20 +1,16 @@
 package client
 
 import (
-	"hcc/violin/action/grpc/pb/rpccello"
-	"hcc/violin/action/grpc/pb/rpcflute"
-	"hcc/violin/action/grpc/pb/rpcharp"
-	"hcc/violin/action/grpc/pb/rpcpiccolo"
-	"hcc/violin/action/grpc/pb/rpcviolin_scheduler"
+	"github.com/hcloud-classic/pb"
 )
 
 // RPCClient : Struct type of gRPC clients
 type RPCClient struct {
-	flute     rpcflute.FluteClient
-	harp      rpcharp.HarpClient
-	cello     rpccello.CelloClient
-	scheduler rpcviolin_scheduler.SchedulerClient
-	piccolo   rpcpiccolo.PiccoloClient
+	flute     pb.FluteClient
+	harp      pb.HarpClient
+	cello     pb.CelloClient
+	scheduler pb.SchedulerClient
+	piccolo   pb.PiccoloClient
 }
 
 // RC : Exported variable pointed to RPCClient

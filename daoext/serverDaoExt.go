@@ -3,16 +3,12 @@ package daoext
 import (
 	"errors"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/hcloud-classic/hcc_errors"
+	"github.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/client"
-	"hcc/violin/action/grpc/pb/rpccello"
-	"hcc/violin/action/grpc/pb/rpcflute"
-	"hcc/violin/action/grpc/pb/rpcharp"
-	pb "hcc/violin/action/grpc/pb/rpcviolin"
-	"hcc/violin/action/grpc/pb/rpcviolin_scheduler"
 	"hcc/violin/data"
 	"hcc/violin/driver"
 	"hcc/violin/lib/config"
-	hccerr "hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
@@ -140,7 +136,7 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 	serverUUID := in.GetServerUUID()
 	serverUUIDOk := len(serverUUID) != 0
 	if !serverUUIDOk {
-		return nil, hccerr.ViolinGrpcArgumentError, "ReadServerNodeList(): need a serverUUID argument"
+		return nil, hcc_errors.ViolinGrpcArgumentError, "ReadServerNodeList(): need a serverUUID argument"
 	}
 
 	var serverNodeList pb.ResGetServerNodeList
@@ -157,7 +153,7 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 	if err != nil {
 		errStr := "ReadServerNodeList(): " + err.Error()
 		logger.Logger.Println(errStr)
-		return nil, hccerr.ViolinSQLOperationFail, errStr
+		return nil, hcc_errors.ViolinSQLOperationFail, errStr
 	}
 	defer func() {
 		_ = stmt.Close()
@@ -169,16 +165,16 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 			errStr := "ReadServerNodeList(): " + err.Error()
 			logger.Logger.Println(errStr)
 			if strings.Contains(err.Error(), "no rows in result set") {
-				return nil, hccerr.ViolinSQLNoResult, errStr
+				return nil, hcc_errors.ViolinSQLNoResult, errStr
 			}
-			return nil, hccerr.ViolinSQLOperationFail, errStr
+			return nil, hcc_errors.ViolinSQLOperationFail, errStr
 		}
 
 		_createdAt, err := ptypes.TimestampProto(createdAt)
 		if err != nil {
 			errStr := "ReadServerNodeList(): " + err.Error()
 			logger.Logger.Println(errStr)
-			return nil, hccerr.ViolinInternalTimeStampConversionError, errStr
+			return nil, hcc_errors.ViolinInternalTimeStampConversionError, errStr
 		}
 
 		serverNodes = append(serverNodes, pb.ServerNode{
@@ -208,18 +204,18 @@ func CheckCreateServerNodeArgs(reqServerNode *pb.ServerNode) bool {
 func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, string) {
 	reqServerNode := in.GetServerNode()
 	if reqServerNode == nil {
-		return nil, hccerr.ViolinGrpcArgumentError, "CreateServerNode(): serverNode is nil"
+		return nil, hcc_errors.ViolinGrpcArgumentError, "CreateServerNode(): serverNode is nil"
 	}
 
 	out, err := gouuid.NewV4()
 	if err != nil {
 		logger.Logger.Println(err)
-		return nil, hccerr.ViolinInternalUUIDGenerationError, "CreateServerNode(): " + err.Error()
+		return nil, hcc_errors.ViolinInternalUUIDGenerationError, "CreateServerNode(): " + err.Error()
 	}
 	uuid := out.String()
 
 	if CheckCreateServerNodeArgs(reqServerNode) {
-		return nil, hccerr.ViolinGrpcArgumentError, "CreateServerNode(): some of arguments are missing\n"
+		return nil, hcc_errors.ViolinGrpcArgumentError, "CreateServerNode(): some of arguments are missing\n"
 	}
 
 	serverNodeList, errCode, errStr := ReadServerNodeList(&pb.ReqGetServerNodeList{ServerUUID: reqServerNode.ServerUUID})
@@ -230,7 +226,7 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 
 	for i := range pserverNodes {
 		if pserverNodes[i].NodeUUID == reqServerNode.NodeUUID {
-			return nil, hccerr.ViolinInternalServerNodePresentError,
+			return nil, hcc_errors.ViolinInternalServerNodePresentError,
 				"CreateServerNode(): requested ServerNode is already present in the database (" +
 					"UUID: " + pserverNodes[i].UUID + ", " +
 					"ServerUUID: " + pserverNodes[i].ServerUUID + ", " +
@@ -249,7 +245,7 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 	if err != nil {
 		errStr := "CreateServerNode(): " + err.Error()
 		logger.Logger.Println(errStr)
-		return nil, hccerr.ViolinSQLOperationFail, errStr
+		return nil, hcc_errors.ViolinSQLOperationFail, errStr
 	}
 	defer func() {
 		_ = stmt.Close()
@@ -259,7 +255,7 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 	if err != nil {
 		errStr := "CreateServerNode(): " + err.Error()
 		logger.Logger.Println(errStr)
-		return nil, hccerr.ViolinSQLOperationFail, errStr
+		return nil, hcc_errors.ViolinSQLOperationFail, errStr
 	}
 
 	return &serverNode, 0, ""
@@ -267,9 +263,9 @@ func CreateServerNode(in *pb.ReqCreateServerNode) (*pb.ServerNode, uint64, strin
 
 // DoGetNodes : Get scheduled nodes
 func DoGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
-	var reqScheduleServer rpcviolin_scheduler.ReqScheduleHandler
-	var reqServer rpcviolin_scheduler.Server
-	var reqServerStruct rpcviolin_scheduler.ScheduleServer
+	var reqScheduleServer pb.ReqScheduleHandler
+	var reqServer pb.Server
+	var reqServerStruct pb.ScheduleServer
 
 	reqScheduleServer.Server = &reqServerStruct
 	reqScheduleServer.Server.ScheduleServer = &reqServer
@@ -316,7 +312,7 @@ func DoGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 			return nil, err
 		}
 
-		node, err := client.RC.UpdateNode(&rpcflute.ReqUpdateNode{Node: &pb.Node{
+		node, err := client.RC.UpdateNode(&pb.ReqUpdateNode{Node: &pb.Node{
 			UUID:       eachSelectedNode.UUID,
 			Active:     1,
 			ServerUUID: userQuota.GetServerUUID(),
@@ -379,8 +375,8 @@ func DoDeleteVolume(serverUUID string) error {
 	// 	return err
 	// }
 
-	var reqDeleteVolume rpccello.ReqVolumeHandler
-	var reqVolume rpccello.Volume
+	var reqDeleteVolume pb.ReqVolumeHandler
+	var reqVolume pb.Volume
 
 	reqDeleteVolume.Volume = &reqVolume
 
@@ -406,8 +402,8 @@ func DoCreateVolume(serverUUID string, celloParams map[string]interface{}, useTy
 		return err
 	}
 
-	var reqCreateVolume rpccello.ReqVolumeHandler
-	var reqVolume rpccello.Volume
+	var reqCreateVolume pb.ReqVolumeHandler
+	var reqVolume pb.Volume
 
 	reqCreateVolume.Volume = &reqVolume
 
@@ -447,8 +443,8 @@ func DoCreateVolume(serverUUID string, celloParams map[string]interface{}, useTy
 
 // DoUpdateSubnet : Update the subnet's leader node UUID and server UUID infos
 func DoUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string) error {
-	err := client.RC.UpdateSubnet(&rpcharp.ReqUpdateSubnet{
-		Subnet: &rpcharp.Subnet{
+	err := client.RC.UpdateSubnet(&pb.ReqUpdateSubnet{
+		Subnet: &pb.Subnet{
 			UUID:           subnetUUID,
 			LeaderNodeUUID: leaderNodeUUID,
 			ServerUUID:     serverUUID,

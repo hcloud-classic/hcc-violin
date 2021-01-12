@@ -1,8 +1,8 @@
 package rabbitmq
 
 import (
+	"github.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/client"
-	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/daoext"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
