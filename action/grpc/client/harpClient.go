@@ -43,7 +43,7 @@ func (rc *RPCClient) GetSubnet(uuid string) (*pb.Subnet, error) {
 		return nil, err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resGetSubnet.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(resGetSubnet.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm().Stack()
 	if len(errors) != 0 && errors[0].Code() != 0 {
 		return nil, errors2.New(errors[0].Text())
@@ -62,7 +62,7 @@ func (rc *RPCClient) GetSubnetByServer(serverUUID string) (*pb.Subnet, error) {
 		return nil, err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resGetSubnetByServer.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(resGetSubnetByServer.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm().Stack()
 	if len(errors) != 0 && errors[0].Code() != 0 {
 		return nil, errors2.New(errors[0].Text())
@@ -81,7 +81,7 @@ func (rc *RPCClient) UpdateSubnet(in *pb.ReqUpdateSubnet) error {
 		return err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resUpdateSubnet.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(resUpdateSubnet.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm().Stack()
 	if len(errors) != 0 && errors[0].Code() != 0 {
 		return errors2.New(errors[0].Text())
@@ -103,7 +103,7 @@ func (rc *RPCClient) CreateDHCPDConfig(subnetUUID string, nodeUUIDs string) erro
 		return err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resCreateDHCPDConf.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(resCreateDHCPDConf.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm().Stack()
 	if len(errors) != 0 && errors[0].Code() != 0 {
 		return errors2.New(errors[0].Text())
@@ -124,7 +124,7 @@ func (rc *RPCClient) DeleteDHCPDConfig(subnetUUID string) error {
 		return err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resDeleteDHCPDConf.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(resDeleteDHCPDConf.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm().Stack()
 	if len(errors) != 0 && errors[0].Code() != 0 {
 		return errors2.New(errors[0].Text())
@@ -143,7 +143,7 @@ func (rc *RPCClient) DeleteAdaptiveIPServer(serverUUID string) (*pb.ResDeleteAda
 		return nil, err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resDeleteAdaptiveIPServer.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(resDeleteAdaptiveIPServer.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm().Stack()
 	if len(errors) != 0 && errors[0].Code() != 0 {
 		return nil, errors2.New(errors[0].Text())
