@@ -2,7 +2,7 @@ package rabbitmq
 
 import (
 	"encoding/json"
-	pb "hcc/violin/action/grpc/pb/rpcviolin"
+	"github.com/hcloud-classic/pb"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
 	"net"

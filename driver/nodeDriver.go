@@ -1,7 +1,7 @@
 package driver
 
 import (
-	pb "hcc/violin/action/grpc/pb/rpcviolin"
+	"github.com/hcloud-classic/pb"
 	"hcc/violin/data"
 	"hcc/violin/http"
 	"strconv"

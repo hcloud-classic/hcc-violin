@@ -1,8 +1,8 @@
 package errconv
 
 import (
-	errg "hcc/violin/action/grpc/pb/rpcmsgType"
-	errh "hcc/violin/lib/errors"
+	errh "github.com/hcloud-classic/hcc_errors"
+	errg "github.com/hcloud-classic/pb"
 )
 
 func GrpcToHcc(eg *errg.HccError) *errh.HccError {
@@ -10,27 +10,36 @@ func GrpcToHcc(eg *errg.HccError) *errh.HccError {
 }
 
 func HccToGrpc(eh *errh.HccError) *errg.HccError {
-	return &errg.HccError{ErrCode: eh.ErrCode, ErrText: eh.ErrText}
+	return &errg.HccError{ErrCode: eh.Code(), ErrText: eh.Text()}
 }
 
-func GrpcStackToHcc(esg *[]*errg.HccError) *errh.HccErrorStack {
+func GrpcStackToHcc(esg *errg.HccErrorStack) *errh.HccErrorStack {
 	errStack := errh.NewHccErrorStack()
 
-	for _, e := range *esg {
+	if errStack.Version() != esg.GetVersion() {
+		errStack.IsMixed = true
+	} else {
+		errStack.IsMixed = false
+	}
+
+	for _, e := range esg.GetErrStack() {
 		errStack.Push(errh.NewHccError(e.GetErrCode(), e.GetErrText()))
 	}
 
-	hccErrStack := *errStack
-	es := hccErrStack[1:]
-
-	return &es
+	return errStack
 }
 
-func HccStackToGrpc(esh *errh.HccErrorStack) []*errg.HccError {
-	ges := []*errg.HccError{}
-	for i := 0; i <= esh.Len(); i++ {
-		ge := &errg.HccError{ErrCode: (*esh)[i].ErrCode, ErrText: (*esh)[i].ErrText}
-		ges = append(ges, ge)
+func HccStackToGrpc(esh *errh.HccErrorStack) *errg.HccErrorStack {
+	ges := new(errg.HccErrorStack)
+
+	ges.Version = esh.Version()
+	ges.IsMixed = esh.IsMixed
+
+	for i := 0; i < esh.Len(); i++ {
+		eh := esh.Pop()
+		ge := HccToGrpc(eh)
+		ges.ErrStack = append(ges.GetErrStack(), ge)
 	}
+
 	return ges
 }

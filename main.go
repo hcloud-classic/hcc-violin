@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/hcloud-classic/hcc_errors"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/grpc/server"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/lib/config"
-	"hcc/violin/lib/errors"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"os"
@@ -17,26 +17,26 @@ import (
 func init() {
 	err := logger.Init()
 	if err != nil {
-		errors.SetErrLogger(logger.Logger)
-		errors.NewHccError(errors.ViolinInternalInitFail, "logger.Init(): "+err.Error()).Fatal()
+		hcc_errors.SetErrLogger(logger.Logger)
+		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "logger.Init(): "+err.Error()).Fatal()
 	}
-	errors.SetErrLogger(logger.Logger)
+	hcc_errors.SetErrLogger(logger.Logger)
 
 	config.Init()
 
 	err = mysql.Init()
 	if err != nil {
-		errors.NewHccError(errors.ViolinInternalInitFail, "mysql.Init(): "+err.Error()).Fatal()
+		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "mysql.Init(): "+err.Error()).Fatal()
 	}
 
 	err = rabbitmq.Init()
 	if err != nil {
-		errors.NewHccError(errors.ViolinInternalInitFail, "rabbitmq.Init(): "+err.Error()).Fatal()
+		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "rabbitmq.Init(): "+err.Error()).Fatal()
 	}
 
 	err = client.Init()
 	if err != nil {
-		errors.NewHccError(errors.ViolinInternalInitFail, "client.Init(): "+err.Error()).Fatal()
+		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "client.Init(): "+err.Error()).Fatal()
 	}
 }
 

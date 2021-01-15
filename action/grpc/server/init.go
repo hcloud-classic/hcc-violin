@@ -1,9 +1,9 @@
 package server
 
 import (
+	"github.com/hcloud-classic/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	pb "hcc/violin/action/grpc/pb/rpcviolin"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"net"

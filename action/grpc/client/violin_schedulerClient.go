@@ -3,8 +3,8 @@ package client
 import (
 	"context"
 	errors2 "errors"
+	"github.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/errconv"
-	"hcc/violin/action/grpc/pb/rpcviolin_scheduler"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"strconv"
@@ -24,7 +24,7 @@ func initScheduler() error {
 		return err
 	}
 
-	RC.scheduler = rpcviolin_scheduler.NewSchedulerClient(schedulerConn)
+	RC.scheduler = pb.NewSchedulerClient(schedulerConn)
 	logger.Logger.Println("gRPC violin-scheduler client ready")
 
 	return nil
@@ -35,7 +35,7 @@ func closeScheduler() {
 }
 
 // ScheduleHandler : Schedule of getting nodes
-func (rc *RPCClient) ScheduleHandler(in *rpcviolin_scheduler.ReqScheduleHandler) (*rpcviolin_scheduler.ResScheduleHandler, error) {
+func (rc *RPCClient) ScheduleHandler(in *pb.ReqScheduleHandler) (*pb.ResScheduleHandler, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.ViolinScheduler.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
@@ -44,10 +44,10 @@ func (rc *RPCClient) ScheduleHandler(in *rpcviolin_scheduler.ReqScheduleHandler)
 		return nil, err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resScheduledNode.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm()
-	if len(errors) != 0 && errors[0].ErrCode != 0 {
-		return nil, errors2.New(errors[0].ErrText)
+	hccErrStack := errconv.GrpcStackToHcc(resScheduledNode.HccErrorStack)
+	errors := *hccErrStack.ConvertReportForm().Stack()
+	if len(errors) != 0 && errors[0].Code() != 0 {
+		return nil, errors2.New(errors[0].Text())
 	}
 
 	return resScheduledNode, nil

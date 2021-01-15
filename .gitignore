@@ -1,6 +1,4 @@
-violin
-tmp_melody
-*.proto
+/violin
 coverage.out
 goreport_grade
 .idea/
