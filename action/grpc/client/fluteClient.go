@@ -53,7 +53,7 @@ func (rc *RPCClient) OnNode(nodeUUID string) error {
 		return err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resNodePowerControl.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(resNodePowerControl.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm().Stack()
 	if len(errors) != 0 && errors[0].Code() != 0 {
 		return errors2.New(errors[0].Text())
@@ -86,7 +86,7 @@ func (rc *RPCClient) OffNode(nodeUUID string, forceOff bool) error {
 		return err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resNodePowerControl.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(resNodePowerControl.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm().Stack()
 	if len(errors) != 0 && errors[0].Code() != 0 {
 		return errors2.New(errors[0].Text())
@@ -121,7 +121,7 @@ func (rc *RPCClient) GetNode(uuid string) (*pb.Node, error) {
 		return nil, err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resGetNode.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(resGetNode.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm().Stack()
 	if len(errors) != 0 && errors[0].Code() != 0 {
 		return nil, errors2.New(errors[0].Text())
@@ -142,7 +142,7 @@ func (rc *RPCClient) GetNodeList(serverUUID string) ([]pb.Node, error) {
 		return nil, err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resGetNodeList.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(resGetNodeList.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm().Stack()
 	if len(errors) != 0 && errors[0].Code() != 0 {
 		return nil, errors2.New(errors[0].Text())
@@ -177,7 +177,7 @@ func (rc *RPCClient) UpdateNode(in *pb.ReqUpdateNode) (*pb.Node, error) {
 		return nil, err
 	}
 
-	hccErrStack := errconv.GrpcStackToHcc(&resUpdateNode.HccErrorStack)
+	hccErrStack := errconv.GrpcStackToHcc(resUpdateNode.HccErrorStack)
 	errors := *hccErrStack.ConvertReportForm().Stack()
 	if len(errors) != 0 && errors[0].Code() != 0 {
 		return nil, errors2.New(errors[0].Text())
