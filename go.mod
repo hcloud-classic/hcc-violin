@@ -9,7 +9,7 @@ require (
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/protobuf v1.4.3
-	github.com/hcloud-classic/hcc_errors v1.1.3
+	github.com/hcloud-classic/hcc_errors v1.1.2
 	github.com/hcloud-classic/pb v0.0.0
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/streadway/amqp v1.0.0
