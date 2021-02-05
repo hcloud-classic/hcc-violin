@@ -44,9 +44,12 @@ func (rc *RPCClient) GetSubnet(uuid string) (*pb.Subnet, error) {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resGetSubnet.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return nil, errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return nil, errors2.New(stack[0].Text())
+		}
 	}
 
 	return resGetSubnet.Subnet, nil
@@ -63,9 +66,12 @@ func (rc *RPCClient) GetSubnetByServer(serverUUID string) (*pb.Subnet, error) {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resGetSubnetByServer.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return nil, errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return nil, errors2.New(stack[0].Text())
+		}
 	}
 
 	return resGetSubnetByServer.Subnet, nil
@@ -82,9 +88,12 @@ func (rc *RPCClient) UpdateSubnet(in *pb.ReqUpdateSubnet) error {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resUpdateSubnet.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return errors2.New(stack[0].Text())
+		}
 	}
 
 	return nil
@@ -104,9 +113,12 @@ func (rc *RPCClient) CreateDHCPDConfig(subnetUUID string, nodeUUIDs string) erro
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resCreateDHCPDConf.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return errors2.New(stack[0].Text())
+		}
 	}
 
 	return nil
@@ -125,9 +137,12 @@ func (rc *RPCClient) DeleteDHCPDConfig(subnetUUID string) error {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resDeleteDHCPDConf.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return errors2.New(stack[0].Text())
+		}
 	}
 
 	return nil
@@ -144,9 +159,12 @@ func (rc *RPCClient) DeleteAdaptiveIPServer(serverUUID string) (*pb.ResDeleteAda
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resDeleteAdaptiveIPServer.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return nil, errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return nil, errors2.New(stack[0].Text())
+		}
 	}
 
 	return resDeleteAdaptiveIPServer, nil

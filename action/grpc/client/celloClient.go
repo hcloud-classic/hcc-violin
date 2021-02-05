@@ -45,9 +45,12 @@ func (rc *RPCClient) Volhandler(in *pb.ReqVolumeHandler) (*pb.ResVolumeHandler, 
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resVolhandle.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return nil, errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return nil, errors2.New(stack[0].Text())
+		}
 	}
 
 	return resVolhandle, nil
