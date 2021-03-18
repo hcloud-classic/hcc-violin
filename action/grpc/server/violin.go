@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
-	"github.com/hcloud-classic/hcc_errors"
-	"github.com/hcloud-classic/pb"
+	"innogrid.com/hcloud-classic/hcc_errors"
+	"innogrid.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/errconv"
 	"hcc/violin/dao"
 	"hcc/violin/daoext"

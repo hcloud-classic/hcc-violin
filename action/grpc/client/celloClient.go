@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 	errors2 "errors"
-	"github.com/hcloud-classic/pb"
+	"innogrid.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/errconv"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"

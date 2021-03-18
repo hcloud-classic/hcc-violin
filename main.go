@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/hcloud-classic/hcc_errors"
+	"innogrid.com/hcloud-classic/hcc_errors"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/grpc/server"
 	"hcc/violin/action/rabbitmq"
