@@ -1,11 +1,11 @@
 package server
 
 import (
-	"innogrid.com/hcloud-classic/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
+	"innogrid.com/hcloud-classic/pb"
 	"net"
 	"strconv"
 )

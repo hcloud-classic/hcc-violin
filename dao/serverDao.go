@@ -2,8 +2,7 @@ package dao
 
 import (
 	dbsql "database/sql"
-	"innogrid.com/hcloud-classic/hcc_errors"
-	"innogrid.com/hcloud-classic/pb"
+	"errors"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/daoext"
@@ -11,6 +10,8 @@ import (
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
+	"innogrid.com/hcloud-classic/hcc_errors"
+	"innogrid.com/hcloud-classic/pb"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,7 @@ import (
 func ReadServer(uuid string) (*pb.Server, uint64, string) {
 	var server pb.Server
 
+	var groupID int64
 	var subnetUUID string
 	var os string
 	var serverName string
@@ -37,6 +39,7 @@ func ReadServer(uuid string) (*pb.Server, uint64, string) {
 	row := mysql.Db.QueryRow(sql, uuid)
 	err := mysql.QueryRowScan(row,
 		&uuid,
+		&groupID,
 		&subnetUUID,
 		&os,
 		&serverName,
@@ -57,6 +60,7 @@ func ReadServer(uuid string) (*pb.Server, uint64, string) {
 	}
 
 	server.UUID = uuid
+	server.GroupID = groupID
 	server.SubnetUUID = subnetUUID
 	server.OS = os
 	server.ServerName = serverName
@@ -84,6 +88,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 	var pservers []*pb.Server
 
 	var uuid string
+	var groupID int64
 	var subnetUUID string
 	var os string
 	var serverName string
@@ -115,6 +120,8 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 
 		uuid = reqServer.UUID
 		uuidOk := len(uuid) != 0
+		groupID = reqServer.GroupID
+		groupIDOk := groupID != 0
 		subnetUUID = reqServer.SubnetUUID
 		subnetUUIDOk := len(subnetUUID) != 0
 		os = reqServer.OS
@@ -136,6 +143,9 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 
 		if uuidOk {
 			sql += " and uuid = '" + uuid + "'"
+		}
+		if groupIDOk {
+			sql += " and group_id = " + strconv.Itoa(int(groupID))
 		}
 		if subnetUUIDOk {
 			sql += " and subnet_uuid = '" + subnetUUID + "'"
@@ -186,7 +196,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 	}()
 
 	for stmt.Next() {
-		err := stmt.Scan(&uuid, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
+		err := stmt.Scan(&uuid, &groupID, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
 		if err != nil {
 			errStr := "ReadServerList(): " + err.Error()
 			logger.Logger.Println(errStr)
@@ -205,6 +215,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 
 		servers = append(servers, pb.Server{
 			UUID:       uuid,
+			GroupID:    groupID,
 			SubnetUUID: subnetUUID,
 			OS:         os,
 			ServerName: serverName,
@@ -294,7 +305,23 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	return nil
 }
 
+func checkGroupIDExist(groupID int64) error {
+	resGetGroupList, hccErrStack := client.RC.GetGroupList(&pb.Empty{})
+	if hccErrStack != nil {
+		return (*hccErrStack.Stack())[0].ToError()
+	}
+
+	for _, pGroup := range resGetGroupList.Group {
+		if pGroup.Id == groupID {
+			return nil
+		}
+	}
+
+	return errors.New("given group ID is not in the database")
+}
+
 func checkCreateServerArgs(reqServer *pb.Server) bool {
+	groupIDOk := reqServer.GroupID != 0
 	subnetUUIDOk := len(reqServer.GetSubnetUUID()) != 0
 	osOk := len(reqServer.GetOS()) != 0
 	serverNameOk := len(reqServer.GetServerName()) != 0
@@ -304,7 +331,7 @@ func checkCreateServerArgs(reqServer *pb.Server) bool {
 	diskSizeOk := reqServer.GetDiskSize() != 0
 	userUUIDOk := len(reqServer.GetUserUUID()) != 0
 
-	return !(subnetUUIDOk && osOk && serverNameOk && serverDescOk && cpuOk && memoryOk && diskSizeOk && userUUIDOk)
+	return !(groupIDOk && subnetUUIDOk && osOk && serverNameOk && serverDescOk && cpuOk && memoryOk && diskSizeOk && userUUIDOk)
 }
 
 // CreateServer : Create a server
@@ -345,6 +372,15 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 
 		goto ERROR
 	}
+
+	err = checkGroupIDExist(reqServer.GroupID)
+	if err != nil {
+		errStr = "CreateServer(): " + err.Error()
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
+
+		goto ERROR
+	}
+
 	//Scheduler
 	nodes, errCode, errStr = doGetAvailableNodes(in, serverUUID)
 	if errCode != 0 {
@@ -361,6 +397,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 
 	server = pb.Server{
 		UUID:       serverUUID,
+		GroupID:    reqServer.GetGroupID(),
 		SubnetUUID: reqServer.GetSubnetUUID(),
 		OS:         reqServer.GetOS(),
 		ServerName: reqServer.GetServerName(),
@@ -416,6 +453,7 @@ ERROR:
 }
 
 func checkUpdateServerArgs(reqServer *pb.Server) bool {
+	groupIDOk := reqServer.GroupID != 0
 	subnetUUIDOk := len(reqServer.SubnetUUID) != 0
 	osOk := len(reqServer.OS) != 0
 	serverNameOk := len(reqServer.ServerName) != 0
@@ -425,7 +463,7 @@ func checkUpdateServerArgs(reqServer *pb.Server) bool {
 	diskSizeOk := reqServer.DiskSize != 0
 	userUUIDOk := len(reqServer.UserUUID) != 0
 
-	return !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !userUUIDOk
+	return !groupIDOk && !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !userUUIDOk
 }
 
 // UpdateServer : Update infos of the server
@@ -448,6 +486,14 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 		return nil, hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): need some arguments"
 	}
 
+	err := checkGroupIDExist(reqServer.GroupID)
+	if err != nil {
+		errStr := "UpdateServer(): " + err.Error()
+
+		return nil, hcc_errors.ViolinGrpcArgumentError, errStr
+	}
+
+	var groupID int64
 	var subnetUUID string
 	var os string
 	var serverName string
@@ -458,6 +504,8 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 	var status string
 	var userUUID string
 
+	groupID = reqServer.GroupID
+	groupIDOk := groupID != 0
 	subnetUUID = reqServer.SubnetUUID
 	subnetUUIDOk := len(subnetUUID) != 0
 	os = reqServer.OS
@@ -479,6 +527,7 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 
 	server := new(pb.Server)
 	server.UUID = requestedUUID
+	server.GroupID = groupID
 	server.SubnetUUID = subnetUUID
 	server.OS = os
 	server.ServerName = serverName
@@ -491,6 +540,9 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 
 	sql := "update server set"
 	var updateSet = ""
+	if groupIDOk {
+		updateSet += " group_id = " + strconv.Itoa(int(server.GroupID)) + ", "
+	}
 	if subnetUUIDOk {
 		updateSet += " subnet_uuid = '" + server.SubnetUUID + "', "
 	}

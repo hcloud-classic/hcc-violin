@@ -3,8 +3,6 @@ package daoext
 import (
 	"errors"
 	"github.com/golang/protobuf/ptypes"
-	"innogrid.com/hcloud-classic/hcc_errors"
-	"innogrid.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/data"
 	"hcc/violin/driver"
@@ -12,6 +10,8 @@ import (
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
+	"innogrid.com/hcloud-classic/hcc_errors"
+	"innogrid.com/hcloud-classic/pb"
 	"net"
 	"strconv"
 	"strings"

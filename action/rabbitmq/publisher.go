@@ -2,9 +2,9 @@ package rabbitmq
 
 import (
 	"encoding/json"
-	"innogrid.com/hcloud-classic/pb"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
+	"innogrid.com/hcloud-classic/pb"
 	"net"
 
 	"github.com/TylerBrock/colorjson"

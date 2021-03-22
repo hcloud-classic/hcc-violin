@@ -1,12 +1,12 @@
 package rabbitmq
 
 import (
-	"innogrid.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/daoext"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
+	"innogrid.com/hcloud-classic/pb"
 	"net"
 	"strconv"
 	"strings"

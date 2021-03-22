@@ -2,10 +2,12 @@ package client
 
 import (
 	"context"
-	"innogrid.com/hcloud-classic/pb"
 	"google.golang.org/grpc"
+	"hcc/violin/action/grpc/errconv"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
+	"innogrid.com/hcloud-classic/hcc_errors"
+	"innogrid.com/hcloud-classic/pb"
 	"strconv"
 	"time"
 )
@@ -51,4 +53,23 @@ func (rc *RPCClient) WriteServerAction(serverUUID string, action string, result 
 	}
 
 	return nil
+}
+
+// GetGroupList : Get list of the group
+func (rc *RPCClient) GetGroupList(_ *pb.Empty) (*pb.ResGetGroupList, *hcc_errors.HccErrorStack) {
+	var errStack *hcc_errors.HccErrorStack = nil
+
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(config.Piccolo.RequestTimeoutMs)*time.Millisecond)
+	defer cancel()
+	resGetGroupList, err := rc.piccolo.GetGroupList(ctx, &pb.Empty{})
+	if err != nil {
+		hccErrStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(hcc_errors.ViolinGrpcRequestError, "GetGroupList(): "+err.Error()))
+		return nil, hccErrStack
+	}
+	if es := resGetGroupList.GetHccErrorStack(); es != nil {
+		errStack = errconv.GrpcStackToHcc(es)
+	}
+
+	return resGetGroupList, errStack
 }
