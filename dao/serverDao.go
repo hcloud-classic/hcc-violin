@@ -525,50 +525,37 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 	userUUID = reqServer.UserUUID
 	userUUIDOk := len(userUUID) != 0
 
-	server := new(pb.Server)
-	server.UUID = requestedUUID
-	server.GroupID = groupID
-	server.SubnetUUID = subnetUUID
-	server.OS = os
-	server.ServerName = serverName
-	server.ServerDesc = serverDesc
-	server.CPU = int32(cpu)
-	server.Memory = int32(memory)
-	server.DiskSize = int32(diskSize)
-	server.Status = status
-	server.UserUUID = userUUID
-
 	sql := "update server set"
 	var updateSet = ""
 	if groupIDOk {
-		updateSet += " group_id = " + strconv.Itoa(int(server.GroupID)) + ", "
+		updateSet += " group_id = " + strconv.Itoa(int(groupID)) + ", "
 	}
 	if subnetUUIDOk {
-		updateSet += " subnet_uuid = '" + server.SubnetUUID + "', "
+		updateSet += " subnet_uuid = '" + subnetUUID + "', "
 	}
 	if osOk {
-		updateSet += " os = '" + server.OS + "', "
+		updateSet += " os = '" + os + "', "
 	}
 	if serverNameOk {
-		updateSet += " server_name = '" + server.ServerName + "', "
+		updateSet += " server_name = '" + serverName + "', "
 	}
 	if serverDescOk {
-		updateSet += " server_desc = '" + server.ServerDesc + "', "
+		updateSet += " server_desc = '" + serverDesc + "', "
 	}
 	if cpuOk {
-		updateSet += " cpu = " + strconv.Itoa(int(server.CPU)) + ", "
+		updateSet += " cpu = " + strconv.Itoa(int(cpu)) + ", "
 	}
 	if memoryOk {
-		updateSet += " memory = " + strconv.Itoa(int(server.Memory)) + ", "
+		updateSet += " memory = " + strconv.Itoa(int(memory)) + ", "
 	}
 	if diskSizeOk {
-		updateSet += " disk_size = " + strconv.Itoa(int(server.DiskSize)) + ", "
+		updateSet += " disk_size = " + strconv.Itoa(int(diskSize)) + ", "
 	}
 	if statusOk {
-		updateSet += " status = '" + server.Status + "', "
+		updateSet += " status = '" + status + "', "
 	}
 	if userUUIDOk {
-		updateSet += " user_uuid = '" + server.UserUUID + "', "
+		updateSet += " user_uuid = '" + userUUID + "', "
 	}
 
 	sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
@@ -585,14 +572,14 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 		_ = stmt.Close()
 	}()
 
-	_, err2 := stmt.Exec(server.UUID)
+	_, err2 := stmt.Exec(requestedUUID)
 	if err2 != nil {
 		errStr := "UpdateServer(): " + err2.Error()
 		logger.Logger.Println(errStr)
 		return nil, hcc_errors.ViolinSQLOperationFail, errStr
 	}
 
-	server, errCode, errStr := ReadServer(server.UUID)
+	server, errCode, errStr := ReadServer(requestedUUID)
 	if errCode != 0 {
 		logger.Logger.Println("UpdateServer(): " + errStr)
 	}
