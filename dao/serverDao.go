@@ -693,8 +693,11 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 			Node: &pb.Node{
 				UUID:       nodes[i].UUID,
 				ServerUUID: "-",
+				// gRPC use 0 value for unset. So I will use -1 for unset node_num. - ish
+				NodeNum: -1,
 				// gRPC use 0 value for unset. So I will use 9 value for inactive. - ish
 				Active: 9,
+				NodeIP: "-",
 			},
 		})
 		if err != nil {
