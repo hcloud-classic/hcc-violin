@@ -721,5 +721,15 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 		return nil, hcc_errors.ViolinSQLOperationFail, errStr
 	}
 
+	logger.Logger.Println("DeleteServer(): Deleting server nodes of the server from the database (ServerUUID: " + requestedUUID + ")")
+	_, errCode, errText = DeleteServerNodeByServerUUID(&pb.ReqDeleteServerNodeByServerUUID{
+		ServerUUID: requestedUUID,
+	})
+	if errCode != 0 {
+		errStr := "DeleteServer(): Failed to deleting the server nodes of the server from the database  (Error: " + errText + ", ServerUUID: " + requestedUUID + ")"
+		logger.Logger.Println(errStr)
+		return nil, hcc_errors.ViolinSQLOperationFail, errStr
+	}
+
 	return server, 0, ""
 }
