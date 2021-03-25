@@ -74,10 +74,10 @@ func (s *violinServer) GetServerList(_ context.Context, in *pb.ReqGetServerList)
 	return serverList, nil
 }
 
-func (s *violinServer) GetServerNum(_ context.Context, _ *pb.Empty) (*pb.ResGetServerNum, error) {
+func (s *violinServer) GetServerNum(_ context.Context, in *pb.ReqGetServerNum) (*pb.ResGetServerNum, error) {
 	// logger.Logger.Println("Request received: GetServerNum()")
 
-	serverNum, errCode, errStr := dao.ReadServerNum()
+	serverNum, errCode, errStr := dao.ReadServerNum(in)
 	if errCode != 0 {
 		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
 		return &pb.ResGetServerNum{Num: 0, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil

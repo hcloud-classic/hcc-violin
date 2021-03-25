@@ -238,11 +238,16 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 }
 
 // ReadServerNum : Get the number of servers
-func ReadServerNum() (*pb.ResGetServerNum, uint64, string) {
+func ReadServerNum(in *pb.ReqGetServerNum) (*pb.ResGetServerNum, uint64, string) {
 	var serverNum pb.ResGetServerNum
 	var serverNr int64
+	var groupID = in.GetGroupID()
 
-	sql := "select count(*) from server where status != 'Deleted'"
+	if groupID == 0 {
+		return nil, hcc_errors.ViolinGrpcArgumentError, "ReadServerNum(): please insert a group_id argument"
+	}
+
+	sql := "select count(*) from server where status != 'Deleted' and group_id = " + strconv.Itoa(int(groupID))
 	row := mysql.Db.QueryRow(sql)
 	err := mysql.QueryRowScan(row, &serverNr)
 	if err != nil {
