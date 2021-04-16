@@ -17,6 +17,7 @@ type violinServer struct {
 func returnServer(server *pb.Server) *pb.Server {
 	return &pb.Server{
 		UUID:       server.UUID,
+		GroupID:    server.GroupID,
 		SubnetUUID: server.SubnetUUID,
 		OS:         server.OS,
 		ServerName: server.ServerName,
