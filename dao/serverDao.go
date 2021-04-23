@@ -142,22 +142,22 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 		userUUIDOk := len(userUUID) != 0
 
 		if uuidOk {
-			sql += " and uuid = '" + uuid + "'"
+			sql += " and uuid like '%" + uuid + "%'"
 		}
 		if groupIDOk {
 			sql += " and group_id = " + strconv.Itoa(int(groupID))
 		}
 		if subnetUUIDOk {
-			sql += " and subnet_uuid = '" + subnetUUID + "'"
+			sql += " and subnet_uuid like '%" + subnetUUID + "%'"
 		}
 		if osOk {
-			sql += " and os = '" + os + "'"
+			sql += " and os like '%" + os + "%'"
 		}
 		if serverNameOk {
-			sql += " and server_name = '" + serverName + "'"
+			sql += " and server_name like '%" + serverName + "%'"
 		}
 		if serverDescOk {
-			sql += " and server_desc = '" + serverDesc + "'"
+			sql += " and server_desc like '%" + serverDesc + "%'"
 		}
 		if cpuOk {
 			sql += " and cpu = " + strconv.Itoa(cpu)
@@ -169,10 +169,10 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 			sql += " and disk_size = " + strconv.Itoa(diskSize)
 		}
 		if statusOk {
-			sql += " and status = '" + status + "'"
+			sql += " and status like '%" + status + "%'"
 		}
 		if userUUIDOk {
-			sql += " and user_uuid = '" + userUUID + "'"
+			sql += " and user_uuid like '%" + userUUID + "%'"
 		}
 	}
 
