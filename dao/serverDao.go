@@ -274,9 +274,24 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 	userQuota.NumberOfNodes = in.GetNrNode()
 
 	logger.Logger.Println("doGetAvailableNodes(): Getting available nodes from flute module ")
-	nodes, err := daoext.DoGetNodes(&userQuota)
+	allNodes, err := daoext.DoGetNodes(&userQuota)
 	if err != nil {
 		return nil, hcc_errors.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + err.Error()
+	}
+
+	for i := range allNodes {
+		if server.GroupID != allNodes[i].GroupID {
+			continue
+		}
+		nodes = append(nodes, pb.Node{
+			UUID:            allNodes[i].UUID,
+			CPUCores:        allNodes[i].CPUCores,
+			Memory:          allNodes[i].Memory,
+		})
+	}
+
+	if len(nodes) == 0 {
+		return nil, hcc_errors.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + "Nodes are not available from your group."
 	}
 
 	return nodes, 0, ""
@@ -386,7 +401,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 		goto ERROR
 	}
 
-	//Scheduler
+	// Scheduler
 	nodes, errCode, errStr = doGetAvailableNodes(in, serverUUID)
 	if errCode != 0 {
 		_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
