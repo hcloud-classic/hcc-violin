@@ -328,7 +328,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 func checkGroupIDExist(groupID int64) error {
 	resGetGroupList, hccErrStack := client.RC.GetGroupList(&pb.Empty{})
 	if hccErrStack != nil {
-		return (*hccErrStack.Stack())[0].ToError()
+		return hccErrStack.Pop().ToError()
 	}
 
 	for _, pGroup := range resGetGroupList.Group {
