@@ -3,8 +3,6 @@ package daoext
 import (
 	"errors"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hcloud-classic/hcc_errors"
-	"github.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/data"
 	"hcc/violin/driver"
@@ -12,6 +10,8 @@ import (
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
+	"innogrid.com/hcloud-classic/hcc_errors"
+	"innogrid.com/hcloud-classic/pb"
 	"net"
 	"strconv"
 	"strings"
@@ -459,17 +459,10 @@ func DoUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string)
 }
 
 // DoCreateDHCPDConfig : Create a DHCPD config file for the server
-func DoCreateDHCPDConfig(subnetUUID string, serverUUID string, nodes []pb.Node) error {
-	var nodeUUIDsStr = ""
-	for i := range nodes {
-		nodeUUIDsStr += nodes[i].UUID
-		if i != len(nodes)-1 {
-			nodeUUIDsStr += ","
-		}
-	}
-	logger.Logger.Println("doCreateDHCPDConfig: server_uuid=" + serverUUID + " nodeUUIDsStr: " + nodeUUIDsStr)
+func DoCreateDHCPDConfig(subnetUUID string, serverUUID string) error {
+	logger.Logger.Println("doCreateDHCPDConfig: server_uuid=" + serverUUID)
 
-	err := client.RC.CreateDHCPDConfig(subnetUUID, nodeUUIDsStr)
+	err := client.RC.CreateDHCPDConfig(subnetUUID)
 	if err != nil {
 		logger.Logger.Println("doCreateDHCPDConfig: server_uuid=" + serverUUID + " CreateDHCPDConfig: " + err.Error())
 		return err

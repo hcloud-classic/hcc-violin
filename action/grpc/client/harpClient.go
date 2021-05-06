@@ -3,11 +3,11 @@ package client
 import (
 	"context"
 	errors2 "errors"
-	"github.com/hcloud-classic/pb"
 	"google.golang.org/grpc"
 	"hcc/violin/action/grpc/errconv"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
+	"innogrid.com/hcloud-classic/pb"
 	"strconv"
 	"time"
 )
@@ -44,9 +44,12 @@ func (rc *RPCClient) GetSubnet(uuid string) (*pb.Subnet, error) {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resGetSubnet.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return nil, errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return nil, errors2.New(stack[0].Text())
+		}
 	}
 
 	return resGetSubnet.Subnet, nil
@@ -63,9 +66,12 @@ func (rc *RPCClient) GetSubnetByServer(serverUUID string) (*pb.Subnet, error) {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resGetSubnetByServer.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return nil, errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return nil, errors2.New(stack[0].Text())
+		}
 	}
 
 	return resGetSubnetByServer.Subnet, nil
@@ -82,31 +88,36 @@ func (rc *RPCClient) UpdateSubnet(in *pb.ReqUpdateSubnet) error {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resUpdateSubnet.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return errors2.New(stack[0].Text())
+		}
 	}
 
 	return nil
 }
 
 // CreateDHCPDConfig : Do dhcpd config file creation works
-func (rc *RPCClient) CreateDHCPDConfig(subnetUUID string, nodeUUIDs string) error {
+func (rc *RPCClient) CreateDHCPDConfig(subnetUUID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
 	resCreateDHCPDConf, err := rc.harp.CreateDHCPDConf(ctx, &pb.ReqCreateDHCPDConf{
 		SubnetUUID: subnetUUID,
-		NodeUUIDs:  nodeUUIDs,
 	})
 	if err != nil {
 		return err
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resCreateDHCPDConf.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return errors2.New(stack[0].Text())
+		}
 	}
 
 	return nil
@@ -125,9 +136,12 @@ func (rc *RPCClient) DeleteDHCPDConfig(subnetUUID string) error {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resDeleteDHCPDConf.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return errors2.New(stack[0].Text())
+		}
 	}
 
 	return nil
@@ -144,9 +158,12 @@ func (rc *RPCClient) DeleteAdaptiveIPServer(serverUUID string) (*pb.ResDeleteAda
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resDeleteAdaptiveIPServer.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return nil, errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return nil, errors2.New(stack[0].Text())
+		}
 	}
 
 	return resDeleteAdaptiveIPServer, nil

@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/hcloud-classic/hcc_errors"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/grpc/server"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
+	"innogrid.com/hcloud-classic/hcc_errors"
 	"os"
 	"os/signal"
 	"syscall"

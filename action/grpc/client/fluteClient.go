@@ -3,11 +3,11 @@ package client
 import (
 	"context"
 	errors2 "errors"
-	"github.com/hcloud-classic/pb"
 	"google.golang.org/grpc"
 	"hcc/violin/action/grpc/errconv"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
+	"innogrid.com/hcloud-classic/pb"
 	"strconv"
 	"time"
 )
@@ -54,9 +54,12 @@ func (rc *RPCClient) OnNode(nodeUUID string) error {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resNodePowerControl.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return errors2.New(stack[0].Text())
+		}
 	}
 
 	return nil
@@ -87,9 +90,12 @@ func (rc *RPCClient) OffNode(nodeUUID string, forceOff bool) error {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resNodePowerControl.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return errors2.New(stack[0].Text())
+		}
 	}
 
 	return nil
@@ -122,9 +128,12 @@ func (rc *RPCClient) GetNode(uuid string) (*pb.Node, error) {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resGetNode.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return nil, errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return nil, errors2.New(stack[0].Text())
+		}
 	}
 
 	return resGetNode.Node, nil
@@ -143,9 +152,12 @@ func (rc *RPCClient) GetNodeList(serverUUID string) ([]pb.Node, error) {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resGetNodeList.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return nil, errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return nil, errors2.New(stack[0].Text())
+		}
 	}
 
 	for _, pnode := range resGetNodeList.Node {
@@ -178,9 +190,12 @@ func (rc *RPCClient) UpdateNode(in *pb.ReqUpdateNode) (*pb.Node, error) {
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resUpdateNode.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return nil, errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return nil, errors2.New(stack[0].Text())
+		}
 	}
 
 	return resUpdateNode.Node, nil

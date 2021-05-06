@@ -2,12 +2,12 @@ package server
 
 import (
 	"context"
-	"github.com/hcloud-classic/hcc_errors"
-	"github.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/errconv"
 	"hcc/violin/dao"
 	"hcc/violin/daoext"
 	"hcc/violin/lib/logger"
+	"innogrid.com/hcloud-classic/hcc_errors"
+	"innogrid.com/hcloud-classic/pb"
 )
 
 type violinServer struct {
@@ -17,6 +17,7 @@ type violinServer struct {
 func returnServer(server *pb.Server) *pb.Server {
 	return &pb.Server{
 		UUID:       server.UUID,
+		GroupID:    server.GroupID,
 		SubnetUUID: server.SubnetUUID,
 		OS:         server.OS,
 		ServerName: server.ServerName,
@@ -63,7 +64,7 @@ func (s *violinServer) GetServer(_ context.Context, in *pb.ReqGetServer) (*pb.Re
 }
 
 func (s *violinServer) GetServerList(_ context.Context, in *pb.ReqGetServerList) (*pb.ResGetServerList, error) {
-	logger.Logger.Println("Request received: GetServerList()")
+	// logger.Logger.Println("Request received: GetServerList()")
 
 	serverList, errCode, errStr := dao.ReadServerList(in)
 	if errCode != 0 {
@@ -74,10 +75,10 @@ func (s *violinServer) GetServerList(_ context.Context, in *pb.ReqGetServerList)
 	return serverList, nil
 }
 
-func (s *violinServer) GetServerNum(_ context.Context, _ *pb.Empty) (*pb.ResGetServerNum, error) {
-	logger.Logger.Println("Request received: GetServerNum()")
+func (s *violinServer) GetServerNum(_ context.Context, in *pb.ReqGetServerNum) (*pb.ResGetServerNum, error) {
+	// logger.Logger.Println("Request received: GetServerNum()")
 
-	serverNum, errCode, errStr := dao.ReadServerNum()
+	serverNum, errCode, errStr := dao.ReadServerNum(in)
 	if errCode != 0 {
 		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
 		return &pb.ResGetServerNum{Num: 0, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
@@ -87,7 +88,7 @@ func (s *violinServer) GetServerNum(_ context.Context, _ *pb.Empty) (*pb.ResGetS
 }
 
 func (s *violinServer) UpdateServer(_ context.Context, in *pb.ReqUpdateServer) (*pb.ResUpdateServer, error) {
-	logger.Logger.Println("Request received: UpdateServer()")
+	// logger.Logger.Println("Request received: UpdateServer()")
 
 	updateServer, errCode, errStr := dao.UpdateServer(in)
 	if errCode != 0 {
@@ -147,7 +148,7 @@ func (s *violinServer) GetServerNodeList(_ context.Context, in *pb.ReqGetServerN
 }
 
 func (s *violinServer) GetServerNodeNum(_ context.Context, in *pb.ReqGetServerNodeNum) (*pb.ResGetServerNodeNum, error) {
-	logger.Logger.Println("Request received: GetServerNodeNum()")
+	// logger.Logger.Println("Request received: GetServerNodeNum()")
 
 	serverNodeNum, errCode, errStr := dao.ReadServerNodeNum(in)
 	if errCode != 0 {

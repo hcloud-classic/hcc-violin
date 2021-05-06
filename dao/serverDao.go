@@ -2,8 +2,7 @@ package dao
 
 import (
 	dbsql "database/sql"
-	"github.com/hcloud-classic/hcc_errors"
-	"github.com/hcloud-classic/pb"
+	"errors"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/daoext"
@@ -11,6 +10,8 @@ import (
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
+	"innogrid.com/hcloud-classic/hcc_errors"
+	"innogrid.com/hcloud-classic/pb"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,7 @@ import (
 func ReadServer(uuid string) (*pb.Server, uint64, string) {
 	var server pb.Server
 
+	var groupID int64
 	var subnetUUID string
 	var os string
 	var serverName string
@@ -37,6 +39,7 @@ func ReadServer(uuid string) (*pb.Server, uint64, string) {
 	row := mysql.Db.QueryRow(sql, uuid)
 	err := mysql.QueryRowScan(row,
 		&uuid,
+		&groupID,
 		&subnetUUID,
 		&os,
 		&serverName,
@@ -57,6 +60,7 @@ func ReadServer(uuid string) (*pb.Server, uint64, string) {
 	}
 
 	server.UUID = uuid
+	server.GroupID = groupID
 	server.SubnetUUID = subnetUUID
 	server.OS = os
 	server.ServerName = serverName
@@ -84,6 +88,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 	var pservers []*pb.Server
 
 	var uuid string
+	var groupID int64
 	var subnetUUID string
 	var os string
 	var serverName string
@@ -115,6 +120,8 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 
 		uuid = reqServer.UUID
 		uuidOk := len(uuid) != 0
+		groupID = reqServer.GroupID
+		groupIDOk := groupID != 0
 		subnetUUID = reqServer.SubnetUUID
 		subnetUUIDOk := len(subnetUUID) != 0
 		os = reqServer.OS
@@ -135,19 +142,22 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 		userUUIDOk := len(userUUID) != 0
 
 		if uuidOk {
-			sql += " and uuid = '" + uuid + "'"
+			sql += " and uuid like '%" + uuid + "%'"
+		}
+		if groupIDOk {
+			sql += " and group_id = " + strconv.Itoa(int(groupID))
 		}
 		if subnetUUIDOk {
-			sql += " and subnet_uuid = '" + subnetUUID + "'"
+			sql += " and subnet_uuid like '%" + subnetUUID + "%'"
 		}
 		if osOk {
-			sql += " and os = '" + os + "'"
+			sql += " and os like '%" + os + "%'"
 		}
 		if serverNameOk {
-			sql += " and server_name = '" + serverName + "'"
+			sql += " and server_name like '%" + serverName + "%'"
 		}
 		if serverDescOk {
-			sql += " and server_desc = '" + serverDesc + "'"
+			sql += " and server_desc like '%" + serverDesc + "%'"
 		}
 		if cpuOk {
 			sql += " and cpu = " + strconv.Itoa(cpu)
@@ -159,10 +169,10 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 			sql += " and disk_size = " + strconv.Itoa(diskSize)
 		}
 		if statusOk {
-			sql += " and status = '" + status + "'"
+			sql += " and status like '%" + status + "%'"
 		}
 		if userUUIDOk {
-			sql += " and user_uuid = '" + userUUID + "'"
+			sql += " and user_uuid like '%" + userUUID + "%'"
 		}
 	}
 
@@ -186,7 +196,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 	}()
 
 	for stmt.Next() {
-		err := stmt.Scan(&uuid, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
+		err := stmt.Scan(&uuid, &groupID, &subnetUUID, &os, &serverName, &serverDesc, &cpu, &memory, &diskSize, &status, &userUUID, &createdAt)
 		if err != nil {
 			errStr := "ReadServerList(): " + err.Error()
 			logger.Logger.Println(errStr)
@@ -205,6 +215,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 
 		servers = append(servers, pb.Server{
 			UUID:       uuid,
+			GroupID:    groupID,
 			SubnetUUID: subnetUUID,
 			OS:         os,
 			ServerName: serverName,
@@ -227,11 +238,16 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 }
 
 // ReadServerNum : Get the number of servers
-func ReadServerNum() (*pb.ResGetServerNum, uint64, string) {
+func ReadServerNum(in *pb.ReqGetServerNum) (*pb.ResGetServerNum, uint64, string) {
 	var serverNum pb.ResGetServerNum
 	var serverNr int64
+	var groupID = in.GetGroupID()
 
-	sql := "select count(*) from server where status != 'Deleted'"
+	if groupID == 0 {
+		return nil, hcc_errors.ViolinGrpcArgumentError, "ReadServerNum(): please insert a group_id argument"
+	}
+
+	sql := "select count(*) from server where status != 'Deleted' and group_id = " + strconv.Itoa(int(groupID))
 	row := mysql.Db.QueryRow(sql)
 	err := mysql.QueryRowScan(row, &serverNr)
 	if err != nil {
@@ -258,9 +274,24 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 	userQuota.NumberOfNodes = in.GetNrNode()
 
 	logger.Logger.Println("doGetAvailableNodes(): Getting available nodes from flute module ")
-	nodes, err := daoext.DoGetNodes(&userQuota)
+	allNodes, err := daoext.DoGetNodes(&userQuota)
 	if err != nil {
 		return nil, hcc_errors.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + err.Error()
+	}
+
+	for i := range allNodes {
+		if server.GroupID != allNodes[i].GroupID {
+			continue
+		}
+		nodes = append(nodes, pb.Node{
+			UUID:     allNodes[i].UUID,
+			CPUCores: allNodes[i].CPUCores,
+			Memory:   allNodes[i].Memory,
+		})
+	}
+
+	if len(nodes) == 0 {
+		return nil, hcc_errors.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + "Nodes are not available from your group."
 	}
 
 	return nodes, 0, ""
@@ -294,7 +325,23 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	return nil
 }
 
+func checkGroupIDExist(groupID int64) error {
+	resGetGroupList, hccErrStack := client.RC.GetGroupList(&pb.Empty{})
+	if hccErrStack != nil {
+		return hccErrStack.Pop().ToError()
+	}
+
+	for _, pGroup := range resGetGroupList.Group {
+		if pGroup.Id == groupID {
+			return nil
+		}
+	}
+
+	return errors.New("given group ID is not in the database")
+}
+
 func checkCreateServerArgs(reqServer *pb.Server) bool {
+	groupIDOk := reqServer.GroupID != 0
 	subnetUUIDOk := len(reqServer.GetSubnetUUID()) != 0
 	osOk := len(reqServer.GetOS()) != 0
 	serverNameOk := len(reqServer.GetServerName()) != 0
@@ -304,7 +351,7 @@ func checkCreateServerArgs(reqServer *pb.Server) bool {
 	diskSizeOk := reqServer.GetDiskSize() != 0
 	userUUIDOk := len(reqServer.GetUserUUID()) != 0
 
-	return !(subnetUUIDOk && osOk && serverNameOk && serverDescOk && cpuOk && memoryOk && diskSizeOk && userUUIDOk)
+	return !(groupIDOk && subnetUUIDOk && osOk && serverNameOk && serverDescOk && cpuOk && memoryOk && diskSizeOk && userUUIDOk)
 }
 
 // CreateServer : Create a server
@@ -345,7 +392,16 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 
 		goto ERROR
 	}
-	//Scheduler
+
+	err = checkGroupIDExist(reqServer.GroupID)
+	if err != nil {
+		errStr = "CreateServer(): " + err.Error()
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
+
+		goto ERROR
+	}
+
+	// Scheduler
 	nodes, errCode, errStr = doGetAvailableNodes(in, serverUUID)
 	if errCode != 0 {
 		_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
@@ -361,6 +417,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 
 	server = pb.Server{
 		UUID:       serverUUID,
+		GroupID:    reqServer.GetGroupID(),
 		SubnetUUID: reqServer.GetSubnetUUID(),
 		OS:         reqServer.GetOS(),
 		ServerName: reqServer.GetServerName(),
@@ -416,6 +473,7 @@ ERROR:
 }
 
 func checkUpdateServerArgs(reqServer *pb.Server) bool {
+	groupIDOk := reqServer.GroupID != 0
 	subnetUUIDOk := len(reqServer.SubnetUUID) != 0
 	osOk := len(reqServer.OS) != 0
 	serverNameOk := len(reqServer.ServerName) != 0
@@ -425,7 +483,7 @@ func checkUpdateServerArgs(reqServer *pb.Server) bool {
 	diskSizeOk := reqServer.DiskSize != 0
 	userUUIDOk := len(reqServer.UserUUID) != 0
 
-	return !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !userUUIDOk
+	return !groupIDOk && !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !userUUIDOk
 }
 
 // UpdateServer : Update infos of the server
@@ -448,6 +506,14 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 		return nil, hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): need some arguments"
 	}
 
+	err := checkGroupIDExist(reqServer.GroupID)
+	if err != nil {
+		errStr := "UpdateServer(): " + err.Error()
+
+		return nil, hcc_errors.ViolinGrpcArgumentError, errStr
+	}
+
+	var groupID int64
 	var subnetUUID string
 	var os string
 	var serverName string
@@ -458,6 +524,8 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 	var status string
 	var userUUID string
 
+	groupID = reqServer.GroupID
+	groupIDOk := groupID != 0
 	subnetUUID = reqServer.SubnetUUID
 	subnetUUIDOk := len(subnetUUID) != 0
 	os = reqServer.OS
@@ -477,46 +545,37 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 	userUUID = reqServer.UserUUID
 	userUUIDOk := len(userUUID) != 0
 
-	server := new(pb.Server)
-	server.UUID = requestedUUID
-	server.SubnetUUID = subnetUUID
-	server.OS = os
-	server.ServerName = serverName
-	server.ServerDesc = serverDesc
-	server.CPU = int32(cpu)
-	server.Memory = int32(memory)
-	server.DiskSize = int32(diskSize)
-	server.Status = status
-	server.UserUUID = userUUID
-
 	sql := "update server set"
 	var updateSet = ""
+	if groupIDOk {
+		updateSet += " group_id = " + strconv.Itoa(int(groupID)) + ", "
+	}
 	if subnetUUIDOk {
-		updateSet += " subnet_uuid = '" + server.SubnetUUID + "', "
+		updateSet += " subnet_uuid = '" + subnetUUID + "', "
 	}
 	if osOk {
-		updateSet += " os = '" + server.OS + "', "
+		updateSet += " os = '" + os + "', "
 	}
 	if serverNameOk {
-		updateSet += " server_name = '" + server.ServerName + "', "
+		updateSet += " server_name = '" + serverName + "', "
 	}
 	if serverDescOk {
-		updateSet += " server_desc = '" + server.ServerDesc + "', "
+		updateSet += " server_desc = '" + serverDesc + "', "
 	}
 	if cpuOk {
-		updateSet += " cpu = " + strconv.Itoa(int(server.CPU)) + ", "
+		updateSet += " cpu = " + strconv.Itoa(int(cpu)) + ", "
 	}
 	if memoryOk {
-		updateSet += " memory = " + strconv.Itoa(int(server.Memory)) + ", "
+		updateSet += " memory = " + strconv.Itoa(int(memory)) + ", "
 	}
 	if diskSizeOk {
-		updateSet += " disk_size = " + strconv.Itoa(int(server.DiskSize)) + ", "
+		updateSet += " disk_size = " + strconv.Itoa(int(diskSize)) + ", "
 	}
 	if statusOk {
-		updateSet += " status = '" + server.Status + "', "
+		updateSet += " status = '" + status + "', "
 	}
 	if userUUIDOk {
-		updateSet += " user_uuid = '" + server.UserUUID + "', "
+		updateSet += " user_uuid = '" + userUUID + "', "
 	}
 
 	sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
@@ -533,14 +592,14 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
 		_ = stmt.Close()
 	}()
 
-	_, err2 := stmt.Exec(server.UUID)
+	_, err2 := stmt.Exec(requestedUUID)
 	if err2 != nil {
 		errStr := "UpdateServer(): " + err2.Error()
 		logger.Logger.Println(errStr)
 		return nil, hcc_errors.ViolinSQLOperationFail, errStr
 	}
 
-	server, errCode, errStr := ReadServer(server.UUID)
+	server, errCode, errStr := ReadServer(requestedUUID)
 	if errCode != 0 {
 		logger.Logger.Println("UpdateServer(): " + errStr)
 	}
@@ -654,8 +713,11 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 			Node: &pb.Node{
 				UUID:       nodes[i].UUID,
 				ServerUUID: "-",
+				// gRPC use 0 value for unset. So I will use -1 for unset node_num. - ish
+				NodeNum: -1,
 				// gRPC use 0 value for unset. So I will use 9 value for inactive. - ish
 				Active: 9,
+				NodeIP: "-",
 			},
 		})
 		if err != nil {
@@ -678,6 +740,16 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	_, err2 := stmt.Exec(requestedUUID)
 	if err2 != nil {
 		errStr := "DeleteServer(): Failed to deleting the server info from the database  (Error: " + err2.Error() + ", ServerUUID: " + requestedUUID + ")"
+		logger.Logger.Println(errStr)
+		return nil, hcc_errors.ViolinSQLOperationFail, errStr
+	}
+
+	logger.Logger.Println("DeleteServer(): Deleting server nodes of the server from the database (ServerUUID: " + requestedUUID + ")")
+	_, errCode, errText = DeleteServerNodeByServerUUID(&pb.ReqDeleteServerNodeByServerUUID{
+		ServerUUID: requestedUUID,
+	})
+	if errCode != 0 {
+		errStr := "DeleteServer(): Failed to deleting the server nodes of the server from the database  (Error: " + errText + ", ServerUUID: " + requestedUUID + ")"
 		logger.Logger.Println(errStr)
 		return nil, hcc_errors.ViolinSQLOperationFail, errStr
 	}

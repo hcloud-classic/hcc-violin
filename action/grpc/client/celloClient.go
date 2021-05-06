@@ -3,10 +3,10 @@ package client
 import (
 	"context"
 	errors2 "errors"
-	"github.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/errconv"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
+	"innogrid.com/hcloud-classic/pb"
 	"strconv"
 	"time"
 
@@ -45,9 +45,12 @@ func (rc *RPCClient) Volhandler(in *pb.ReqVolumeHandler) (*pb.ResVolumeHandler, 
 	}
 
 	hccErrStack := errconv.GrpcStackToHcc(resVolhandle.HccErrorStack)
-	errors := *hccErrStack.ConvertReportForm().Stack()
-	if len(errors) != 0 && errors[0].Code() != 0 {
-		return nil, errors2.New(errors[0].Text())
+	errors := hccErrStack.ConvertReportForm()
+	if errors != nil {
+		stack := *errors.Stack()
+		if len(stack) != 0 && stack[0].Code() != 0 {
+			return nil, errors2.New(stack[0].Text())
+		}
 	}
 
 	return resVolhandle, nil

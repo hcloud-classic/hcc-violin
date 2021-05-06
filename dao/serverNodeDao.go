@@ -1,11 +1,11 @@
 package dao
 
 import (
-	"github.com/hcloud-classic/hcc_errors"
-	"github.com/hcloud-classic/pb"
 	"hcc/violin/daoext"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
+	"innogrid.com/hcloud-classic/hcc_errors"
+	"innogrid.com/hcloud-classic/pb"
 	"strings"
 	"time"
 

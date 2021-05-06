@@ -1,12 +1,12 @@
 package rabbitmq
 
 import (
-	"github.com/hcloud-classic/pb"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/daoext"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
+	"innogrid.com/hcloud-classic/pb"
 	"net"
 	"strconv"
 	"strings"
@@ -113,7 +113,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineSubnet *pb.Subn
 		token)
 
 	printLogDoCreateServerRoutineQueue(routineServerUUID, "Creating DHCPD config file")
-	routineError = daoext.DoCreateDHCPDConfig(routineSubnet.UUID, routineServerUUID, routineNodes)
+	routineError = daoext.DoCreateDHCPDConfig(routineSubnet.UUID, routineServerUUID)
 	if routineError != nil {
 		_ = client.RC.WriteServerAction(
 			routineServerUUID,
