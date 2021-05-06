@@ -113,7 +113,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineSubnet *pb.Subn
 		token)
 
 	printLogDoCreateServerRoutineQueue(routineServerUUID, "Creating DHCPD config file")
-	routineError = daoext.DoCreateDHCPDConfig(routineSubnet.UUID, routineServerUUID, routineNodes)
+	routineError = daoext.DoCreateDHCPDConfig(routineSubnet.UUID, routineServerUUID)
 	if routineError != nil {
 		_ = client.RC.WriteServerAction(
 			routineServerUUID,

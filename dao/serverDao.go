@@ -284,9 +284,9 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 			continue
 		}
 		nodes = append(nodes, pb.Node{
-			UUID:            allNodes[i].UUID,
-			CPUCores:        allNodes[i].CPUCores,
-			Memory:          allNodes[i].Memory,
+			UUID:     allNodes[i].UUID,
+			CPUCores: allNodes[i].CPUCores,
+			Memory:   allNodes[i].Memory,
 		})
 	}
 
