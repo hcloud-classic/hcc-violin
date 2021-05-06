@@ -100,13 +100,12 @@ func (rc *RPCClient) UpdateSubnet(in *pb.ReqUpdateSubnet) error {
 }
 
 // CreateDHCPDConfig : Do dhcpd config file creation works
-func (rc *RPCClient) CreateDHCPDConfig(subnetUUID string, nodeUUIDs string) error {
+func (rc *RPCClient) CreateDHCPDConfig(subnetUUID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Harp.RequestTimeoutMs)*time.Millisecond)
 	defer cancel()
 	resCreateDHCPDConf, err := rc.harp.CreateDHCPDConf(ctx, &pb.ReqCreateDHCPDConf{
 		SubnetUUID: subnetUUID,
-		NodeUUIDs:  nodeUUIDs,
 	})
 	if err != nil {
 		return err
