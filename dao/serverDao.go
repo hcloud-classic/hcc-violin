@@ -279,6 +279,9 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 		return nil, hcc_errors.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + err.Error()
 	}
 
+	var coreTotal int32 = 0
+	var memoryTotal int32 = 0
+
 	for i := range allNodes {
 		if server.GroupID != allNodes[i].GroupID {
 			continue
@@ -288,10 +291,35 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 			CPUCores: allNodes[i].CPUCores,
 			Memory:   allNodes[i].Memory,
 		})
+
+		coreTotal += allNodes[i].CPUCores
+		memoryTotal += allNodes[i].Memory
 	}
 
 	if len(nodes) == 0 {
 		return nil, hcc_errors.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + "Nodes are not available from your group."
+	}
+
+	resGetQuota, errStack := client.RC.GetQuota(server.GroupID)
+	if errStack != nil {
+		return nil, hcc_errors.ViolinGrpcRequestError, "doGetAvailableNodes(): " + errStack.Pop().Text()
+	}
+
+	var cpuCoreQuotaExceeded = false
+	var memoryQuotaExceeded = false
+
+	if coreTotal > resGetQuota.Quota.LimitCPUCores {
+		cpuCoreQuotaExceeded = true
+	}
+	if memoryTotal > resGetQuota.Quota.LimitMemoryGB {
+		memoryQuotaExceeded = true
+	}
+	if cpuCoreQuotaExceeded && memoryQuotaExceeded {
+		return nil, hcc_errors.ViolinGrpcRequestError, "doGetAvailableNodes(): CPU cores and memory quotas exceeded"
+	} else if cpuCoreQuotaExceeded {
+		return nil, hcc_errors.ViolinGrpcRequestError, "doGetAvailableNodes(): CPU cores quota exceeded"
+	} else if memoryQuotaExceeded {
+		return nil, hcc_errors.ViolinGrpcRequestError, "doGetAvailableNodes(): Memory quota exceeded"
 	}
 
 	return nodes, 0, ""

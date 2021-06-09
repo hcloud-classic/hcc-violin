@@ -73,3 +73,22 @@ func (rc *RPCClient) GetGroupList(_ *pb.Empty) (*pb.ResGetGroupList, *hcc_errors
 
 	return resGetGroupList, errStack
 }
+
+// GetQuota : Get the quota of the group
+func (rc *RPCClient) GetQuota(groupID int64) (*pb.ResGetQuota, *hcc_errors.HccErrorStack) {
+	var errStack *hcc_errors.HccErrorStack = nil
+
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(config.Piccolo.RequestTimeoutMs)*time.Millisecond)
+	defer cancel()
+	resGetQuota, err := rc.piccolo.GetQuota(ctx, &pb.ReqGetQuota{GroupID: groupID})
+	if err != nil {
+		hccErrStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(hcc_errors.HarpGrpcRequestError, "GetQuota(): "+err.Error()))
+		return nil, hccErrStack
+	}
+	if es := resGetQuota.GetHccErrorStack(); es != nil {
+		errStack = errconv.GrpcStackToHcc(es)
+	}
+
+	return resGetQuota, errStack
+}
