@@ -16,7 +16,7 @@ require (
 	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/appengine v1.6.2 // indirect
 	google.golang.org/genproto v0.0.0-20210111234610-22ae2b108f89 // indirect
-	google.golang.org/grpc v1.38.0
+	google.golang.org/grpc v1.39.0
 	innogrid.com/hcloud-classic/hcc_errors v0.0.0
 	innogrid.com/hcloud-classic/pb v0.0.0
 )
