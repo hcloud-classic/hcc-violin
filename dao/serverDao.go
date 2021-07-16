@@ -3,6 +3,7 @@ package dao
 import (
 	dbsql "database/sql"
 	"errors"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/daoext"
@@ -15,8 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/golang/protobuf/ptypes"
 )
 
 // ReadServer : Get infos of a server
@@ -70,13 +69,7 @@ func ReadServer(uuid string) (*pb.Server, uint64, string) {
 	server.DiskSize = int32(diskSize)
 	server.Status = status
 	server.UserUUID = userUUID
-
-	server.CreatedAt, err = ptypes.TimestampProto(createdAt)
-	if err != nil {
-		errStr := "ReadServer(): " + err.Error()
-		logger.Logger.Println(errStr)
-		return nil, hcc_errors.ViolinInternalTimeStampConversionError, errStr
-	}
+	server.CreatedAt = timestamppb.New(createdAt)
 
 	return &server, 0, ""
 }
@@ -206,13 +199,6 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 			return nil, hcc_errors.ViolinSQLOperationFail, errStr
 		}
 
-		_createdAt, err := ptypes.TimestampProto(createdAt)
-		if err != nil {
-			errStr := "ReadServerList(): " + err.Error()
-			logger.Logger.Println(errStr)
-			return nil, hcc_errors.ViolinInternalTimeStampConversionError, errStr
-		}
-
 		servers = append(servers, pb.Server{
 			UUID:       uuid,
 			GroupID:    groupID,
@@ -225,7 +211,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 			DiskSize:   int32(diskSize),
 			Status:     status,
 			UserUUID:   userUUID,
-			CreatedAt:  _createdAt})
+			CreatedAt:  timestamppb.New(createdAt)})
 	}
 
 	for i := range servers {
@@ -279,6 +265,9 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 		return nil, hcc_errors.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + err.Error()
 	}
 
+	var coreTotal int32 = 0
+	var memoryTotal int32 = 0
+
 	for i := range allNodes {
 		if server.GroupID != allNodes[i].GroupID {
 			continue
@@ -288,10 +277,35 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 			CPUCores: allNodes[i].CPUCores,
 			Memory:   allNodes[i].Memory,
 		})
+
+		coreTotal += allNodes[i].CPUCores
+		memoryTotal += allNodes[i].Memory
 	}
 
 	if len(nodes) == 0 {
 		return nil, hcc_errors.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + "Nodes are not available from your group."
+	}
+
+	resGetQuota, errStack := client.RC.GetQuota(server.GroupID)
+	if errStack != nil {
+		return nil, hcc_errors.ViolinGrpcRequestError, "doGetAvailableNodes(): " + errStack.Pop().Text()
+	}
+
+	var cpuCoreQuotaExceeded = false
+	var memoryQuotaExceeded = false
+
+	if coreTotal > resGetQuota.Quota.LimitCPUCores {
+		cpuCoreQuotaExceeded = true
+	}
+	if memoryTotal > resGetQuota.Quota.LimitMemoryGB {
+		memoryQuotaExceeded = true
+	}
+	if cpuCoreQuotaExceeded && memoryQuotaExceeded {
+		return nil, hcc_errors.ViolinGrpcRequestError, "doGetAvailableNodes(): CPU cores and memory quotas exceeded"
+	} else if cpuCoreQuotaExceeded {
+		return nil, hcc_errors.ViolinGrpcRequestError, "doGetAvailableNodes(): CPU cores quota exceeded"
+	} else if memoryQuotaExceeded {
+		return nil, hcc_errors.ViolinGrpcRequestError, "doGetAvailableNodes(): Memory quota exceeded"
 	}
 
 	return nodes, 0, ""

@@ -2,7 +2,7 @@ package daoext
 
 import (
 	"errors"
-	"github.com/golang/protobuf/ptypes"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/data"
 	"hcc/violin/driver"
@@ -170,18 +170,11 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 			return nil, hcc_errors.ViolinSQLOperationFail, errStr
 		}
 
-		_createdAt, err := ptypes.TimestampProto(createdAt)
-		if err != nil {
-			errStr := "ReadServerNodeList(): " + err.Error()
-			logger.Logger.Println(errStr)
-			return nil, hcc_errors.ViolinInternalTimeStampConversionError, errStr
-		}
-
 		serverNodes = append(serverNodes, pb.ServerNode{
 			UUID:       uuid,
 			ServerUUID: serverUUID,
 			NodeUUID:   nodeUUID,
-			CreatedAt:  _createdAt})
+			CreatedAt:  timestamppb.New(createdAt)})
 	}
 
 	for i := range serverNodes {
