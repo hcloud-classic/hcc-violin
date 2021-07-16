@@ -3,6 +3,7 @@ package dao
 import (
 	dbsql "database/sql"
 	"errors"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/daoext"
@@ -15,8 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/golang/protobuf/ptypes"
 )
 
 // ReadServer : Get infos of a server
@@ -70,13 +69,7 @@ func ReadServer(uuid string) (*pb.Server, uint64, string) {
 	server.DiskSize = int32(diskSize)
 	server.Status = status
 	server.UserUUID = userUUID
-
-	server.CreatedAt, err = ptypes.TimestampProto(createdAt)
-	if err != nil {
-		errStr := "ReadServer(): " + err.Error()
-		logger.Logger.Println(errStr)
-		return nil, hcc_errors.ViolinInternalTimeStampConversionError, errStr
-	}
+	server.CreatedAt = timestamppb.New(createdAt)
 
 	return &server, 0, ""
 }
@@ -206,13 +199,6 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 			return nil, hcc_errors.ViolinSQLOperationFail, errStr
 		}
 
-		_createdAt, err := ptypes.TimestampProto(createdAt)
-		if err != nil {
-			errStr := "ReadServerList(): " + err.Error()
-			logger.Logger.Println(errStr)
-			return nil, hcc_errors.ViolinInternalTimeStampConversionError, errStr
-		}
-
 		servers = append(servers, pb.Server{
 			UUID:       uuid,
 			GroupID:    groupID,
@@ -225,7 +211,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 			DiskSize:   int32(diskSize),
 			Status:     status,
 			UserUUID:   userUUID,
-			CreatedAt:  _createdAt})
+			CreatedAt:  timestamppb.New(createdAt)})
 	}
 
 	for i := range servers {

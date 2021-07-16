@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"hcc/violin/daoext"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	gouuid "github.com/nu7hatch/gouuid"
 )
 
@@ -40,13 +40,7 @@ func ReadServerNode(uuid string) (*pb.ServerNode, uint64, string) {
 	serverNode.UUID = uuid
 	serverNode.ServerUUID = serverUUID
 	serverNode.NodeUUID = nodeUUID
-
-	serverNode.CreatedAt, err = ptypes.TimestampProto(createdAt)
-	if err != nil {
-		errStr := "ReadServerNode(): " + err.Error()
-		logger.Logger.Println(errStr)
-		return nil, hcc_errors.ViolinInternalTimeStampConversionError, errStr
-	}
+	serverNode.CreatedAt = timestamppb.New(createdAt)
 
 	return &serverNode, 0, ""
 }
