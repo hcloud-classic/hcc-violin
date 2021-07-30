@@ -509,8 +509,9 @@ ERROR:
 func checkUpdateServerArgs(reqServer *pb.Server) bool {
 	serverNameOk := len(reqServer.ServerName) != 0
 	serverDescOk := len(reqServer.ServerDesc) != 0
+	statusOk := len(reqServer.ServerName) != 0
 
-	return !serverNameOk && !serverDescOk
+	return !serverNameOk && !serverDescOk && !statusOk
 }
 
 // UpdateServer : Update infos of the server
@@ -522,6 +523,8 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	var serverNameOk bool
 	var serverDesc string
 	var serverDescOk bool
+	var status string
+	var statusOk bool
 	var requestedUUID string
 	var requestedUUIDOk bool
 
@@ -554,6 +557,8 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	serverNameOk = len(reqServer.ServerName) != 0
 	serverDesc = reqServer.ServerDesc
 	serverDescOk = len(reqServer.ServerDesc) != 0
+	status = reqServer.Status
+	statusOk = len(reqServer.Status) != 0
 
 	if checkUpdateServerArgs(reqServer) {
 		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): need some arguments"))
@@ -567,6 +572,9 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	}
 	if serverDescOk {
 		updateSet += " server_desc = '" + serverDesc + "', "
+	}
+	if statusOk {
+		updateSet += " status = '" + status + "', "
 	}
 
 	sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
