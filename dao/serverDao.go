@@ -10,7 +10,6 @@ import (
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
-	"hcc/violin/model"
 	"innogrid.com/hcloud-classic/hcc_errors"
 	"innogrid.com/hcloud-classic/pb"
 	"strconv"
@@ -404,8 +403,6 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	var nodes []pb.Node
 	var server pb.Server
 
-	var totalDiskSize int32
-
 	var sql string
 	var stmt *dbsql.Stmt
 
@@ -464,16 +461,11 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 		OS:         reqServer.GetOS(),
 		ServerName: reqServer.GetServerName(),
 		ServerDesc: reqServer.GetServerDesc(),
-		CPU:        cpuCores,
-		Memory:     memory,
-		DiskSize:   reqServer.GetDiskSize(),
 		Status:     "Creating",
 		UserUUID:   reqServer.GetUserUUID(),
 	}
 
-	totalDiskSize = int32(model.OSDiskSize) + reqServer.GetDiskSize()
-
-	sql = "insert into server(uuid, subnet_uuid, os, server_name, server_desc, cpu, memory, disk_size, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())"
+	sql = "insert into server_list(uuid, subnet_uuid, os, server_name, server_desc, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, now())"
 	stmt, err = mysql.Prepare(sql)
 	if err != nil {
 		errStr := "CreateServer(): " + err.Error()
@@ -485,7 +477,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	defer func() {
 		_ = stmt.Close()
 	}()
-	_, err = stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.CPU, server.Memory, totalDiskSize, server.Status, server.UserUUID)
+	_, err = stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.Status, server.UserUUID)
 	if err != nil {
 		errStr := "CreateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
@@ -569,7 +561,7 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 		goto ERROR
 	}
 
-	sql = "update server set"
+	sql = "update server_list set"
 	if serverNameOk {
 		updateSet += " server_name = '" + serverName + "', "
 	}
