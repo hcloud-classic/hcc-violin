@@ -88,11 +88,10 @@ func (s *violinServer) GetServerNum(_ context.Context, in *pb.ReqGetServerNum) (
 }
 
 func (s *violinServer) UpdateServer(_ context.Context, in *pb.ReqUpdateServer) (*pb.ResUpdateServer, error) {
-	// logger.Logger.Println("Request received: UpdateServer()")
+	logger.Logger.Println("Request received: UpdateServer()")
 
-	updateServer, errCode, errStr := dao.UpdateServer(in)
-	if errCode != 0 {
-		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+	updateServer, errStack := dao.UpdateServer(in)
+	if updateServer == nil {
 		return &pb.ResUpdateServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
 	}
 
