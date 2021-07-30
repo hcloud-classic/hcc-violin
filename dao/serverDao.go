@@ -339,6 +339,34 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	return nil
 }
 
+func doUpdateServerRoutine(server *pb.Server, nodes []pb.Node, token string) error {
+	celloParams := make(map[string]interface{})
+	celloParams["user_uuid"] = server.UserUUID
+	celloParams["os"] = server.OS
+	celloParams["disk_size"] = strconv.Itoa(int(server.DiskSize))
+
+	logger.Logger.Println("doCreateServerRoutine(): Getting subnet info from harp module")
+	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID)
+	if err != nil {
+		return err
+	}
+
+	logger.Logger.Println("doCreateServerRoutine(): ", serverSubnet, subnet)
+
+	logger.Logger.Println("doCreateServerRoutine(): Getting leaderNodeUUID from first of nodes[]")
+	subnet.LeaderNodeUUID = nodes[0].UUID
+
+	logger.Logger.Println("doCreateServerRoutine(): Getting IP address range")
+	firstIP, lastIP := daoext.DoGetIPRange(serverSubnet, nodes)
+
+	err = rabbitmq.QueueCreateServer(server.UUID, subnet, nodes, celloParams, firstIP, lastIP, token)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func checkGroupIDExist(groupID int64) error {
 	resGetGroupList, hccErrStack := client.RC.GetGroupList(&pb.Empty{})
 	if hccErrStack != nil {
@@ -487,138 +515,109 @@ ERROR:
 }
 
 func checkUpdateServerArgs(reqServer *pb.Server) bool {
-	groupIDOk := reqServer.GroupID != 0
-	subnetUUIDOk := len(reqServer.SubnetUUID) != 0
-	osOk := len(reqServer.OS) != 0
 	serverNameOk := len(reqServer.ServerName) != 0
 	serverDescOk := len(reqServer.ServerDesc) != 0
-	cpuOk := reqServer.CPU != 0
-	memoryOk := reqServer.Memory != 0
-	diskSizeOk := reqServer.DiskSize != 0
-	userUUIDOk := len(reqServer.UserUUID) != 0
 
-	return !groupIDOk && !subnetUUIDOk && !osOk && !serverNameOk && !serverDescOk && !cpuOk && !memoryOk && !diskSizeOk && !userUUIDOk
+	return !serverNameOk && !serverDescOk
 }
 
 // UpdateServer : Update infos of the server
-func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, uint64, string) {
-	// TODO : Update server stages
-	// TODO : Currently UpdateServer() only updates infos of the server. Need some works to call other modules.
+func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack) {
+	var server *pb.Server
+	var reqServer *pb.Server
+
+	var serverName string
+	var serverNameOk bool
+	var serverDesc string
+	var serverDescOk bool
+	var requestedUUID string
+	var requestedUUIDOk bool
+
+	var sql string
+	var stmt *dbsql.Stmt
+	var updateSet = ""
+
+	var err error
+	var err2 error
+	var errCode uint64
+	var errStr string
+	errStack := hcc_errors.NewHccErrorStack()
 
 	if in.Server == nil {
-		return nil, hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): server is nil"
-	}
-	reqServer := in.Server
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): server is nil"))
 
-	requestedUUID := reqServer.GetUUID()
-	requestedUUIDOk := len(requestedUUID) != 0
-	if !requestedUUIDOk {
-		return nil, hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): need a uuid argument"
+		goto ERROR
 	}
+	reqServer = in.Server
+
+	requestedUUID = reqServer.GetUUID()
+	requestedUUIDOk = len(requestedUUID) != 0
+	if !requestedUUIDOk {
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): need a uuid argument"))
+
+		goto ERROR
+	}
+
+	serverName = reqServer.ServerName
+	serverNameOk = len(reqServer.ServerName) != 0
+	serverDesc = reqServer.ServerDesc
+	serverDescOk = len(reqServer.ServerDesc) != 0
 
 	if checkUpdateServerArgs(reqServer) {
-		return nil, hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): need some arguments"
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): need some arguments"))
+
+		goto ERROR
 	}
 
-	err := checkGroupIDExist(reqServer.GroupID)
-	if err != nil {
-		errStr := "UpdateServer(): " + err.Error()
-
-		return nil, hcc_errors.ViolinGrpcArgumentError, errStr
-	}
-
-	var groupID int64
-	var subnetUUID string
-	var os string
-	var serverName string
-	var serverDesc string
-	var cpu int
-	var memory int
-	var diskSize int
-	var status string
-	var userUUID string
-
-	groupID = reqServer.GroupID
-	groupIDOk := groupID != 0
-	subnetUUID = reqServer.SubnetUUID
-	subnetUUIDOk := len(subnetUUID) != 0
-	os = reqServer.OS
-	osOk := len(os) != 0
-	serverName = reqServer.ServerName
-	serverNameOk := len(serverName) != 0
-	serverDesc = reqServer.ServerDesc
-	serverDescOk := len(serverDesc) != 0
-	cpu = int(reqServer.CPU)
-	cpuOk := cpu != 0
-	memory = int(reqServer.Memory)
-	memoryOk := memory != 0
-	diskSize = int(reqServer.DiskSize)
-	diskSizeOk := diskSize != 0
-	status = reqServer.Status
-	statusOk := len(status) != 0
-	userUUID = reqServer.UserUUID
-	userUUIDOk := len(userUUID) != 0
-
-	sql := "update server set"
-	var updateSet = ""
-	if groupIDOk {
-		updateSet += " group_id = " + strconv.Itoa(int(groupID)) + ", "
-	}
-	if subnetUUIDOk {
-		updateSet += " subnet_uuid = '" + subnetUUID + "', "
-	}
-	if osOk {
-		updateSet += " os = '" + os + "', "
-	}
+	sql = "update server set"
 	if serverNameOk {
 		updateSet += " server_name = '" + serverName + "', "
 	}
 	if serverDescOk {
 		updateSet += " server_desc = '" + serverDesc + "', "
 	}
-	if cpuOk {
-		updateSet += " cpu = " + strconv.Itoa(int(cpu)) + ", "
-	}
-	if memoryOk {
-		updateSet += " memory = " + strconv.Itoa(int(memory)) + ", "
-	}
-	if diskSizeOk {
-		updateSet += " disk_size = " + strconv.Itoa(int(diskSize)) + ", "
-	}
-	if statusOk {
-		updateSet += " status = '" + status + "', "
-	}
-	if userUUIDOk {
-		updateSet += " user_uuid = '" + userUUID + "', "
-	}
 
 	sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
 
 	logger.Logger.Println("update_server sql : ", sql)
 
-	stmt, err := mysql.Prepare(sql)
+	stmt, err = mysql.Prepare(sql)
 	if err != nil {
 		errStr := "UpdateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
-		return nil, hcc_errors.ViolinSQLOperationFail, errStr
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinSQLOperationFail, errStr))
+
+		goto ERROR
 	}
 	defer func() {
 		_ = stmt.Close()
 	}()
 
-	_, err2 := stmt.Exec(requestedUUID)
+	_, err2 = stmt.Exec(requestedUUID)
 	if err2 != nil {
 		errStr := "UpdateServer(): " + err2.Error()
 		logger.Logger.Println(errStr)
-		return nil, hcc_errors.ViolinSQLOperationFail, errStr
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinSQLOperationFail, errStr))
+
+		goto ERROR
 	}
 
-	server, errCode, errStr := ReadServer(requestedUUID)
+	server, errCode, errStr = ReadServer(requestedUUID)
 	if errCode != 0 {
 		logger.Logger.Println("UpdateServer(): " + errStr)
 	}
 
-	return server, 0, ""
+	return server, errStack.ConvertReportForm()
+ERROR:
+	logger.Logger.Println("UpdateServer(): Failed to update server")
+	logger.Logger.Println("UpdateServer(): errStack: ", errStack)
+
+	_ = errStack.Push(hcc_errors.NewHccError(
+		hcc_errors.ViolinInternalCreateServerFailed,
+		"UpdateServer(): Failed to update server",
+	))
+
+	return nil, errStack.ConvertReportForm()
 }
 
 // DeleteServer : Delete a server by UUID
