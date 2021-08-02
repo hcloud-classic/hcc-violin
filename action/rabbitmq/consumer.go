@@ -113,9 +113,15 @@ func ConsumeCreateServer() error {
 				return
 			}
 
-			logger.Logger.Println("QueueCreateServer: Creating server for " + data.RoutineServerUUID)
-			DoCreateServerRoutineQueue(data.RoutineServerUUID, &data.RoutineSubnet, data.RoutineNodes,
-				data.CelloParams, data.RoutineFirstIP, data.RoutineLastIP, data.Token)
+			if data.IsUpdate {
+				logger.Logger.Println("QueueUpdateServerNodes: Updating server for " + data.RoutineServerUUID)
+				DoUpdateServerNodesRoutineQueue(data.RoutineServerUUID, &data.RoutineSubnet, data.RoutineNodes,
+					data.RoutineFirstIP, data.RoutineLastIP, data.Token)
+			} else {
+				logger.Logger.Println("QueueCreateServer: Creating server for " + data.RoutineServerUUID)
+				DoCreateServerRoutineQueue(data.RoutineServerUUID, &data.RoutineSubnet, data.RoutineNodes,
+					data.CelloParams, data.RoutineFirstIP, data.RoutineLastIP, data.Token)
+			}
 		}
 	}()
 

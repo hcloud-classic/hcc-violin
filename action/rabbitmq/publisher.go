@@ -110,3 +110,58 @@ func QueueCreateServer(routineServerUUID string, routineSubnet *pb.Subnet, routi
 
 	return nil
 }
+
+// QueueUpdateServerNodes : Publish server updating queues to RabbitMQ channel
+func QueueUpdateServerNodes(routineServerUUID string, routineSubnet *pb.Subnet, routineNodes []pb.Node,
+	routineFirstIP net.IP, routineLastIP net.IP, token string) error {
+	qCreate, err := Channel.QueueDeclare(
+		"create_server",
+		false,
+		false,
+		false,
+		false,
+		nil)
+	if err != nil {
+		logger.Logger.Println("QueueUpdateServerNodes: Failed to declare a update queue")
+		return err
+	}
+
+	body, _ := json.Marshal(
+		createServerDataStruct{
+			RoutineServerUUID: routineServerUUID,
+			RoutineSubnet: pb.Subnet{
+				UUID:           routineSubnet.UUID,
+				GroupID:        routineSubnet.GroupID,
+				NetworkIP:      routineSubnet.NetworkIP,
+				Netmask:        routineSubnet.Netmask,
+				Gateway:        routineSubnet.Gateway,
+				NextServer:     routineSubnet.NextServer,
+				NameServer:     routineSubnet.NameServer,
+				DomainName:     routineSubnet.DomainName,
+				LeaderNodeUUID: routineSubnet.LeaderNodeUUID,
+				OS:             routineSubnet.OS,
+				SubnetName:     routineSubnet.SubnetName,
+				CreatedAt:      routineSubnet.CreatedAt,
+			},
+			RoutineNodes:   routineNodes,
+			RoutineFirstIP: routineFirstIP,
+			RoutineLastIP:  routineLastIP,
+			Token:          token,
+		})
+	err = Channel.Publish(
+		"",
+		qCreate.Name,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:     "text/plain",
+			ContentEncoding: "utf-8",
+			Body:            body,
+		})
+	if err != nil {
+		logger.Logger.Println("QueueUpdateServerNodes: Failed to register publisher")
+		return err
+	}
+
+	return nil
+}
