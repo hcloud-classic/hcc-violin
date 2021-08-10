@@ -317,7 +317,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	celloParams["disk_size"] = strconv.Itoa(int(server.DiskSize))
 
 	logger.Logger.Println("doCreateServerRoutine(): Getting subnet info from harp module")
-	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID)
+	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID, false)
 	if err != nil {
 		return err
 	}
@@ -340,7 +340,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 
 func doUpdateServerNodesRoutine(server *pb.Server, nodes []pb.Node, token string) error {
 	logger.Logger.Println("doUpdateServerNodesRoutine(): Getting subnet info from harp module")
-	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID)
+	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID, true)
 	if err != nil {
 		return err
 	}
@@ -784,6 +784,11 @@ func UpdateServerNodes(in *pb.ReqUpdateServerNodes) (*pb.Server, *hcc_errors.Hcc
 		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServerNodes(): Need a server_uuid argument"))
 
 		goto ERROR
+	}
+
+	server, errCode, errStr = ReadServer(requestedUUID)
+	if errCode != 0 {
+		logger.Logger.Println("UpdateServerNodes(): " + errStr)
 	}
 
 	selectedNodes = in.GetSelectedNodes()

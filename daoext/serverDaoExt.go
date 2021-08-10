@@ -57,7 +57,7 @@ func checkNetmask(netmask string) (net.IPMask, error) {
 }
 
 // DoGetSubnet : Get the subnet infos
-func DoGetSubnet(subnetUUID string) (*net.IPNet, *pb.Subnet, error) {
+func DoGetSubnet(subnetUUID string, isUpdate bool) (*net.IPNet, *pb.Subnet, error) {
 	var ipNet net.IPNet
 
 	subnet, err := client.RC.GetSubnet(subnetUUID)
@@ -66,7 +66,7 @@ func DoGetSubnet(subnetUUID string) (*net.IPNet, *pb.Subnet, error) {
 		return nil, nil, err
 	}
 
-	if len(subnet.ServerUUID) != 0 {
+	if !isUpdate && len(subnet.ServerUUID) != 0 {
 		errMsg := "createServer: Selected subnet (subnetUUID=" + subnetUUID +
 			") is used by one of server (serverUUID=" + subnet.ServerUUID + ")"
 		logger.Logger.Println(errMsg)
