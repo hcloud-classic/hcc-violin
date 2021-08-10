@@ -88,7 +88,7 @@ func (s *violinServer) GetServerNum(_ context.Context, in *pb.ReqGetServerNum) (
 }
 
 func (s *violinServer) UpdateServer(_ context.Context, in *pb.ReqUpdateServer) (*pb.ResUpdateServer, error) {
-	logger.Logger.Println("Request received: UpdateServer()")
+	// logger.Logger.Println("Request received: UpdateServer()")
 
 	updateServer, errStack := dao.UpdateServer(in)
 	if updateServer == nil {

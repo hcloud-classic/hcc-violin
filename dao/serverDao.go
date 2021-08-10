@@ -574,8 +574,6 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 
 	sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
 
-	logger.Logger.Println("update_server sql : ", sql)
-
 	stmt, err = mysql.Prepare(sql)
 	if err != nil {
 		errStr := "UpdateServer(): " + err.Error()
