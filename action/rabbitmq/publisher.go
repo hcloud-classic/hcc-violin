@@ -147,6 +147,7 @@ func QueueUpdateServerNodes(routineServerUUID string, routineSubnet *pb.Subnet, 
 			RoutineFirstIP: routineFirstIP,
 			RoutineLastIP:  routineLastIP,
 			Token:          token,
+			IsUpdate:       true,
 		})
 	err = Channel.Publish(
 		"",
