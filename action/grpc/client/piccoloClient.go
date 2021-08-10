@@ -57,7 +57,7 @@ func (rc *RPCClient) WriteServerAction(serverUUID string, action string, result 
 
 // GetGroupList : Get list of the group
 func (rc *RPCClient) GetGroupList(_ *pb.Empty) (*pb.ResGetGroupList, *hcc_errors.HccErrorStack) {
-	var errStack *hcc_errors.HccErrorStack = nil
+	var errStack *hcc_errors.HccErrorStack
 
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Piccolo.RequestTimeoutMs)*time.Millisecond)
@@ -76,7 +76,7 @@ func (rc *RPCClient) GetGroupList(_ *pb.Empty) (*pb.ResGetGroupList, *hcc_errors
 
 // GetQuota : Get the quota of the group
 func (rc *RPCClient) GetQuota(groupID int64) (*pb.ResGetQuota, *hcc_errors.HccErrorStack) {
-	var errStack *hcc_errors.HccErrorStack = nil
+	var errStack *hcc_errors.HccErrorStack
 
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(config.Piccolo.RequestTimeoutMs)*time.Millisecond)

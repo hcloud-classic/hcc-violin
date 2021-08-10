@@ -21,6 +21,7 @@ type createServerDataStruct struct {
 	RoutineFirstIP    net.IP                 `json:"routine_first_ip"`
 	RoutineLastIP     net.IP                 `json:"routine_last_ip"`
 	Token             string                 `json:"token"`
+	IsUpdate          bool                   `json:"is_update"`
 }
 
 func printLogDoCreateServerRoutineQueue(serverUUID string, msg string) {
@@ -28,7 +29,7 @@ func printLogDoCreateServerRoutineQueue(serverUUID string, msg string) {
 }
 
 func updateServerStatus(serverUUID string, status string) error {
-	sql := "update server set status = '" + status + "' where uuid = ?"
+	sql := "update server_list set status = '" + status + "' where uuid = ?"
 
 	logger.Logger.Println("UpdateServerStatus sql : ", sql)
 

@@ -264,8 +264,8 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 		return nil, hcc_errors.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + err.Error()
 	}
 
-	var coreTotal int32 = 0
-	var memoryTotal int32 = 0
+	var coreTotal int32
+	var memoryTotal int32
 
 	for i := range allNodes {
 		if server.GroupID != allNodes[i].GroupID {
@@ -317,7 +317,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	celloParams["disk_size"] = strconv.Itoa(int(server.DiskSize))
 
 	logger.Logger.Println("doCreateServerRoutine(): Getting subnet info from harp module")
-	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID)
+	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID, false)
 	if err != nil {
 		return err
 	}
@@ -338,27 +338,22 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	return nil
 }
 
-func doUpdateServerRoutine(server *pb.Server, nodes []pb.Node, token string) error {
-	celloParams := make(map[string]interface{})
-	celloParams["user_uuid"] = server.UserUUID
-	celloParams["os"] = server.OS
-	celloParams["disk_size"] = strconv.Itoa(int(server.DiskSize))
-
-	logger.Logger.Println("doCreateServerRoutine(): Getting subnet info from harp module")
-	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID)
+func doUpdateServerNodesRoutine(server *pb.Server, nodes []pb.Node, token string) error {
+	logger.Logger.Println("doUpdateServerNodesRoutine(): Getting subnet info from harp module")
+	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID, true)
 	if err != nil {
 		return err
 	}
 
-	logger.Logger.Println("doCreateServerRoutine(): ", serverSubnet, subnet)
+	logger.Logger.Println("doUpdateServerNodesRoutine(): ", serverSubnet, subnet)
 
-	logger.Logger.Println("doCreateServerRoutine(): Getting leaderNodeUUID from first of nodes[]")
+	logger.Logger.Println("doUpdateServerNodesRoutine(): Getting leaderNodeUUID from first of nodes[]")
 	subnet.LeaderNodeUUID = nodes[0].UUID
 
-	logger.Logger.Println("doCreateServerRoutine(): Getting IP address range")
+	logger.Logger.Println("doUpdateServerNodesRoutine(): Getting IP address range")
 	firstIP, lastIP := daoext.DoGetIPRange(serverSubnet, nodes)
 
-	err = rabbitmq.QueueCreateServer(server.UUID, subnet, nodes, celloParams, firstIP, lastIP, token)
+	err = rabbitmq.QueueUpdateServerNodes(server.UUID, subnet, nodes, firstIP, lastIP, token)
 	if err != nil {
 		return err
 	}
@@ -397,8 +392,8 @@ func checkCreateServerArgs(reqServer *pb.Server) bool {
 
 // CreateServer : Create a server
 func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack) {
-	var cpuCores int32 = 0
-	var memory int32 = 0
+	var cpuCores int32
+	var memory int32
 	var serverUUID string
 	var nodes []pb.Node
 	var server pb.Server
@@ -509,7 +504,7 @@ ERROR:
 func checkUpdateServerArgs(reqServer *pb.Server) bool {
 	serverNameOk := len(reqServer.ServerName) != 0
 	serverDescOk := len(reqServer.ServerDesc) != 0
-	statusOk := len(reqServer.ServerName) != 0
+	statusOk := len(reqServer.Status) != 0
 
 	return !serverNameOk && !serverDescOk && !statusOk
 }
@@ -578,8 +573,6 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	}
 
 	sql += updateSet[0:len(updateSet)-2] + " where uuid = ?"
-
-	logger.Logger.Println("update_server sql : ", sql)
 
 	stmt, err = mysql.Prepare(sql)
 	if err != nil {
@@ -768,4 +761,73 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	}
 
 	return server, 0, ""
+}
+
+// UpdateServerNodes : Update nodes of the server
+func UpdateServerNodes(in *pb.ReqUpdateServerNodes) (*pb.Server, *hcc_errors.HccErrorStack) {
+	var server *pb.Server
+
+	var requestedUUID string
+	var selectedNodes string
+	var nodes []pb.Node
+	var splitSelectedNodes []string
+
+	var err error
+	var errCode uint64
+	var errStr string
+	errStack := hcc_errors.NewHccErrorStack()
+
+	requestedUUID = in.GetServerUUID()
+	if len(requestedUUID) == 0 {
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServerNodes(): Need a server_uuid argument"))
+
+		goto ERROR
+	}
+
+	server, errCode, errStr = ReadServer(requestedUUID)
+	if errCode != 0 {
+		logger.Logger.Println("UpdateServerNodes(): " + errStr)
+	}
+
+	selectedNodes = in.GetSelectedNodes()
+	if len(selectedNodes) == 0 {
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServerNodes(): Nodes are not selected"))
+
+		goto ERROR
+	}
+
+	splitSelectedNodes = strings.Split(selectedNodes, ",")
+	for _, nodeUUID := range splitSelectedNodes {
+		if nodeUUID == "" {
+			continue
+		}
+
+		nodes = append(nodes, pb.Node{
+			UUID: nodeUUID,
+		})
+	}
+
+	err = doUpdateServerNodesRoutine(server, nodes, in.GetToken())
+	if err != nil {
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, err.Error()))
+
+		goto ERROR
+	}
+
+	server, errCode, errStr = ReadServer(requestedUUID)
+	if errCode != 0 {
+		logger.Logger.Println("UpdateServerNodes(): " + errStr)
+	}
+
+	return server, errStack.ConvertReportForm()
+ERROR:
+	logger.Logger.Println("UpdateServerNodes(): Failed to update nodes of the server")
+	logger.Logger.Println("UpdateServerNodes(): errStack: ", errStack)
+
+	_ = errStack.Push(hcc_errors.NewHccError(
+		hcc_errors.ViolinInternalCreateServerFailed,
+		"UpdateServerNodes(): Failed to update nodes of the server",
+	))
+
+	return nil, errStack.ConvertReportForm()
 }

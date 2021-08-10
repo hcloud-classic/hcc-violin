@@ -88,7 +88,7 @@ func (s *violinServer) GetServerNum(_ context.Context, in *pb.ReqGetServerNum) (
 }
 
 func (s *violinServer) UpdateServer(_ context.Context, in *pb.ReqUpdateServer) (*pb.ResUpdateServer, error) {
-	logger.Logger.Println("Request received: UpdateServer()")
+	// logger.Logger.Println("Request received: UpdateServer()")
 
 	updateServer, errStack := dao.UpdateServer(in)
 	if updateServer == nil {
@@ -96,6 +96,17 @@ func (s *violinServer) UpdateServer(_ context.Context, in *pb.ReqUpdateServer) (
 	}
 
 	return &pb.ResUpdateServer{Server: updateServer}, nil
+}
+
+func (s *violinServer) UpdateServerNodes(_ context.Context, in *pb.ReqUpdateServerNodes) (*pb.ResUpdateServerNodes, error) {
+	logger.Logger.Println("Request received: UpdateServerNodes()")
+
+	updateServer, errStack := dao.UpdateServerNodes(in)
+	if updateServer == nil {
+		return &pb.ResUpdateServerNodes{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
+	}
+
+	return &pb.ResUpdateServerNodes{Server: updateServer}, nil
 }
 
 func (s *violinServer) DeleteServer(_ context.Context, in *pb.ReqDeleteServer) (*pb.ResDeleteServer, error) {
