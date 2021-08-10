@@ -99,7 +99,7 @@ func (s *violinServer) UpdateServer(_ context.Context, in *pb.ReqUpdateServer) (
 }
 
 func (s *violinServer) UpdateServerNodes(_ context.Context, in *pb.ReqUpdateServerNodes) (*pb.ResUpdateServerNodes, error) {
-	logger.Logger.Println("Request received: UpdateServer()")
+	logger.Logger.Println("Request received: UpdateServerNodes()")
 
 	updateServer, errStack := dao.UpdateServerNodes(in)
 	if updateServer == nil {
