@@ -264,8 +264,8 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 		return nil, hcc_errors.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + err.Error()
 	}
 
-	var coreTotal int32 = 0
-	var memoryTotal int32 = 0
+	var coreTotal int32
+	var memoryTotal int32
 
 	for i := range allNodes {
 		if server.GroupID != allNodes[i].GroupID {
@@ -392,8 +392,8 @@ func checkCreateServerArgs(reqServer *pb.Server) bool {
 
 // CreateServer : Create a server
 func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack) {
-	var cpuCores int32 = 0
-	var memory int32 = 0
+	var cpuCores int32
+	var memory int32
 	var serverUUID string
 	var nodes []pb.Node
 	var server pb.Server
