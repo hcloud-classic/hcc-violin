@@ -504,7 +504,7 @@ ERROR:
 func checkUpdateServerArgs(reqServer *pb.Server) bool {
 	serverNameOk := len(reqServer.ServerName) != 0
 	serverDescOk := len(reqServer.ServerDesc) != 0
-	statusOk := len(reqServer.ServerName) != 0
+	statusOk := len(reqServer.Status) != 0
 
 	return !serverNameOk && !serverDescOk && !statusOk
 }
