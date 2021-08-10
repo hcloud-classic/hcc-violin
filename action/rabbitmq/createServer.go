@@ -29,7 +29,7 @@ func printLogDoCreateServerRoutineQueue(serverUUID string, msg string) {
 }
 
 func updateServerStatus(serverUUID string, status string) error {
-	sql := "update server set status = '" + status + "' where uuid = ?"
+	sql := "update server_list set status = '" + status + "' where uuid = ?"
 
 	logger.Logger.Println("UpdateServerStatus sql : ", sql)
 
