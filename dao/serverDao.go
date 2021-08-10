@@ -798,6 +798,10 @@ func UpdateServerNodes(in *pb.ReqUpdateServerNodes) (*pb.Server, *hcc_errors.Hcc
 
 	splitSelectedNodes = strings.Split(selectedNodes, ",")
 	for _, nodeUUID := range splitSelectedNodes {
+		if nodeUUID == "" {
+			continue
+		}
+
 		nodes = append(nodes, pb.Node{
 			UUID: nodeUUID,
 		})
