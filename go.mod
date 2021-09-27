@@ -6,6 +6,7 @@ require (
 	github.com/Terry-Mao/goconf v0.0.0-20161115082538-13cb73d70c44
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2
 	github.com/apparentlymart/go-cidr v1.1.0
+	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -16,7 +17,7 @@ require (
 	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/appengine v1.6.2 // indirect
 	google.golang.org/genproto v0.0.0-20210111234610-22ae2b108f89 // indirect
-	google.golang.org/grpc v1.40.0
+	google.golang.org/grpc v1.41.0
 	google.golang.org/protobuf v1.26.0
 	innogrid.com/hcloud-classic/hcc_errors v0.0.0
 	innogrid.com/hcloud-classic/pb v0.0.0
