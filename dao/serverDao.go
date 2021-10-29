@@ -708,7 +708,6 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 			},
 		})
 		if err != nil {
-
 			logger.Logger.Println("DeleteServer(): Failed to re-setting nodes info  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
 		}
 	}

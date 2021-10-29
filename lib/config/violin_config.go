@@ -14,6 +14,8 @@ type violinConfig struct {
 	HarpConfig      *goconf.Section
 	SchedulerConfig *goconf.Section
 	PiccoloConfig   *goconf.Section
+	PianoConfig     *goconf.Section
+	AutoScaleConfig *goconf.Section
 }
 
 /*-----------------------------------
@@ -31,6 +33,8 @@ connection_retry_interval_ms 500
 
 [grpc]
 port 7500
+client_ping_interval_ms 1000
+client_ping_timeout_ms 1000
 
 [http]
 request_timeout_ms 5000
@@ -60,4 +64,15 @@ harp_server_address 222.222.222.222
 harp_server_port 3333
 harp_request_timeout_ms 5000
 harp_wait_for_leader_node_timeout_sec 30
+
+[piano]
+piano_server_address 222.222.222.222
+piano_server_port 6666
+piano_request_timeout_ms 30000
+
+[autoscale]
+debug on
+check_server_resource_interval_ms 3000
+autoscale_trigger_cpu_usage_percent 90
+autoscale_trigger_memory_usage_percent 90
 -----------------------------------*/
