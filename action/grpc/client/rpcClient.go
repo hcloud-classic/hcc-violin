@@ -11,6 +11,7 @@ type RPCClient struct {
 	cello     pb.CelloClient
 	scheduler pb.SchedulerClient
 	piccolo   pb.PiccoloClient
+	piano     pb.PianoClient
 }
 
 // RC : Exported variable pointed to RPCClient
@@ -43,11 +44,18 @@ func Init() error {
 		return err
 	}
 
+	err = initPiano()
+	if err != nil {
+		return err
+	}
+	checkPiano()
+
 	return nil
 }
 
 // End : Close connections of gRPC clients
 func End() {
+	closePiano()
 	closePiccolo()
 	closeScheduler()
 	closeCello()

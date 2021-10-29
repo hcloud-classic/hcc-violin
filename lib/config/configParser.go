@@ -63,6 +63,21 @@ func parseGrpc() {
 	if err != nil {
 		logger.Logger.Panicln(err)
 	}
+
+	Grpc.Port, err = config.GrpcConfig.Int("port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Grpc.ClientPingIntervalMs, err = config.GrpcConfig.Int("client_ping_interval_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Grpc.ClientPingIntervalMs, err = config.GrpcConfig.Int("client_ping_timeout_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
 }
 
 func parseHTTP() {
@@ -241,6 +256,57 @@ func parsePiccolo() {
 	}
 }
 
+func parsePiano() {
+	config.PianoConfig = conf.Get("piano")
+	if config.PianoConfig == nil {
+		logger.Logger.Panicln("no piano section")
+	}
+
+	Piano = piano{}
+	Piano.ServerAddress, err = config.PianoConfig.String("piano_server_address")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Piano.ServerPort, err = config.PianoConfig.Int("piano_server_port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Piano.RequestTimeoutMs, err = config.PianoConfig.Int("piano_request_timeout_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+}
+
+func parseAutoScale() {
+	config.AutoScaleConfig = conf.Get("autoscale")
+	if config.AutoScaleConfig == nil {
+		logger.Logger.Panicln("no autoscale section")
+	}
+
+	AutoScale = autoscale{}
+	AutoScale.Debug, err = config.AutoScaleConfig.String("debug")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	AutoScale.CheckServerResourceIntervalMs, err = config.AutoScaleConfig.Int("check_server_resource_interval_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	AutoScale.AutoScaleTriggerCPUUsagePercent, err = config.AutoScaleConfig.Int("autoscale_trigger_cpu_usage_percent")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	AutoScale.AutoScaleTriggerMemoryUsagePercent, err = config.AutoScaleConfig.Int("autoscale_trigger_memory_usage_percent")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+}
+
 // Init : Parse config file and initialize config structure
 func Init() {
 	if err = conf.Parse(configLocation); err != nil {
@@ -256,4 +322,6 @@ func Init() {
 	parseHarp()
 	parseScheduler()
 	parsePiccolo()
+	parsePiano()
+	parseAutoScale()
 }

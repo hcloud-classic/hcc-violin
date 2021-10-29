@@ -5,12 +5,14 @@ import (
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/grpc/server"
 	"hcc/violin/action/rabbitmq"
+	"hcc/violin/lib/autoscale"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"innogrid.com/hcloud-classic/hcc_errors"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 )
 
@@ -38,6 +40,9 @@ func init() {
 	if err != nil {
 		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "client.Init(): "+err.Error()).Fatal()
 	}
+
+	logger.Logger.Println("Starting autoscale.CheckServerResource() Interval is " + strconv.Itoa(int(config.AutoScale.CheckServerResourceIntervalMs)) + "ms")
+	autoscale.CheckServerResource()
 }
 
 func end() {
