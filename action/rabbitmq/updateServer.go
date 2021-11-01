@@ -24,6 +24,9 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 
 	var routineError error
 
+	var previousNodesDetailStr string
+	var newNodesDetailStr string
+
 	printLogDoUpdateServerRoutineQueue(routineServerUUID, "Updating subnet info")
 	routineError = daoext.DoUpdateSubnet(routineSubnet.UUID, routineSubnet.LeaderNodeUUID, routineServerUUID)
 	if routineError != nil {
@@ -77,6 +80,9 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 	for i := range routineNodes {
 		var skipUpdate = false
 
+		newNodesDetailStr += "NodeName: " + routineNodes[i].NodeName + ", " +
+			"UUID: " + routineNodes[i].UUID + "\\n"
+
 		for j := range previousNodes {
 			if previousNodes[j].UUID == routineNodes[i].UUID {
 				skipUpdate = true
@@ -126,6 +132,9 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 
 	for i := range previousNodes {
 		var duplicated = false
+
+		previousNodesDetailStr += "NodeName: " + previousNodes[i].NodeName + ", " +
+			"UUID: " + previousNodes[i].UUID + "\\n"
 
 		for _, nodeUUID := range duplicatedNodeUUIDs {
 			if nodeUUID == previousNodes[i].UUID {
@@ -251,6 +260,11 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 		"",
 		token)
 
+	_ = client.RC.WriteServerAlarm(routineServerUUID,
+		"Server Nodes are changed",
+		"[Previous Nodes]"+"\\n"+previousNodesDetailStr+"\\n"+
+			"[New Nodes]"+"\\n"+newNodesDetailStr)
+
 	return
 
 ERROR:
@@ -259,4 +273,8 @@ ERROR:
 	if err != nil {
 		logger.Logger.Println("DoUpdateServerNodesRoutineQueue(): Failed to update server status as failed")
 	}
+
+	_ = client.RC.WriteServerAlarm(routineServerUUID,
+		"Failed to change Server Nodes",
+		routineError.Error())
 }
