@@ -105,6 +105,23 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 
 			goto ERROR
 		}
+
+		_, _, errStr := daoext.CreateServerNode(&pb.ReqCreateServerNode{
+			ServerNode: &pb.ServerNode{
+				ServerUUID: routineServerUUID,
+				NodeUUID:   routineNodes[i].UUID,
+			},
+		})
+		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"violin / create_server_node (New)",
+				"Failed",
+				errStr,
+				token)
+
+			goto ERROR
+		}
 	}
 
 	for i := range previousNodes {
@@ -131,6 +148,18 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 			_ = client.RC.WriteServerAction(
 				routineServerUUID,
 				"flute / update_node (Previous)",
+				"Failed",
+				routineError.Error(),
+				token)
+
+			goto ERROR
+		}
+
+		err := daoext.DeleteServerNodeByNodeUUID(routineNodes[i].UUID)
+		if err != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"violin / delete_server_node (Previous)",
 				"Failed",
 				routineError.Error(),
 				token)
