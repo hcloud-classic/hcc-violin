@@ -12,16 +12,6 @@ import (
 	"time"
 )
 
-type updateServerDataStruct struct {
-	RoutineServerUUID string                 `json:"routine_server_uuid"`
-	RoutineSubnet     pb.Subnet              `json:"routine_subnet"`
-	RoutineNodes      []pb.Node              `json:"routine_nodes"`
-	CelloParams       map[string]interface{} `json:"cello_params"`
-	RoutineFirstIP    net.IP                 `json:"routine_first_ip"`
-	RoutineLastIP     net.IP                 `json:"routine_last_ip"`
-	Token             string                 `json:"token"`
-}
-
 func printLogDoUpdateServerRoutineQueue(serverUUID string, msg string) {
 	logger.Logger.Println("DoUpdateServerNodesRoutineQueue(): server_uuid=" + serverUUID + ": " + msg)
 }
