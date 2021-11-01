@@ -482,6 +482,98 @@ ERROR:
 	return nil, errStack.ConvertReportForm()
 }
 
+// ScaleUpServer : Scale up the server
+func ScaleUpServer(in *pb.ReqScaleUpServer) (*pb.Server, *hcc_errors.HccErrorStack) {
+	var availableNode []pb.Node
+	var serverNodes []pb.Node
+	var server *pb.Server
+
+	var err error
+	var errCode uint64
+	var errStr string
+	errStack := hcc_errors.NewHccErrorStack()
+
+	serverUUID := in.GetServerUUID()
+	if len(serverUUID) != 0 {
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "ScaleUpServer(): Need a serverUUID argument"))
+
+		goto ERROR
+	}
+
+	server, errCode, errStr = ReadServer(serverUUID)
+	if errCode != 0 {
+		errStr = "ScaleUpServer(): " + errStr
+		_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalOperationFail, errStr))
+
+		goto ERROR
+	}
+
+	serverNodes, err = client.RC.GetNodeList(serverUUID)
+	if err != nil {
+		errStr = "ScaleUpServer(): " + err.Error()
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
+
+		goto ERROR
+	}
+	if len(serverNodes) == 0 {
+		errStr = "ScaleUpServer(): Failed to get server nodes"
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
+
+		goto ERROR
+	}
+
+	// Scheduler
+	availableNode, err = daoext.DoGetNodes(&pb.Quota{
+		ServerUUID:    serverUUID,
+		CPU:           serverNodes[0].CPUCores,
+		Memory:        serverNodes[0].Memory,
+		NumberOfNodes: 1,
+	})
+	if err != nil {
+		errStr = "ScaleUpServer(): " + err.Error()
+		logger.Logger.Println(errStr)
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalGetAvailableNodesError, errStr))
+
+		goto ERROR
+	}
+	if len(availableNode) == 0 {
+		errStr = "ScaleUpServer(): Failed to get a available node"
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
+
+		goto ERROR
+	}
+
+	serverNodes = append(serverNodes, pb.Node{
+		UUID:       availableNode[0].UUID,
+		ServerUUID: serverUUID,
+	})
+
+	err = doUpdateServerNodesRoutine(server, serverNodes, in.GetToken())
+	if err != nil {
+		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, err.Error()))
+
+		goto ERROR
+	}
+
+	server, errCode, errStr = ReadServer(serverUUID)
+	if errCode != 0 {
+		logger.Logger.Println("ScaleUpServer(): " + errStr)
+	}
+
+	return server, errStack.ConvertReportForm()
+ERROR:
+	logger.Logger.Println("ScaleUpServer(): Failed to scale up the server")
+	logger.Logger.Println("ScaleUpServer(): errStack: ", errStack)
+
+	_ = errStack.Push(hcc_errors.NewHccError(
+		hcc_errors.ViolinInternalCreateServerFailed,
+		"ScaleUpServer(): Failed to scale up the server",
+	))
+
+	return nil, errStack.ConvertReportForm()
+}
+
 func checkUpdateServerArgs(reqServer *pb.Server) bool {
 	serverNameOk := len(reqServer.ServerName) != 0
 	serverDescOk := len(reqServer.ServerDesc) != 0

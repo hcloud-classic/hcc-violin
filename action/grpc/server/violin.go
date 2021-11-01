@@ -109,6 +109,17 @@ func (s *violinServer) UpdateServerNodes(_ context.Context, in *pb.ReqUpdateServ
 	return &pb.ResUpdateServerNodes{Server: updateServer}, nil
 }
 
+func (s *violinServer) ScaleUpServer(_ context.Context, in *pb.ReqScaleUpServer) (*pb.ResScaleUpServer, error) {
+	logger.Logger.Println("Request received: ScaleUpServer()")
+
+	scaleUpServer, errStack := dao.ScaleUpServer(in)
+	if scaleUpServer == nil {
+		return &pb.ResScaleUpServer{Server: &pb.Server{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
+	}
+
+	return &pb.ResScaleUpServer{Server: scaleUpServer}, nil
+}
+
 func (s *violinServer) DeleteServer(_ context.Context, in *pb.ReqDeleteServer) (*pb.ResDeleteServer, error) {
 	logger.Logger.Println("Request received: DeleteServer()")
 
@@ -124,7 +135,7 @@ func (s *violinServer) DeleteServer(_ context.Context, in *pb.ReqDeleteServer) (
 func (s *violinServer) CreateServerNode(_ context.Context, in *pb.ReqCreateServerNode) (*pb.ResCreateServerNode, error) {
 	logger.Logger.Println("Request received: CreateServerNode()")
 
-	serverNode, errCode, errStr := dao.CreateServerNode(in)
+	serverNode, errCode, errStr := daoext.CreateServerNode(in)
 	if errCode != 0 {
 		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
 		return &pb.ResCreateServerNode{ServerNode: &pb.ServerNode{}, HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
