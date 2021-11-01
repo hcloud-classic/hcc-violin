@@ -12,16 +12,6 @@ import (
 	"time"
 )
 
-type updateServerDataStruct struct {
-	RoutineServerUUID string                 `json:"routine_server_uuid"`
-	RoutineSubnet     pb.Subnet              `json:"routine_subnet"`
-	RoutineNodes      []pb.Node              `json:"routine_nodes"`
-	CelloParams       map[string]interface{} `json:"cello_params"`
-	RoutineFirstIP    net.IP                 `json:"routine_first_ip"`
-	RoutineLastIP     net.IP                 `json:"routine_last_ip"`
-	Token             string                 `json:"token"`
-}
-
 func printLogDoUpdateServerRoutineQueue(serverUUID string, msg string) {
 	logger.Logger.Println("DoUpdateServerNodesRoutineQueue(): server_uuid=" + serverUUID + ": " + msg)
 }
@@ -33,6 +23,9 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 	var duplicatedNodeUUIDs []string
 
 	var routineError error
+
+	var previousNodesDetailStr string
+	var newNodesDetailStr string
 
 	printLogDoUpdateServerRoutineQueue(routineServerUUID, "Updating subnet info")
 	routineError = daoext.DoUpdateSubnet(routineSubnet.UUID, routineSubnet.LeaderNodeUUID, routineServerUUID)
@@ -87,6 +80,9 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 	for i := range routineNodes {
 		var skipUpdate = false
 
+		newNodesDetailStr += "NodeName: " + routineNodes[i].NodeName + ", " +
+			"UUID: " + routineNodes[i].UUID + "\\n"
+
 		for j := range previousNodes {
 			if previousNodes[j].UUID == routineNodes[i].UUID {
 				skipUpdate = true
@@ -115,10 +111,30 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 
 			goto ERROR
 		}
+
+		_, _, errStr := daoext.CreateServerNode(&pb.ReqCreateServerNode{
+			ServerNode: &pb.ServerNode{
+				ServerUUID: routineServerUUID,
+				NodeUUID:   routineNodes[i].UUID,
+			},
+		})
+		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"violin / create_server_node (New)",
+				"Failed",
+				errStr,
+				token)
+
+			goto ERROR
+		}
 	}
 
 	for i := range previousNodes {
 		var duplicated = false
+
+		previousNodesDetailStr += "NodeName: " + previousNodes[i].NodeName + ", " +
+			"UUID: " + previousNodes[i].UUID + "\\n"
 
 		for _, nodeUUID := range duplicatedNodeUUIDs {
 			if nodeUUID == previousNodes[i].UUID {
@@ -141,6 +157,18 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 			_ = client.RC.WriteServerAction(
 				routineServerUUID,
 				"flute / update_node (Previous)",
+				"Failed",
+				routineError.Error(),
+				token)
+
+			goto ERROR
+		}
+
+		err := daoext.DeleteServerNodeByNodeUUID(routineNodes[i].UUID)
+		if err != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"violin / delete_server_node (Previous)",
 				"Failed",
 				routineError.Error(),
 				token)
@@ -232,6 +260,11 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 		"",
 		token)
 
+	_ = client.RC.WriteServerAlarm(routineServerUUID,
+		"Server Nodes are changed",
+		"[Previous Nodes]"+"\\n"+previousNodesDetailStr+"\\n"+
+			"[New Nodes]"+"\\n"+newNodesDetailStr)
+
 	return
 
 ERROR:
@@ -240,4 +273,8 @@ ERROR:
 	if err != nil {
 		logger.Logger.Println("DoUpdateServerNodesRoutineQueue(): Failed to update server status as failed")
 	}
+
+	_ = client.RC.WriteServerAlarm(routineServerUUID,
+		"Failed to change Server Nodes",
+		routineError.Error())
 }
