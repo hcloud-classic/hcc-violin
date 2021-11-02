@@ -112,6 +112,9 @@ func doCheckServerResource() {
 	var reason = "AutoScale Triggered"
 
 	for _, server := range serverList.Server {
+		var needAutoScale = false
+		var reasonDetail string
+
 		if strings.ToLower(server.Status) == "creating" {
 			continue
 		}
@@ -126,11 +129,8 @@ func doCheckServerResource() {
 		}
 
 		if cpuUsagePercent >= int(config.AutoScale.AutoScaleTriggerCPUUsagePercent) {
-			err = client.RC.WriteServerAlarm(server.UUID, reason,
-				"CPU Usage is higher than "+strconv.Itoa(int(config.AutoScale.AutoScaleTriggerCPUUsagePercent))+"%")
-			if err != nil {
-				logger.Logger.Println("doCheckServerResource(): cpuUsagePercent, errStr=" + err.Error())
-			}
+			reasonDetail += "CPU Usage is higher than " + strconv.Itoa(int(config.AutoScale.AutoScaleTriggerCPUUsagePercent)) + "%"
+			needAutoScale = true
 		}
 
 		memoryUsagePercent, err := getMemoryUsagePercent(server.UUID)
@@ -143,10 +143,17 @@ func doCheckServerResource() {
 		}
 
 		if memoryUsagePercent >= int(config.AutoScale.AutoScaleTriggerMemoryUsagePercent) {
-			err = client.RC.WriteServerAlarm(server.UUID, reason,
-				"Memory Usage is higher than "+strconv.Itoa(int(config.AutoScale.AutoScaleTriggerMemoryUsagePercent))+"%")
+			if len(reasonDetail) != 0 {
+				reasonDetail += "\\n"
+			}
+			reasonDetail += "Memory Usage is higher than " + strconv.Itoa(int(config.AutoScale.AutoScaleTriggerMemoryUsagePercent)) + "%"
+			needAutoScale = true
+		}
+
+		if needAutoScale {
+			err = client.RC.WriteServerAlarm(server.UUID, reason, reasonDetail)
 			if err != nil {
-				logger.Logger.Println("doCheckServerResource(): memoryUsagePercent, errStr=" + err.Error())
+				logger.Logger.Println("doCheckServerResource(): " + err.Error())
 			}
 		}
 	}
