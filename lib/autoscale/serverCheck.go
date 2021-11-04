@@ -150,11 +150,13 @@ func doCheckServerResource() {
 			needAutoScale = true
 		}
 
-		if needAutoScale {
-			err = client.RC.WriteServerAlarm(server.UUID, reason, reasonDetail)
-			if err != nil {
-				logger.Logger.Println("doCheckServerResource(): " + err.Error())
-			}
+		if !needAutoScale {
+			reasonDetail = "Turn Off AutoScale"
+		}
+
+		err = client.RC.WriteServerAlarm(server.UUID, reason, reasonDetail)
+		if err != nil {
+			logger.Logger.Println("doCheckServerResource(): " + err.Error())
 		}
 	}
 
