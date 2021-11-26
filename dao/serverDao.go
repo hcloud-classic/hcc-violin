@@ -805,7 +805,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	}
 
 	logger.Logger.Println("DeleteServer(): Deleting the server info from the database (UUID: " + requestedUUID + ")")
-	sql := "delete from server where uuid = ?"
+	sql := "delete from server_list where uuid = ?"
 	stmt, err := mysql.Prepare(sql)
 	if err != nil {
 		errStr := "DeleteServer(): Failed to deleting the server info from the database  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")"
