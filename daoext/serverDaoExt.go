@@ -366,7 +366,7 @@ func DoCreateVolume(serverUUID string, celloParams map[string]interface{}, useTy
 	reqCreateVolume.Volume.Gateway_IP = gateway
 
 	reqCreateVolume.Volume.Action = "create"
-
+	reqCreateVolume.Volume.GroupID = int64(celloParams["group_id"].(float64))
 	logger.Logger.Println("[doCreateVolume] : ", reqCreateVolume.Volume)
 	resCreateVolume, err := client.RC.Volhandler(&reqCreateVolume)
 	if err != nil {

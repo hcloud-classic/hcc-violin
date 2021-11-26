@@ -299,7 +299,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	celloParams["user_uuid"] = server.UserUUID
 	celloParams["os"] = server.OS
 	celloParams["disk_size"] = strconv.Itoa(int(server.DiskSize))
-
+	celloParams["group_id"] = server.GroupID
 	logger.Logger.Println("doCreateServerRoutine(): Getting subnet info from harp module")
 	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID, false)
 	if err != nil {
