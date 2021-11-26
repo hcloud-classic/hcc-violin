@@ -3,18 +3,20 @@ package dao
 import (
 	dbsql "database/sql"
 	"errors"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"fmt"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/daoext"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
-	"innogrid.com/hcloud-classic/hcc_errors"
-	"innogrid.com/hcloud-classic/pb"
 	"strconv"
 	"strings"
 	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
+	"innogrid.com/hcloud-classic/hcc_errors"
+	"innogrid.com/hcloud-classic/pb"
 )
 
 // ReadServer : Get infos of a server
@@ -210,7 +212,8 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 			DiskSize:   int32(diskSize),
 			Status:     status,
 			UserUUID:   userUUID,
-			CreatedAt:  timestamppb.New(createdAt)})
+			CreatedAt:  timestamppb.New(createdAt),
+		})
 	}
 
 	for i := range servers {
@@ -226,7 +229,7 @@ func ReadServerList(in *pb.ReqGetServerList) (*pb.ResGetServerList, uint64, stri
 func ReadServerNum(in *pb.ReqGetServerNum) (*pb.ResGetServerNum, uint64, string) {
 	var serverNum pb.ResGetServerNum
 	var serverNr int64
-	var groupID = in.GetGroupID()
+	groupID := in.GetGroupID()
 
 	if groupID == 0 {
 		return nil, hcc_errors.ViolinGrpcArgumentError, "ReadServerNum(): please insert a group_id argument"
@@ -263,7 +266,7 @@ func doGetAvailableNodes(in *pb.ReqCreateServer, UUID string) ([]pb.Node, uint64
 	if err != nil {
 		return nil, hcc_errors.ViolinGrpcGetNodesError, "doGetAvailableNodes(): " + err.Error()
 	}
-
+	fmt.Println("####\nallNodes\n#### => ", allNodes)
 	for i := range allNodes {
 		if server.GroupID != allNodes[i].GroupID {
 			continue
@@ -296,7 +299,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	celloParams["user_uuid"] = server.UserUUID
 	celloParams["os"] = server.OS
 	celloParams["disk_size"] = strconv.Itoa(int(server.DiskSize))
-
+	celloParams["group_id"] = server.GroupID
 	logger.Logger.Println("doCreateServerRoutine(): Getting subnet info from harp module")
 	serverSubnet, subnet, err := daoext.DoGetSubnet(server.SubnetUUID, false)
 	if err != nil {
@@ -386,7 +389,6 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	var errCode uint64
 	var errStr string
 	errStack := hcc_errors.NewHccErrorStack()
-
 	reqServer := in.GetServer()
 	if reqServer == nil {
 		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "CreateServer(): Server is nil"))
@@ -441,7 +443,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 		UserUUID:   reqServer.GetUserUUID(),
 	}
 
-	sql = "insert into server_list(uuid, subnet_uuid, os, server_name, server_desc, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, now())"
+	sql = "insert into server_list(uuid, group_id,subnet_uuid, os, server_name, server_desc, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, now())"
 	stmt, err = mysql.Prepare(sql)
 	if err != nil {
 		errStr := "CreateServer(): " + err.Error()
@@ -453,7 +455,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	defer func() {
 		_ = stmt.Close()
 	}()
-	_, err = stmt.Exec(server.UUID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.Status, server.UserUUID)
+	_, err = stmt.Exec(server.UUID, server.GroupID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.Status, server.UserUUID)
 	if err != nil {
 		errStr := "CreateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
@@ -462,12 +464,14 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 		goto ERROR
 	}
 
+	fmt.Println("9")
 	err = doCreateServerRoutine(&server, nodes, in.GetToken())
 	if err != nil {
 		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, err.Error()))
 
 		goto ERROR
 	}
+	fmt.Println("10")
 
 	return &server, errStack.ConvertReportForm()
 ERROR:
@@ -598,7 +602,7 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 
 	var sql string
 	var stmt *dbsql.Stmt
-	var updateSet = ""
+	updateSet := ""
 
 	var err error
 	var err2 error
@@ -713,7 +717,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 		logger.Logger.Println("DeleteServer(): If seems nodes are already changed to inactive state (ServerUUID: " + requestedUUID + ")")
 	}
 
-	var subnetIsInactive = false
+	subnetIsInactive := false
 	var subnet *pb.Subnet
 
 	logger.Logger.Println("DeleteServer(): Getting subnet info (ServerUUID: " + requestedUUID + ")")
@@ -735,7 +739,7 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 		}
 
 		for i := config.Flute.TurnOffNodesWaitTimeSec; i >= 1; i-- {
-			var isAllNodesTurnedOff = true
+			isAllNodesTurnedOff := true
 
 			logger.Logger.Println("DeleteServer(): Wait for turning off nodes... (Remained time: " + strconv.FormatInt(i, 10) + "sec, ServerUUID: " + requestedUUID + ")")
 			for i := range nodes {

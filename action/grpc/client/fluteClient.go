@@ -3,13 +3,14 @@ package client
 import (
 	"context"
 	errors2 "errors"
-	"google.golang.org/grpc"
 	"hcc/violin/action/grpc/errconv"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
-	"innogrid.com/hcloud-classic/pb"
 	"strconv"
 	"time"
+
+	"google.golang.org/grpc"
+	"innogrid.com/hcloud-classic/pb"
 )
 
 var fluteConn *grpc.ClientConn
@@ -77,7 +78,7 @@ func (rc *RPCClient) OffNode(nodeUUID string, forceOff bool) error {
 	}
 	nodes = append(nodes, &node)
 
-	var powerState = pb.PowerState_OFF
+	powerState := pb.PowerState_OFF
 	if forceOff {
 		powerState = pb.PowerState_FORCE_OFF
 	}
