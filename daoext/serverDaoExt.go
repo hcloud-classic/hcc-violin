@@ -2,7 +2,7 @@ package daoext
 
 import (
 	"errors"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"fmt"
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/data"
 	"hcc/violin/driver"
@@ -10,13 +10,15 @@ import (
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"hcc/violin/model"
-	"innogrid.com/hcloud-classic/hcc_errors"
-	"innogrid.com/hcloud-classic/pb"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
+	"innogrid.com/hcloud-classic/hcc_errors"
+	"innogrid.com/hcloud-classic/pb"
 
 	"github.com/apparentlymart/go-cidr/cidr"
 	gouuid "github.com/nu7hatch/gouuid"
@@ -25,7 +27,7 @@ import (
 func checkNetmask(netmask string) (net.IPMask, error) {
 	var err error
 
-	var maskPartsStr = strings.Split(netmask, ".")
+	maskPartsStr := strings.Split(netmask, ".")
 	if len(maskPartsStr) != 4 {
 		return nil, errors.New(netmask + " is invalid, netmask should be X.X.X.X form")
 	}
@@ -38,7 +40,7 @@ func checkNetmask(netmask string) (net.IPMask, error) {
 		}
 	}
 
-	var mask = net.IPv4Mask(
+	mask := net.IPv4Mask(
 		byte(maskParts[0]),
 		byte(maskParts[1]),
 		byte(maskParts[2]),
@@ -122,7 +124,7 @@ func nodeScheduler(userquota *pb.Quota) ([]string, error) {
 	// 	fmt.Println("++++>", testqwe.Data.ScheduledNode.NodeList[index])
 	// }
 
-	//Debug for selected node mutation
+	// Debug for selected node mutation
 
 	// fmt.Println(testqwe.Data.NodeList)
 	// for index := 0; index < len(testqwe.Data.NodeList); index++ {
@@ -174,7 +176,8 @@ func ReadServerNodeList(in *pb.ReqGetServerNodeList) (*pb.ResGetServerNodeList, 
 			UUID:       uuid,
 			ServerUUID: serverUUID,
 			NodeUUID:   nodeUUID,
-			CreatedAt:  timestamppb.New(createdAt)})
+			CreatedAt:  timestamppb.New(createdAt),
+		})
 	}
 
 	for i := range serverNodes {
@@ -213,11 +216,11 @@ func DoGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 		return nil, err
 	}
 
-	var nrNodes = userQuota.NumberOfNodes
+	nrNodes := userQuota.NumberOfNodes
 	retNodes := resNodes.GetNodes()
 	nodeList := retNodes.GetShceduledNode()
 
-	//fmt.Println("Nodes:   ", retNodes)
+	fmt.Println("nrNodes : ", nrNodes, "\retNodes:   ", retNodes, "\nnodeList: ", nodeList)
 
 	// if len(nodeList.ShceduledNode) < int(nrNodes) || len(nodeList.ShceduledNode) == 0 {
 	if len(nodeList) == 0 {
@@ -226,7 +229,7 @@ func DoGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 		return nil, errors.New(errMsg)
 	}
 	var GatherSelectedNodes []pb.Node
-	var nodeSelected = 0
+	nodeSelected := 0
 
 	for _, nodes := range nodeList {
 		if nodes.UUID == "" {
@@ -243,7 +246,7 @@ func DoGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 			logger.Logger.Println(err)
 			return nil, err
 		}
-
+		fmt.Println("eachSelectedNode => ", eachSelectedNode)
 		node, err := client.RC.UpdateNode(&pb.ReqUpdateNode{Node: &pb.Node{
 			UUID:       eachSelectedNode.UUID,
 			Active:     1,
@@ -267,6 +270,7 @@ func DoGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 			Description: node.Description,
 			CreatedAt:   node.CreatedAt,
 			Active:      eachSelectedNode.Active,
+			GroupID:     eachSelectedNode.GroupID,
 		})
 
 		_, errCode, errStr := CreateServerNode(&pb.ReqCreateServerNode{
@@ -359,7 +363,7 @@ func DoCreateVolume(serverUUID string, celloParams map[string]interface{}, useTy
 	reqCreateVolume.Volume.UserUUID = userUUID
 	reqCreateVolume.Volume.UseType = useType
 	reqCreateVolume.Volume.Network_IP = firstIP.String()
-	reqCreateVolume.Volume.GatewayIp = gateway
+	reqCreateVolume.Volume.Gateway_IP = gateway
 
 	reqCreateVolume.Volume.Action = "create"
 
@@ -407,7 +411,7 @@ func DoCreateDHCPDConfig(subnetUUID string, serverUUID string) error {
 func DoTurnOnNodes(serverUUID string, leaderNodeUUID string, nodes []pb.Node) error {
 	printLogCreateServerRoutine(serverUUID, "Turning on leader node")
 
-	var foundLeaderNode = false
+	foundLeaderNode := false
 
 	for i := range nodes {
 		if nodes[i].UUID == leaderNodeUUID {
