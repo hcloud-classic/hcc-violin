@@ -21,6 +21,8 @@ func printLogDoDeleteServerRoutineQueue(serverUUID string, msg string) {
 func DoDeleteServerRoutineQueue(routineServerUUID string, token string) {
 	var routineError error
 
+	var nodes []pb.Node
+
 	var subnetIsInactive = false
 	var subnet *pb.Subnet
 
@@ -32,8 +34,26 @@ func DoDeleteServerRoutineQueue(routineServerUUID string, token string) {
 	var errCode uint64
 	var errText string
 
+	routineError = updateServerStatus(routineServerUUID, "Deleting")
+	if routineError != nil {
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"violin / update_server_status",
+			"Failed",
+			routineError.Error(),
+			token)
+
+		goto ERROR
+	}
+	_ = client.RC.WriteServerAction(
+		routineServerUUID,
+		"violin / update_server_status",
+		"Success",
+		"",
+		token)
+
 	printLogDoDeleteServerRoutineQueue(routineServerUUID, "Getting nodes list")
-	nodes, routineError := client.RC.GetNodeList(routineServerUUID)
+	nodes, routineError = client.RC.GetNodeList(routineServerUUID)
 	if routineError != nil {
 		_ = client.RC.WriteServerAction(
 			routineServerUUID,
@@ -296,13 +316,13 @@ func DoDeleteServerRoutineQueue(routineServerUUID string, token string) {
 	return
 
 ERROR:
-	printLogDoUpdateServerRoutineQueue(routineServerUUID, routineError.Error())
+	printLogDoDeleteServerRoutineQueue(routineServerUUID, routineError.Error())
 	err := updateServerStatus(routineServerUUID, "Failed")
 	if err != nil {
 		logger.Logger.Println("DoUpdateServerNodesRoutineQueue(): Failed to update server status as failed")
 	}
 
 	_ = client.RC.WriteServerAlarm(routineServerUUID,
-		"Failed to change Server Nodes",
+		"Failed to delete the server",
 		routineError.Error())
 }
