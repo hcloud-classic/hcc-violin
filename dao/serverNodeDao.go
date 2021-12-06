@@ -105,34 +105,3 @@ func DeleteServerNode(in *pb.ReqDeleteServerNode) (*pb.ServerNode, uint64, strin
 
 	return serverNode, 0, ""
 }
-
-// DeleteServerNodeByServerUUID : Delete server nodes. Delete server nodes matched with server UUID.
-func DeleteServerNodeByServerUUID(in *pb.ReqDeleteServerNodeByServerUUID) (string, uint64, string) {
-	var err error
-
-	requestedServerUUID := in.GetServerUUID()
-	requestedServerUUIDOk := len(requestedServerUUID) != 0
-	if !requestedServerUUIDOk {
-		return "", hcc_errors.ViolinGrpcArgumentError, "DeleteServerNodeByServerUUID(): need a serverUUID argument"
-	}
-
-	sql := "delete from server_node where server_uuid = ?"
-	stmt, err := mysql.Prepare(sql)
-	if err != nil {
-		errStr := "DeleteServerNodeByServerUUID(): " + err.Error()
-		logger.Logger.Println(errStr)
-		return "", hcc_errors.ViolinSQLOperationFail, errStr
-	}
-	defer func() {
-		_ = stmt.Close()
-	}()
-	result, err2 := stmt.Exec(requestedServerUUID)
-	if err2 != nil {
-		errStr := "DeleteServerNodeByServerUUID(): " + err2.Error()
-		logger.Logger.Println(errStr)
-		return "", hcc_errors.ViolinSQLOperationFail, errStr
-	}
-	logger.Logger.Println(result.RowsAffected())
-
-	return requestedServerUUID, 0, ""
-}
