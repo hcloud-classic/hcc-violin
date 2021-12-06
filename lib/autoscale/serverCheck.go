@@ -168,7 +168,7 @@ func doCheckServerResource() {
 func queueCheckServerResource() {
 	go func() {
 		if config.AutoScale.Debug == "on" {
-			logger.Logger.Println("queueCheckServerStatus(): Queued of running CheckServerStatus() after " + strconv.Itoa(int(config.AutoScale.CheckServerResourceIntervalMs)) + "ms")
+			logger.Logger.Println("queueCheckServerResource(): Queued of running CheckServerResource() after " + strconv.Itoa(int(config.AutoScale.CheckServerResourceIntervalMs)) + "ms")
 		}
 		delayMillisecond(time.Duration(config.AutoScale.CheckServerResourceIntervalMs))
 		CheckServerResource()
