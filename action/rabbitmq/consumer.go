@@ -104,7 +104,7 @@ func ConsumeCreateServer() error {
 
 	go func() {
 		for d := range msgsCreate {
-			logger.Logger.Printf("QueueCreateServer: Received a create/update message: %s\n", d.Body)
+			logger.Logger.Printf("QueueCreateServer: Received a message: %s\n", d.Body)
 
 			var data createServerDataStruct
 			err = json.Unmarshal(d.Body, &data)
