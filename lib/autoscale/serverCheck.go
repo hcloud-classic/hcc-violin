@@ -115,7 +115,10 @@ func doCheckServerResource() {
 		var needAutoScale = false
 		var reasonDetail string
 
-		if strings.ToLower(server.Status) == "creating" {
+		if strings.ToLower(server.Status) == "creating" ||
+			strings.ToLower(server.Status) == "deleting" ||
+			strings.ToLower(server.Status) == "stopped" ||
+			strings.ToLower(server.Status) == "failed" {
 			continue
 		}
 
