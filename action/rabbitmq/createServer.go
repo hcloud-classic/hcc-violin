@@ -21,7 +21,7 @@ type createServerDataStruct struct {
 	RoutineFirstIP    net.IP                 `json:"routine_first_ip"`
 	RoutineLastIP     net.IP                 `json:"routine_last_ip"`
 	Token             string                 `json:"token"`
-	IsUpdate          bool                   `json:"is_update"`
+	Action            string                 `json:"action"`
 }
 
 func printLogDoCreateServerRoutineQueue(serverUUID string, msg string) {

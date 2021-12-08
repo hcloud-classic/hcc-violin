@@ -7,7 +7,6 @@ import (
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/daoext"
-	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"strconv"
@@ -694,7 +693,7 @@ ERROR:
 func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	var err error
 
-	requestedUUID := in.GetUUID()
+	requestedUUID := in.GetServerUUID()
 	requestedUUIDOk := len(requestedUUID) != 0
 	if !requestedUUIDOk {
 		return nil, hcc_errors.ViolinGrpcArgumentError, "DeleteServer(): Need a uuid argument"
@@ -707,133 +706,9 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 
 	logger.Logger.Println("DeleteServer(): Deleting the server (ServerUUID: " + requestedUUID + ")")
 
-	logger.Logger.Println("DeleteServer(): Getting nodes list (ServerUUID: " + requestedUUID + ")")
-	nodes, err := client.RC.GetNodeList(requestedUUID)
+	err = rabbitmq.QueueDeleteServer(requestedUUID, in.GetToken())
 	if err != nil {
-		return nil, hcc_errors.ViolinGrpcRequestError, "DeleteServer(): Failed to get nodes (" + err.Error() + ")"
-	}
-
-	if len(nodes) == 0 {
-		logger.Logger.Println("DeleteServer(): If seems nodes are already changed to inactive state (ServerUUID: " + requestedUUID + ")")
-	}
-
-	subnetIsInactive := false
-	var subnet *pb.Subnet
-
-	logger.Logger.Println("DeleteServer(): Getting subnet info (ServerUUID: " + requestedUUID + ")")
-	subnet, err = client.RC.GetSubnetByServer(requestedUUID)
-	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			subnetIsInactive = true
-			logger.Logger.Println("DeleteServer(): If seems the subnet is already changed to inactive state (ServerUUID: " + requestedUUID + ")")
-		} else {
-			return nil, hcc_errors.ViolinGrpcRequestError, "DeleteServer(): Failed to get subnet info (" + err.Error() + ")"
-		}
-	}
-
-	if len(nodes) != 0 {
-		logger.Logger.Println("DeleteServer(): Turning off nodes (ServerUUID: " + requestedUUID + ")")
-		err = daoext.DoTurnOffNodes(requestedUUID, nodes)
-		if err != nil {
-			logger.Logger.Println("DeleteServer(): Failed to turning off nodes (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
-		}
-
-		for i := config.Flute.TurnOffNodesWaitTimeSec; i >= 1; i-- {
-			isAllNodesTurnedOff := true
-
-			logger.Logger.Println("DeleteServer(): Wait for turning off nodes... (Remained time: " + strconv.FormatInt(i, 10) + "sec, ServerUUID: " + requestedUUID + ")")
-			for i := range nodes {
-				resGetNodePowerState, _ := client.RC.GetNodePowerState(nodes[i].UUID)
-				if strings.ToLower(resGetNodePowerState.Result) == "on" {
-					isAllNodesTurnedOff = false
-					break
-				}
-			}
-
-			if isAllNodesTurnedOff {
-				break
-			}
-
-			time.Sleep(time.Second * time.Duration(1))
-		}
-	}
-
-	if !subnetIsInactive && subnet != nil {
-		logger.Logger.Println("DeleteServer(): Deleting DHCPD configuration (ServerUUID: " + requestedUUID + ")")
-		err = client.RC.DeleteDHCPDConfig(subnet.UUID)
-		if err != nil {
-			logger.Logger.Println("DeleteServer(): Failed to delete DHCPD configuration (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
-		}
-
-		logger.Logger.Println("DeleteServer(): Re-setting subnet info (ServerUUID: " + requestedUUID + ")")
-		err = client.RC.UpdateSubnet(&pb.ReqUpdateSubnet{
-			Subnet: &pb.Subnet{
-				UUID:           subnet.UUID,
-				ServerUUID:     "-",
-				LeaderNodeUUID: "-",
-			},
-		})
-		if err != nil {
-			logger.Logger.Println("DeleteServer(): Failed to re-setting subnet info (" + err.Error() + ")")
-		}
-	}
-
-	logger.Logger.Println("DeleteServer(): Deleting AdaptiveIP (ServerUUID: " + requestedUUID + ")")
-	_, err = client.RC.DeleteAdaptiveIPServer(requestedUUID)
-	if err != nil {
-		logger.Logger.Println("DeleteServer(): Failed to delete AdaptiveIP  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
-	}
-
-	logger.Logger.Println("DeleteServer(): Deleting volumes (ServerUUID: " + requestedUUID + ")")
-	err = daoext.DoDeleteVolume(requestedUUID)
-	if err != nil {
-		logger.Logger.Println("DeleteServer(): Failed to delete volumes  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
-	}
-
-	logger.Logger.Println("DeleteServer(): Re-setting nodes info (ServerUUID: " + requestedUUID + ")")
-	for i := range nodes {
-		_, err = client.RC.UpdateNode(&pb.ReqUpdateNode{
-			Node: &pb.Node{
-				UUID:       nodes[i].UUID,
-				ServerUUID: "-",
-				// gRPC use 0 value for unset. So I will use -1 for unset node_num. - ish
-				NodeNum: -1,
-				// gRPC use 0 value for unset. So I will use 9 value for inactive. - ish
-				Active: 9,
-				NodeIP: "-",
-			},
-		})
-		if err != nil {
-			logger.Logger.Println("DeleteServer(): Failed to re-setting nodes info  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
-		}
-	}
-
-	logger.Logger.Println("DeleteServer(): Deleting the server info from the database (UUID: " + requestedUUID + ")")
-	sql := "delete from server_list where uuid = ?"
-	stmt, err := mysql.Prepare(sql)
-	if err != nil {
-		errStr := "DeleteServer(): Failed to deleting the server info from the database  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")"
-		logger.Logger.Println(errStr)
-		return nil, hcc_errors.ViolinSQLOperationFail, errStr
-	}
-	defer func() {
-		_ = stmt.Close()
-	}()
-	_, err2 := stmt.Exec(requestedUUID)
-	if err2 != nil {
-		errStr := "DeleteServer(): Failed to deleting the server info from the database  (Error: " + err2.Error() + ", ServerUUID: " + requestedUUID + ")"
-		logger.Logger.Println(errStr)
-		return nil, hcc_errors.ViolinSQLOperationFail, errStr
-	}
-
-	logger.Logger.Println("DeleteServer(): Deleting server nodes of the server from the database (ServerUUID: " + requestedUUID + ")")
-	_, errCode, errText = DeleteServerNodeByServerUUID(&pb.ReqDeleteServerNodeByServerUUID{
-		ServerUUID: requestedUUID,
-	})
-	if errCode != 0 {
-		errStr := "DeleteServer(): Failed to deleting the server nodes of the server from the database  (Error: " + errText + ", ServerUUID: " + requestedUUID + ")"
-		logger.Logger.Println(errStr)
-		return nil, hcc_errors.ViolinSQLOperationFail, errStr
+		return nil, hcc_errors.ViolinGrpcRequestError, "DeleteServer(): " + err.Error()
 	}
 
 	return server, 0, ""

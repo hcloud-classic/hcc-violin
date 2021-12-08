@@ -195,7 +195,7 @@ func (s *violinServer) DeleteServerNode(_ context.Context, in *pb.ReqDeleteServe
 func (s *violinServer) DeleteServerNodeByServerUUID(_ context.Context, in *pb.ReqDeleteServerNodeByServerUUID) (*pb.ResDeleteServerNodeByServerUUID, error) {
 	logger.Logger.Println("Request received: DeleteServerNodeByServerUUID()")
 
-	serverUUID, errCode, errStr := dao.DeleteServerNodeByServerUUID(in)
+	serverUUID, errCode, errStr := daoext.DeleteServerNodeByServerUUID(in)
 	if errCode != 0 {
 		errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
 		return &pb.ResDeleteServerNodeByServerUUID{ServerUUID: "", HccErrorStack: errconv.HccStackToGrpc(errStack)}, nil
