@@ -9,6 +9,7 @@ import (
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
+	"hcc/violin/lib/pid"
 	"innogrid.com/hcloud-classic/hcc_errors"
 	"os"
 	"os/signal"
@@ -17,10 +18,27 @@ import (
 )
 
 func init() {
-	err := logger.Init()
+	violinRunning, violinPID, err := pid.IsViolinRunning()
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	if violinRunning {
+		fmt.Println("violin is already running. (PID: " + strconv.Itoa(violinPID) + ")")
+		os.Exit(1)
+	}
+	err = pid.WriteViolinPID()
+	if err != nil {
+		_ = pid.DeleteViolinPID()
+		fmt.Println(err)
+		panic(err)
+	}
+
+	err = logger.Init()
 	if err != nil {
 		hcc_errors.SetErrLogger(logger.Logger)
 		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "logger.Init(): "+err.Error()).Fatal()
+		_ = pid.DeleteViolinPID()
 	}
 	hcc_errors.SetErrLogger(logger.Logger)
 
@@ -29,16 +47,19 @@ func init() {
 	err = mysql.Init()
 	if err != nil {
 		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "mysql.Init(): "+err.Error()).Fatal()
+		_ = pid.DeleteViolinPID()
 	}
 
 	err = rabbitmq.Init()
 	if err != nil {
 		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "rabbitmq.Init(): "+err.Error()).Fatal()
+		_ = pid.DeleteViolinPID()
 	}
 
 	err = client.Init()
 	if err != nil {
 		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "client.Init(): "+err.Error()).Fatal()
+		_ = pid.DeleteViolinPID()
 	}
 
 	logger.Logger.Println("Starting autoscale.CheckServerResource() Interval is " + strconv.Itoa(int(config.AutoScale.CheckServerResourceIntervalMs)) + "ms")
@@ -50,6 +71,7 @@ func end() {
 	rabbitmq.End()
 	mysql.End()
 	logger.End()
+	_ = pid.DeleteViolinPID()
 }
 
 func main() {
