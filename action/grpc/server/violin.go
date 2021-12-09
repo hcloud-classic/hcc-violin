@@ -52,7 +52,7 @@ func (s *violinServer) CreateServer(_ context.Context, in *pb.ReqCreateServer) (
 }
 
 func (s *violinServer) GetServer(_ context.Context, in *pb.ReqGetServer) (*pb.ResGetServer, error) {
-	logger.Logger.Println("Request received: GetServer()")
+	// logger.Logger.Println("Request received: GetServer()")
 
 	server, errCode, errStr := dao.ReadServer(in.GetUUID())
 	if errCode != 0 {

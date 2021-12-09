@@ -51,7 +51,7 @@ func ReadServer(uuid string) (*pb.Server, uint64, string) {
 		&createdAt)
 	if err != nil {
 		errStr := "ReadServer(): " + err.Error()
-		logger.Logger.Println(errStr)
+		// logger.Logger.Println(errStr)
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, hcc_errors.ViolinSQLNoResult, errStr
 		}
