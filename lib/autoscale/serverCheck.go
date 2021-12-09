@@ -43,7 +43,8 @@ func getMetricPercent(resMonitoringData *pb.ResMonitoringData) (int, error) {
 
 	if len(metric[0].Series) > 0 {
 		if len(metric[0].Series[0].Values) > 0 {
-			if len(metric[0].Series[0].Values[0]) == 3 {
+			if len(metric[0].Series[0].Values[0]) == 3 &&
+				metric[0].Series[0].Values[0][1] != nil {
 				currentUsage = int((metric[0].Series[0].Values[0][1]).(float64))
 			} else {
 				logger.Logger.Println("getMetricPercent(): Got wrong values while reading metric")
