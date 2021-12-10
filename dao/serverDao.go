@@ -497,7 +497,7 @@ func ScaleUpServer(in *pb.ReqScaleUpServer) (*pb.Server, *hcc_errors.HccErrorSta
 	errStack := hcc_errors.NewHccErrorStack()
 
 	serverUUID := in.GetServerUUID()
-	if len(serverUUID) != 0 {
+	if len(serverUUID) == 0 {
 		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "ScaleUpServer(): Need a serverUUID argument"))
 
 		goto ERROR
