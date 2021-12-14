@@ -390,7 +390,8 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	errStack := hcc_errors.NewHccErrorStack()
 	reqServer := in.GetServer()
 	if reqServer == nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "CreateServer(): Server is nil"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "CreateServer(): Server is nil"
 
 		goto ERROR
 	}
@@ -398,21 +399,25 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	logger.Logger.Println("CreateServer(): Generating server UUID")
 	serverUUID, err = daoext.DoGenerateServerUUID()
 	if err != nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalUUIDGenerationError, "CreateServer(): "+err.Error()))
+		errCode = hcc_errors.ViolinInternalUUIDGenerationError
+		errStr = "CreateServer(): " + err.Error()
 
 		goto ERROR
 	}
 
+	_ = client.RC.WriteServerAlarm(server.UUID, "Create Server", "Creating the server.")
+
 	if checkCreateServerArgs(reqServer) {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "CreateServer(): some of arguments are missing"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "CreateServer(): some of arguments are missing"
 
 		goto ERROR
 	}
 
 	err = checkGroupIDExist(reqServer.GroupID)
 	if err != nil {
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
 		errStr = "CreateServer(): " + err.Error()
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
 
 		goto ERROR
 	}
@@ -420,8 +425,8 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	// Scheduler
 	nodes, errCode, errStr = doGetAvailableNodes(in, serverUUID)
 	if errCode != 0 {
-		_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalGetAvailableNodesError, "CreateServer(): Failed to get available nodes"))
+		errCode = hcc_errors.ViolinInternalGetAvailableNodesError
+		errStr = "CreateServer(): Failed to get available nodes"
 
 		goto ERROR
 	}
@@ -445,9 +450,9 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	sql = "insert into server_list(uuid, group_id,subnet_uuid, os, server_name, server_desc, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, now())"
 	stmt, err = mysql.Prepare(sql)
 	if err != nil {
-		errStr := "CreateServer(): " + err.Error()
+		errCode = hcc_errors.ViolinSQLOperationFail
+		errStr = "CreateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinSQLOperationFail, errStr))
 
 		goto ERROR
 	}
@@ -456,33 +461,30 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	}()
 	_, err = stmt.Exec(server.UUID, server.GroupID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.Status, server.UserUUID)
 	if err != nil {
-		errStr := "CreateServer(): " + err.Error()
+		errCode = hcc_errors.ViolinSQLOperationFail
+		errStr = "CreateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinSQLOperationFail, errStr))
 
 		goto ERROR
 	}
 
-	fmt.Println("9")
 	err = doCreateServerRoutine(&server, nodes, in.GetToken())
 	if err != nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, err.Error()))
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
+		errStr = "CreateServer(): " + err.Error()
 
 		goto ERROR
 	}
-	fmt.Println("10")
 
-	return &server, errStack.ConvertReportForm()
+	return &server, errStack
 ERROR:
 	logger.Logger.Println("CreateServer(): Failed to create server")
-	logger.Logger.Println("CreateServer(): errStack: ", errStack)
+	logger.Logger.Println("CreateServer(): errStr: ", errStr)
 
-	_ = errStack.Push(hcc_errors.NewHccError(
-		hcc_errors.ViolinInternalCreateServerFailed,
-		"CreateServer(): Failed to create server",
-	))
+	_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
+	_ = client.RC.WriteServerAlarm(server.UUID, "Create Server", errStr)
 
-	return nil, errStack.ConvertReportForm()
+	return nil, errStack
 }
 
 // ScaleUpServer : Scale up the server
@@ -497,31 +499,33 @@ func ScaleUpServer(in *pb.ReqScaleUpServer) (*pb.Server, *hcc_errors.HccErrorSta
 	errStack := hcc_errors.NewHccErrorStack()
 
 	serverUUID := in.GetServerUUID()
-	if len(serverUUID) != 0 {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "ScaleUpServer(): Need a serverUUID argument"))
+	if len(serverUUID) == 0 {
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "ScaleUpServer(): Need a serverUUID argument"
 
 		goto ERROR
 	}
 
+	_ = client.RC.WriteServerAlarm(serverUUID, "Auto Scale Queued", "Scaling up the server.")
+
 	server, errCode, errStr = ReadServer(serverUUID)
 	if errCode != 0 {
+		errCode = hcc_errors.ViolinInternalOperationFail
 		errStr = "ScaleUpServer(): " + errStr
-		_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalOperationFail, errStr))
 
 		goto ERROR
 	}
 
 	serverNodes, err = client.RC.GetNodeList(serverUUID)
 	if err != nil {
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
 		errStr = "ScaleUpServer(): " + err.Error()
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
 
 		goto ERROR
 	}
 	if len(serverNodes) == 0 {
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
 		errStr = "ScaleUpServer(): Failed to get server nodes"
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
 
 		goto ERROR
 	}
@@ -534,15 +538,15 @@ func ScaleUpServer(in *pb.ReqScaleUpServer) (*pb.Server, *hcc_errors.HccErrorSta
 		NumberOfNodes: 1,
 	})
 	if err != nil {
+		errCode = hcc_errors.ViolinInternalGetAvailableNodesError
 		errStr = "ScaleUpServer(): " + err.Error()
 		logger.Logger.Println(errStr)
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalGetAvailableNodesError, errStr))
 
 		goto ERROR
 	}
 	if len(availableNode) == 0 {
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
 		errStr = "ScaleUpServer(): Failed to get a available node"
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
 
 		goto ERROR
 	}
@@ -554,7 +558,8 @@ func ScaleUpServer(in *pb.ReqScaleUpServer) (*pb.Server, *hcc_errors.HccErrorSta
 
 	err = doUpdateServerNodesRoutine(server, serverNodes, in.GetToken())
 	if err != nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, err.Error()))
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
+		errStr = "ScaleUpServer(): " + err.Error()
 
 		goto ERROR
 	}
@@ -564,17 +569,15 @@ func ScaleUpServer(in *pb.ReqScaleUpServer) (*pb.Server, *hcc_errors.HccErrorSta
 		logger.Logger.Println("ScaleUpServer(): " + errStr)
 	}
 
-	return server, errStack.ConvertReportForm()
+	return server, errStack
 ERROR:
 	logger.Logger.Println("ScaleUpServer(): Failed to scale up the server")
-	logger.Logger.Println("ScaleUpServer(): errStack: ", errStack)
+	logger.Logger.Println("ScaleUpServer(): errStr: ", errStr)
 
-	_ = errStack.Push(hcc_errors.NewHccError(
-		hcc_errors.ViolinInternalCreateServerFailed,
-		"ScaleUpServer(): Failed to scale up the server",
-	))
+	_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
+	_ = client.RC.WriteServerAlarm(server.UUID, "ScaleUp Server", errStr)
 
-	return nil, errStack.ConvertReportForm()
+	return nil, errStack
 }
 
 func checkUpdateServerArgs(reqServer *pb.Server) bool {
@@ -610,7 +613,8 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	errStack := hcc_errors.NewHccErrorStack()
 
 	if in.Server == nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): server is nil"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "UpdateServer(): server is nil"
 
 		goto ERROR
 	}
@@ -619,7 +623,8 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	requestedUUID = reqServer.GetUUID()
 	requestedUUIDOk = len(requestedUUID) != 0
 	if !requestedUUIDOk {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): need a uuid argument"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "UpdateServer(): need a uuid argument"
 
 		goto ERROR
 	}
@@ -632,7 +637,8 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	statusOk = len(reqServer.Status) != 0
 
 	if checkUpdateServerArgs(reqServer) {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): need some arguments"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "UpdateServer(): need some arguments"
 
 		goto ERROR
 	}
@@ -652,9 +658,9 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 
 	stmt, err = mysql.Prepare(sql)
 	if err != nil {
-		errStr := "UpdateServer(): " + err.Error()
+		errCode = hcc_errors.ViolinSQLOperationFail
+		errStr = "UpdateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinSQLOperationFail, errStr))
 
 		goto ERROR
 	}
@@ -664,9 +670,9 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 
 	_, err2 = stmt.Exec(requestedUUID)
 	if err2 != nil {
-		errStr := "UpdateServer(): " + err2.Error()
+		errCode = hcc_errors.ViolinSQLOperationFail
+		errStr = "UpdateServer(): " + err2.Error()
 		logger.Logger.Println(errStr)
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinSQLOperationFail, errStr))
 
 		goto ERROR
 	}
@@ -676,17 +682,15 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 		logger.Logger.Println("UpdateServer(): " + errStr)
 	}
 
-	return server, errStack.ConvertReportForm()
+	return server, errStack
 ERROR:
 	logger.Logger.Println("UpdateServer(): Failed to update server")
-	logger.Logger.Println("UpdateServer(): errStack: ", errStack)
+	logger.Logger.Println("UpdateServer(): errStr: ", errStr)
 
-	_ = errStack.Push(hcc_errors.NewHccError(
-		hcc_errors.ViolinInternalCreateServerFailed,
-		"UpdateServer(): Failed to update server",
-	))
+	_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
+	_ = client.RC.WriteServerAlarm(server.UUID, "Update Server", errStr)
 
-	return nil, errStack.ConvertReportForm()
+	return nil, errStack
 }
 
 // DeleteServer : Delete a server by UUID
@@ -698,6 +702,8 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	if !requestedUUIDOk {
 		return nil, hcc_errors.ViolinGrpcArgumentError, "DeleteServer(): Need a uuid argument"
 	}
+
+	_ = client.RC.WriteServerAlarm(requestedUUID, "Delete Server", "Deleting the server.")
 
 	server, errCode, errText := ReadServer(requestedUUID)
 	if errCode != 0 {
@@ -730,7 +736,8 @@ func UpdateServerNodes(in *pb.ReqUpdateServerNodes) (*pb.Server, *hcc_errors.Hcc
 
 	requestedUUID = in.GetServerUUID()
 	if len(requestedUUID) == 0 {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServerNodes(): Need a server_uuid argument"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "UpdateServerNodes(): Need a server_uuid argument"
 
 		goto ERROR
 	}
@@ -740,9 +747,12 @@ func UpdateServerNodes(in *pb.ReqUpdateServerNodes) (*pb.Server, *hcc_errors.Hcc
 		logger.Logger.Println("UpdateServerNodes(): " + errStr)
 	}
 
+	_ = client.RC.WriteServerAlarm(server.UUID, "Update Server Nodes", "Updating the server nodes.")
+
 	selectedNodes = in.GetSelectedNodes()
 	if len(selectedNodes) == 0 {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServerNodes(): Nodes are not selected"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "UpdateServerNodes(): Nodes are not selected"
 
 		goto ERROR
 	}
@@ -760,7 +770,8 @@ func UpdateServerNodes(in *pb.ReqUpdateServerNodes) (*pb.Server, *hcc_errors.Hcc
 
 	err = doUpdateServerNodesRoutine(server, nodes, in.GetToken())
 	if err != nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, err.Error()))
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
+		errStr = "UpdateServerNodes(): " + err.Error()
 
 		goto ERROR
 	}
@@ -770,15 +781,13 @@ func UpdateServerNodes(in *pb.ReqUpdateServerNodes) (*pb.Server, *hcc_errors.Hcc
 		logger.Logger.Println("UpdateServerNodes(): " + errStr)
 	}
 
-	return server, errStack.ConvertReportForm()
+	return server, errStack
 ERROR:
 	logger.Logger.Println("UpdateServerNodes(): Failed to update nodes of the server")
-	logger.Logger.Println("UpdateServerNodes(): errStack: ", errStack)
+	logger.Logger.Println("UpdateServerNodes(): errStr: ", errStr)
 
-	_ = errStack.Push(hcc_errors.NewHccError(
-		hcc_errors.ViolinInternalCreateServerFailed,
-		"UpdateServerNodes(): Failed to update nodes of the server",
-	))
+	_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
+	_ = client.RC.WriteServerAlarm(server.UUID, "Update Server Nodes", errStr)
 
-	return nil, errStack.ConvertReportForm()
+	return nil, errStack
 }
