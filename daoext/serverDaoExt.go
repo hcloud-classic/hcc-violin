@@ -196,6 +196,37 @@ func CheckCreateServerNodeArgs(reqServerNode *pb.ServerNode) bool {
 	return !(serverUUIDOk && nodeUUIDOk)
 }
 
+// DeleteServerNodeByServerUUID : Delete server nodes. Delete server nodes matched with server UUID.
+func DeleteServerNodeByServerUUID(in *pb.ReqDeleteServerNodeByServerUUID) (string, uint64, string) {
+	var err error
+
+	requestedServerUUID := in.GetServerUUID()
+	requestedServerUUIDOk := len(requestedServerUUID) != 0
+	if !requestedServerUUIDOk {
+		return "", hcc_errors.ViolinGrpcArgumentError, "DeleteServerNodeByServerUUID(): need a serverUUID argument"
+	}
+
+	sql := "delete from server_node where server_uuid = ?"
+	stmt, err := mysql.Prepare(sql)
+	if err != nil {
+		errStr := "DeleteServerNodeByServerUUID(): " + err.Error()
+		logger.Logger.Println(errStr)
+		return "", hcc_errors.ViolinSQLOperationFail, errStr
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+	result, err2 := stmt.Exec(requestedServerUUID)
+	if err2 != nil {
+		errStr := "DeleteServerNodeByServerUUID(): " + err2.Error()
+		logger.Logger.Println(errStr)
+		return "", hcc_errors.ViolinSQLOperationFail, errStr
+	}
+	logger.Logger.Println(result.RowsAffected())
+
+	return requestedServerUUID, 0, ""
+}
+
 // DoGetNodes : Get scheduled nodes
 func DoGetNodes(userQuota *pb.Quota) ([]pb.Node, error) {
 	var reqScheduleServer pb.ReqScheduleHandler
@@ -377,13 +408,14 @@ func DoCreateVolume(serverUUID string, celloParams map[string]interface{}, useTy
 	return nil
 }
 
-// DoUpdateSubnet : Update the subnet's leader node UUID and server UUID infos
-func DoUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string) error {
+// DoUpdateSubnet : Update the subnet's leader node UUID and server UUID, OS infos
+func DoUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string, os string) error {
 	err := client.RC.UpdateSubnet(&pb.ReqUpdateSubnet{
 		Subnet: &pb.Subnet{
 			UUID:           subnetUUID,
 			LeaderNodeUUID: leaderNodeUUID,
 			ServerUUID:     serverUUID,
+			OS:             os,
 		},
 	})
 	if err != nil {

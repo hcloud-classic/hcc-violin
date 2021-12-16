@@ -28,7 +28,7 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 	var newNodesDetailStr string
 
 	printLogDoUpdateServerRoutineQueue(routineServerUUID, "Updating subnet info")
-	routineError = daoext.DoUpdateSubnet(routineSubnet.UUID, routineSubnet.LeaderNodeUUID, routineServerUUID)
+	routineError = daoext.DoUpdateSubnet(routineSubnet.UUID, routineSubnet.LeaderNodeUUID, routineServerUUID, routineSubnet.OS)
 	if routineError != nil {
 		_ = client.RC.WriteServerAction(
 			routineServerUUID,

@@ -43,7 +43,8 @@ func getMetricPercent(resMonitoringData *pb.ResMonitoringData) (int, error) {
 
 	if len(metric[0].Series) > 0 {
 		if len(metric[0].Series[0].Values) > 0 {
-			if len(metric[0].Series[0].Values[0]) == 3 {
+			if len(metric[0].Series[0].Values[0]) == 3 &&
+				metric[0].Series[0].Values[0][1] != nil {
 				currentUsage = int((metric[0].Series[0].Values[0][1]).(float64))
 			} else {
 				logger.Logger.Println("getMetricPercent(): Got wrong values while reading metric")
@@ -115,7 +116,10 @@ func doCheckServerResource() {
 		var needAutoScale = false
 		var reasonDetail string
 
-		if strings.ToLower(server.Status) == "creating" {
+		if strings.ToLower(server.Status) == "creating" ||
+			strings.ToLower(server.Status) == "deleting" ||
+			strings.ToLower(server.Status) == "stopped" ||
+			strings.ToLower(server.Status) == "failed" {
 			continue
 		}
 
@@ -168,7 +172,7 @@ func doCheckServerResource() {
 func queueCheckServerResource() {
 	go func() {
 		if config.AutoScale.Debug == "on" {
-			logger.Logger.Println("queueCheckServerStatus(): Queued of running CheckServerStatus() after " + strconv.Itoa(int(config.AutoScale.CheckServerResourceIntervalMs)) + "ms")
+			logger.Logger.Println("queueCheckServerResource(): Queued of running CheckServerResource() after " + strconv.Itoa(int(config.AutoScale.CheckServerResourceIntervalMs)) + "ms")
 		}
 		delayMillisecond(time.Duration(config.AutoScale.CheckServerResourceIntervalMs))
 		CheckServerResource()

@@ -7,7 +7,6 @@ import (
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/action/rabbitmq"
 	"hcc/violin/daoext"
-	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"strconv"
@@ -52,7 +51,7 @@ func ReadServer(uuid string) (*pb.Server, uint64, string) {
 		&createdAt)
 	if err != nil {
 		errStr := "ReadServer(): " + err.Error()
-		logger.Logger.Println(errStr)
+		// logger.Logger.Println(errStr)
 		if strings.Contains(err.Error(), "no rows in result set") {
 			return nil, hcc_errors.ViolinSQLNoResult, errStr
 		}
@@ -314,7 +313,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	logger.Logger.Println("doCreateServerRoutine(): Getting IP address range")
 	firstIP, lastIP := daoext.DoGetIPRange(serverSubnet, nodes)
 
-	err = rabbitmq.QueueCreateServer(server.UUID, subnet, nodes, celloParams, firstIP, lastIP, token)
+	err = rabbitmq.QueueCreateServer(server.UUID, server.OS, subnet, nodes, celloParams, firstIP, lastIP, token)
 	if err != nil {
 		return err
 	}
@@ -391,7 +390,8 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	errStack := hcc_errors.NewHccErrorStack()
 	reqServer := in.GetServer()
 	if reqServer == nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "CreateServer(): Server is nil"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "CreateServer(): Server is nil"
 
 		goto ERROR
 	}
@@ -399,21 +399,25 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	logger.Logger.Println("CreateServer(): Generating server UUID")
 	serverUUID, err = daoext.DoGenerateServerUUID()
 	if err != nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalUUIDGenerationError, "CreateServer(): "+err.Error()))
+		errCode = hcc_errors.ViolinInternalUUIDGenerationError
+		errStr = "CreateServer(): " + err.Error()
 
 		goto ERROR
 	}
 
+	_ = client.RC.WriteServerAlarm(server.UUID, "Create Server", "Creating the server.")
+
 	if checkCreateServerArgs(reqServer) {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "CreateServer(): some of arguments are missing"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "CreateServer(): some of arguments are missing"
 
 		goto ERROR
 	}
 
 	err = checkGroupIDExist(reqServer.GroupID)
 	if err != nil {
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
 		errStr = "CreateServer(): " + err.Error()
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
 
 		goto ERROR
 	}
@@ -421,8 +425,8 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	// Scheduler
 	nodes, errCode, errStr = doGetAvailableNodes(in, serverUUID)
 	if errCode != 0 {
-		_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalGetAvailableNodesError, "CreateServer(): Failed to get available nodes"))
+		errCode = hcc_errors.ViolinInternalGetAvailableNodesError
+		errStr = "CreateServer(): Failed to get available nodes"
 
 		goto ERROR
 	}
@@ -447,9 +451,9 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	sql = "insert into server_list(uuid, group_id,subnet_uuid, os, server_name, server_desc, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, now())"
 	stmt, err = mysql.Prepare(sql)
 	if err != nil {
-		errStr := "CreateServer(): " + err.Error()
+		errCode = hcc_errors.ViolinSQLOperationFail
+		errStr = "CreateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinSQLOperationFail, errStr))
 
 		goto ERROR
 	}
@@ -458,33 +462,30 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	}()
 	_, err = stmt.Exec(server.UUID, server.GroupID, server.SubnetUUID, server.OS, server.ServerName, server.ServerDesc, server.Status, server.UserUUID)
 	if err != nil {
-		errStr := "CreateServer(): " + err.Error()
+		errCode = hcc_errors.ViolinSQLOperationFail
+		errStr = "CreateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinSQLOperationFail, errStr))
 
 		goto ERROR
 	}
 
-	fmt.Println("9")
 	err = doCreateServerRoutine(&server, nodes, in.GetToken())
 	if err != nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, err.Error()))
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
+		errStr = "CreateServer(): " + err.Error()
 
 		goto ERROR
 	}
-	fmt.Println("10")
 
-	return &server, errStack.ConvertReportForm()
+	return &server, errStack
 ERROR:
 	logger.Logger.Println("CreateServer(): Failed to create server")
-	logger.Logger.Println("CreateServer(): errStack: ", errStack)
+	logger.Logger.Println("CreateServer(): errStr: ", errStr)
 
-	_ = errStack.Push(hcc_errors.NewHccError(
-		hcc_errors.ViolinInternalCreateServerFailed,
-		"CreateServer(): Failed to create server",
-	))
+	_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
+	_ = client.RC.WriteServerAlarm(server.UUID, "Create Server", errStr)
 
-	return nil, errStack.ConvertReportForm()
+	return nil, errStack
 }
 
 // ScaleUpServer : Scale up the server
@@ -499,31 +500,33 @@ func ScaleUpServer(in *pb.ReqScaleUpServer) (*pb.Server, *hcc_errors.HccErrorSta
 	errStack := hcc_errors.NewHccErrorStack()
 
 	serverUUID := in.GetServerUUID()
-	if len(serverUUID) != 0 {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "ScaleUpServer(): Need a serverUUID argument"))
+	if len(serverUUID) == 0 {
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "ScaleUpServer(): Need a serverUUID argument"
 
 		goto ERROR
 	}
 
+	_ = client.RC.WriteServerAlarm(serverUUID, "Auto Scale Queued", "Scaling up the server.")
+
 	server, errCode, errStr = ReadServer(serverUUID)
 	if errCode != 0 {
+		errCode = hcc_errors.ViolinInternalOperationFail
 		errStr = "ScaleUpServer(): " + errStr
-		_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalOperationFail, errStr))
 
 		goto ERROR
 	}
 
 	serverNodes, err = client.RC.GetNodeList(serverUUID)
 	if err != nil {
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
 		errStr = "ScaleUpServer(): " + err.Error()
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
 
 		goto ERROR
 	}
 	if len(serverNodes) == 0 {
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
 		errStr = "ScaleUpServer(): Failed to get server nodes"
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
 
 		goto ERROR
 	}
@@ -536,15 +539,15 @@ func ScaleUpServer(in *pb.ReqScaleUpServer) (*pb.Server, *hcc_errors.HccErrorSta
 		NumberOfNodes: 1,
 	})
 	if err != nil {
+		errCode = hcc_errors.ViolinInternalGetAvailableNodesError
 		errStr = "ScaleUpServer(): " + err.Error()
 		logger.Logger.Println(errStr)
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalGetAvailableNodesError, errStr))
 
 		goto ERROR
 	}
 	if len(availableNode) == 0 {
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
 		errStr = "ScaleUpServer(): Failed to get a available node"
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, errStr))
 
 		goto ERROR
 	}
@@ -556,7 +559,8 @@ func ScaleUpServer(in *pb.ReqScaleUpServer) (*pb.Server, *hcc_errors.HccErrorSta
 
 	err = doUpdateServerNodesRoutine(server, serverNodes, in.GetToken())
 	if err != nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, err.Error()))
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
+		errStr = "ScaleUpServer(): " + err.Error()
 
 		goto ERROR
 	}
@@ -566,17 +570,15 @@ func ScaleUpServer(in *pb.ReqScaleUpServer) (*pb.Server, *hcc_errors.HccErrorSta
 		logger.Logger.Println("ScaleUpServer(): " + errStr)
 	}
 
-	return server, errStack.ConvertReportForm()
+	return server, errStack
 ERROR:
 	logger.Logger.Println("ScaleUpServer(): Failed to scale up the server")
-	logger.Logger.Println("ScaleUpServer(): errStack: ", errStack)
+	logger.Logger.Println("ScaleUpServer(): errStr: ", errStr)
 
-	_ = errStack.Push(hcc_errors.NewHccError(
-		hcc_errors.ViolinInternalCreateServerFailed,
-		"ScaleUpServer(): Failed to scale up the server",
-	))
+	_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
+	_ = client.RC.WriteServerAlarm(server.UUID, "ScaleUp Server", errStr)
 
-	return nil, errStack.ConvertReportForm()
+	return nil, errStack
 }
 
 func checkUpdateServerArgs(reqServer *pb.Server) bool {
@@ -612,7 +614,8 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	errStack := hcc_errors.NewHccErrorStack()
 
 	if in.Server == nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): server is nil"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "UpdateServer(): server is nil"
 
 		goto ERROR
 	}
@@ -621,7 +624,8 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	requestedUUID = reqServer.GetUUID()
 	requestedUUIDOk = len(requestedUUID) != 0
 	if !requestedUUIDOk {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): need a uuid argument"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "UpdateServer(): need a uuid argument"
 
 		goto ERROR
 	}
@@ -634,7 +638,8 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	statusOk = len(reqServer.Status) != 0
 
 	if checkUpdateServerArgs(reqServer) {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServer(): need some arguments"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "UpdateServer(): need some arguments"
 
 		goto ERROR
 	}
@@ -654,9 +659,9 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 
 	stmt, err = mysql.Prepare(sql)
 	if err != nil {
-		errStr := "UpdateServer(): " + err.Error()
+		errCode = hcc_errors.ViolinSQLOperationFail
+		errStr = "UpdateServer(): " + err.Error()
 		logger.Logger.Println(errStr)
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinSQLOperationFail, errStr))
 
 		goto ERROR
 	}
@@ -666,9 +671,9 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 
 	_, err2 = stmt.Exec(requestedUUID)
 	if err2 != nil {
-		errStr := "UpdateServer(): " + err2.Error()
+		errCode = hcc_errors.ViolinSQLOperationFail
+		errStr = "UpdateServer(): " + err2.Error()
 		logger.Logger.Println(errStr)
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinSQLOperationFail, errStr))
 
 		goto ERROR
 	}
@@ -678,28 +683,28 @@ func UpdateServer(in *pb.ReqUpdateServer) (*pb.Server, *hcc_errors.HccErrorStack
 		logger.Logger.Println("UpdateServer(): " + errStr)
 	}
 
-	return server, errStack.ConvertReportForm()
+	return server, errStack
 ERROR:
 	logger.Logger.Println("UpdateServer(): Failed to update server")
-	logger.Logger.Println("UpdateServer(): errStack: ", errStack)
+	logger.Logger.Println("UpdateServer(): errStr: ", errStr)
 
-	_ = errStack.Push(hcc_errors.NewHccError(
-		hcc_errors.ViolinInternalCreateServerFailed,
-		"UpdateServer(): Failed to update server",
-	))
+	_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
+	_ = client.RC.WriteServerAlarm(server.UUID, "Update Server", errStr)
 
-	return nil, errStack.ConvertReportForm()
+	return nil, errStack
 }
 
 // DeleteServer : Delete a server by UUID
 func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 	var err error
 
-	requestedUUID := in.GetUUID()
+	requestedUUID := in.GetServerUUID()
 	requestedUUIDOk := len(requestedUUID) != 0
 	if !requestedUUIDOk {
 		return nil, hcc_errors.ViolinGrpcArgumentError, "DeleteServer(): Need a uuid argument"
 	}
+
+	_ = client.RC.WriteServerAlarm(requestedUUID, "Delete Server", "Deleting the server.")
 
 	server, errCode, errText := ReadServer(requestedUUID)
 	if errCode != 0 {
@@ -708,133 +713,9 @@ func DeleteServer(in *pb.ReqDeleteServer) (*pb.Server, uint64, string) {
 
 	logger.Logger.Println("DeleteServer(): Deleting the server (ServerUUID: " + requestedUUID + ")")
 
-	logger.Logger.Println("DeleteServer(): Getting nodes list (ServerUUID: " + requestedUUID + ")")
-	nodes, err := client.RC.GetNodeList(requestedUUID)
+	err = rabbitmq.QueueDeleteServer(requestedUUID, in.GetToken())
 	if err != nil {
-		return nil, hcc_errors.ViolinGrpcRequestError, "DeleteServer(): Failed to get nodes (" + err.Error() + ")"
-	}
-
-	if len(nodes) == 0 {
-		logger.Logger.Println("DeleteServer(): If seems nodes are already changed to inactive state (ServerUUID: " + requestedUUID + ")")
-	}
-
-	subnetIsInactive := false
-	var subnet *pb.Subnet
-
-	logger.Logger.Println("DeleteServer(): Getting subnet info (ServerUUID: " + requestedUUID + ")")
-	subnet, err = client.RC.GetSubnetByServer(requestedUUID)
-	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			subnetIsInactive = true
-			logger.Logger.Println("DeleteServer(): If seems the subnet is already changed to inactive state (ServerUUID: " + requestedUUID + ")")
-		} else {
-			return nil, hcc_errors.ViolinGrpcRequestError, "DeleteServer(): Failed to get subnet info (" + err.Error() + ")"
-		}
-	}
-
-	if len(nodes) != 0 {
-		logger.Logger.Println("DeleteServer(): Turning off nodes (ServerUUID: " + requestedUUID + ")")
-		err = daoext.DoTurnOffNodes(requestedUUID, nodes)
-		if err != nil {
-			logger.Logger.Println("DeleteServer(): Failed to turning off nodes (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
-		}
-
-		for i := config.Flute.TurnOffNodesWaitTimeSec; i >= 1; i-- {
-			isAllNodesTurnedOff := true
-
-			logger.Logger.Println("DeleteServer(): Wait for turning off nodes... (Remained time: " + strconv.FormatInt(i, 10) + "sec, ServerUUID: " + requestedUUID + ")")
-			for i := range nodes {
-				resGetNodePowerState, _ := client.RC.GetNodePowerState(nodes[i].UUID)
-				if strings.ToLower(resGetNodePowerState.Result) == "on" {
-					isAllNodesTurnedOff = false
-					break
-				}
-			}
-
-			if isAllNodesTurnedOff {
-				break
-			}
-
-			time.Sleep(time.Second * time.Duration(1))
-		}
-	}
-
-	if !subnetIsInactive && subnet != nil {
-		logger.Logger.Println("DeleteServer(): Deleting DHCPD configuration (ServerUUID: " + requestedUUID + ")")
-		err = client.RC.DeleteDHCPDConfig(subnet.UUID)
-		if err != nil {
-			logger.Logger.Println("DeleteServer(): Failed to delete DHCPD configuration (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
-		}
-
-		logger.Logger.Println("DeleteServer(): Re-setting subnet info (ServerUUID: " + requestedUUID + ")")
-		err = client.RC.UpdateSubnet(&pb.ReqUpdateSubnet{
-			Subnet: &pb.Subnet{
-				UUID:           subnet.UUID,
-				ServerUUID:     "-",
-				LeaderNodeUUID: "-",
-			},
-		})
-		if err != nil {
-			logger.Logger.Println("DeleteServer(): Failed to re-setting subnet info (" + err.Error() + ")")
-		}
-	}
-
-	logger.Logger.Println("DeleteServer(): Deleting AdaptiveIP (ServerUUID: " + requestedUUID + ")")
-	_, err = client.RC.DeleteAdaptiveIPServer(requestedUUID)
-	if err != nil {
-		logger.Logger.Println("DeleteServer(): Failed to delete AdaptiveIP  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
-	}
-
-	logger.Logger.Println("DeleteServer(): Deleting volumes (ServerUUID: " + requestedUUID + ")")
-	err = daoext.DoDeleteVolume(requestedUUID)
-	if err != nil {
-		logger.Logger.Println("DeleteServer(): Failed to delete volumes  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
-	}
-
-	logger.Logger.Println("DeleteServer(): Re-setting nodes info (ServerUUID: " + requestedUUID + ")")
-	for i := range nodes {
-		_, err = client.RC.UpdateNode(&pb.ReqUpdateNode{
-			Node: &pb.Node{
-				UUID:       nodes[i].UUID,
-				ServerUUID: "-",
-				// gRPC use 0 value for unset. So I will use -1 for unset node_num. - ish
-				NodeNum: -1,
-				// gRPC use 0 value for unset. So I will use 9 value for inactive. - ish
-				Active: 9,
-				NodeIP: "-",
-			},
-		})
-		if err != nil {
-			logger.Logger.Println("DeleteServer(): Failed to re-setting nodes info  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")")
-		}
-	}
-
-	logger.Logger.Println("DeleteServer(): Deleting the server info from the database (UUID: " + requestedUUID + ")")
-	sql := "delete from server_list where uuid = ?"
-	stmt, err := mysql.Prepare(sql)
-	if err != nil {
-		errStr := "DeleteServer(): Failed to deleting the server info from the database  (Error: " + err.Error() + ", ServerUUID: " + requestedUUID + ")"
-		logger.Logger.Println(errStr)
-		return nil, hcc_errors.ViolinSQLOperationFail, errStr
-	}
-	defer func() {
-		_ = stmt.Close()
-	}()
-	_, err2 := stmt.Exec(requestedUUID)
-	if err2 != nil {
-		errStr := "DeleteServer(): Failed to deleting the server info from the database  (Error: " + err2.Error() + ", ServerUUID: " + requestedUUID + ")"
-		logger.Logger.Println(errStr)
-		return nil, hcc_errors.ViolinSQLOperationFail, errStr
-	}
-
-	logger.Logger.Println("DeleteServer(): Deleting server nodes of the server from the database (ServerUUID: " + requestedUUID + ")")
-	_, errCode, errText = DeleteServerNodeByServerUUID(&pb.ReqDeleteServerNodeByServerUUID{
-		ServerUUID: requestedUUID,
-	})
-	if errCode != 0 {
-		errStr := "DeleteServer(): Failed to deleting the server nodes of the server from the database  (Error: " + errText + ", ServerUUID: " + requestedUUID + ")"
-		logger.Logger.Println(errStr)
-		return nil, hcc_errors.ViolinSQLOperationFail, errStr
+		return nil, hcc_errors.ViolinGrpcRequestError, "DeleteServer(): " + err.Error()
 	}
 
 	return server, 0, ""
@@ -856,7 +737,8 @@ func UpdateServerNodes(in *pb.ReqUpdateServerNodes) (*pb.Server, *hcc_errors.Hcc
 
 	requestedUUID = in.GetServerUUID()
 	if len(requestedUUID) == 0 {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServerNodes(): Need a server_uuid argument"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "UpdateServerNodes(): Need a server_uuid argument"
 
 		goto ERROR
 	}
@@ -866,9 +748,12 @@ func UpdateServerNodes(in *pb.ReqUpdateServerNodes) (*pb.Server, *hcc_errors.Hcc
 		logger.Logger.Println("UpdateServerNodes(): " + errStr)
 	}
 
+	_ = client.RC.WriteServerAlarm(server.UUID, "Update Server Nodes", "Updating the server nodes.")
+
 	selectedNodes = in.GetSelectedNodes()
 	if len(selectedNodes) == 0 {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinGrpcArgumentError, "UpdateServerNodes(): Nodes are not selected"))
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "UpdateServerNodes(): Nodes are not selected"
 
 		goto ERROR
 	}
@@ -886,7 +771,8 @@ func UpdateServerNodes(in *pb.ReqUpdateServerNodes) (*pb.Server, *hcc_errors.Hcc
 
 	err = doUpdateServerNodesRoutine(server, nodes, in.GetToken())
 	if err != nil {
-		_ = errStack.Push(hcc_errors.NewHccError(hcc_errors.ViolinInternalCreateServerRoutineError, err.Error()))
+		errCode = hcc_errors.ViolinInternalCreateServerRoutineError
+		errStr = "UpdateServerNodes(): " + err.Error()
 
 		goto ERROR
 	}
@@ -896,15 +782,13 @@ func UpdateServerNodes(in *pb.ReqUpdateServerNodes) (*pb.Server, *hcc_errors.Hcc
 		logger.Logger.Println("UpdateServerNodes(): " + errStr)
 	}
 
-	return server, errStack.ConvertReportForm()
+	return server, errStack
 ERROR:
 	logger.Logger.Println("UpdateServerNodes(): Failed to update nodes of the server")
-	logger.Logger.Println("UpdateServerNodes(): errStack: ", errStack)
+	logger.Logger.Println("UpdateServerNodes(): errStr: ", errStr)
 
-	_ = errStack.Push(hcc_errors.NewHccError(
-		hcc_errors.ViolinInternalCreateServerFailed,
-		"UpdateServerNodes(): Failed to update nodes of the server",
-	))
+	_ = errStack.Push(hcc_errors.NewHccError(errCode, errStr))
+	_ = client.RC.WriteServerAlarm(server.UUID, "Update Server Nodes", errStr)
 
-	return nil, errStack.ConvertReportForm()
+	return nil, errStack
 }

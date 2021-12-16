@@ -57,7 +57,7 @@ func ViolinToViola(action model.Control) error {
 }
 
 // QueueCreateServer : Publish server creating queues to RabbitMQ channel
-func QueueCreateServer(routineServerUUID string, routineSubnet *pb.Subnet, routineNodes []pb.Node,
+func QueueCreateServer(routineServerUUID string, routineOS string, routineSubnet *pb.Subnet, routineNodes []pb.Node,
 	celloParams map[string]interface{}, routineFirstIP net.IP, routineLastIP net.IP, token string) error {
 	qCreate, err := Channel.QueueDeclare(
 		"create_server",
@@ -74,6 +74,7 @@ func QueueCreateServer(routineServerUUID string, routineSubnet *pb.Subnet, routi
 	body, _ := json.Marshal(
 		createServerDataStruct{
 			RoutineServerUUID: routineServerUUID,
+			RoutineServerOS:   routineOS,
 			RoutineSubnet: pb.Subnet{
 				UUID:           routineSubnet.UUID,
 				NetworkIP:      routineSubnet.NetworkIP,
@@ -83,7 +84,7 @@ func QueueCreateServer(routineServerUUID string, routineSubnet *pb.Subnet, routi
 				NameServer:     routineSubnet.NameServer,
 				DomainName:     routineSubnet.DomainName,
 				LeaderNodeUUID: routineSubnet.LeaderNodeUUID,
-				OS:             routineSubnet.OS,
+				OS:             routineOS,
 				SubnetName:     routineSubnet.SubnetName,
 				CreatedAt:      routineSubnet.CreatedAt,
 			},
@@ -92,6 +93,7 @@ func QueueCreateServer(routineServerUUID string, routineSubnet *pb.Subnet, routi
 			RoutineFirstIP: routineFirstIP,
 			RoutineLastIP:  routineLastIP,
 			Token:          token,
+			Action:         "create",
 		})
 	err = Channel.Publish(
 		"",
@@ -147,7 +149,7 @@ func QueueUpdateServerNodes(routineServerUUID string, routineSubnet *pb.Subnet, 
 			RoutineFirstIP: routineFirstIP,
 			RoutineLastIP:  routineLastIP,
 			Token:          token,
-			IsUpdate:       true,
+			Action:         "update",
 		})
 	err = Channel.Publish(
 		"",
@@ -161,6 +163,44 @@ func QueueUpdateServerNodes(routineServerUUID string, routineSubnet *pb.Subnet, 
 		})
 	if err != nil {
 		logger.Logger.Println("QueueUpdateServerNodes: Failed to register publisher")
+		return err
+	}
+
+	return nil
+}
+
+// QueueDeleteServer : Publish server deleting queues to RabbitMQ channel
+func QueueDeleteServer(routineServerUUID string, token string) error {
+	qCreate, err := Channel.QueueDeclare(
+		"create_server",
+		false,
+		false,
+		false,
+		false,
+		nil)
+	if err != nil {
+		logger.Logger.Println("QueueDeleteServer: Failed to declare a update queue")
+		return err
+	}
+
+	body, _ := json.Marshal(
+		createServerDataStruct{
+			RoutineServerUUID: routineServerUUID,
+			Token:             token,
+			Action:            "delete",
+		})
+	err = Channel.Publish(
+		"",
+		qCreate.Name,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:     "text/plain",
+			ContentEncoding: "utf-8",
+			Body:            body,
+		})
+	if err != nil {
+		logger.Logger.Println("QueueDeleteServer: Failed to register publisher")
 		return err
 	}
 

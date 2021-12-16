@@ -15,13 +15,14 @@ import (
 
 type createServerDataStruct struct {
 	RoutineServerUUID string                 `json:"routine_server_uuid"`
+	RoutineServerOS   string                 `json:"routine_server_os"`
 	RoutineSubnet     pb.Subnet              `json:"routine_subnet"`
 	RoutineNodes      []pb.Node              `json:"routine_nodes"`
 	CelloParams       map[string]interface{} `json:"cello_params"`
 	RoutineFirstIP    net.IP                 `json:"routine_first_ip"`
 	RoutineLastIP     net.IP                 `json:"routine_last_ip"`
 	Token             string                 `json:"token"`
-	IsUpdate          bool                   `json:"is_update"`
+	Action            string                 `json:"action"`
 }
 
 func printLogDoCreateServerRoutineQueue(serverUUID string, msg string) {
@@ -52,7 +53,7 @@ func updateServerStatus(serverUUID string, status string) error {
 }
 
 // DoCreateServerRoutineQueue : Do create server stages of the queue
-func DoCreateServerRoutineQueue(routineServerUUID string, routineSubnet *pb.Subnet, routineNodes []pb.Node,
+func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string, routineSubnet *pb.Subnet, routineNodes []pb.Node,
 	celloParams map[string]interface{}, routineFirstIP net.IP, routineLastIP net.IP, token string) {
 	var routineError error
 
@@ -95,7 +96,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineSubnet *pb.Subn
 		token)
 
 	printLogDoCreateServerRoutineQueue(routineServerUUID, "Updating subnet info")
-	routineError = daoext.DoUpdateSubnet(routineSubnet.UUID, routineSubnet.LeaderNodeUUID, routineServerUUID)
+	routineError = daoext.DoUpdateSubnet(routineSubnet.UUID, routineSubnet.LeaderNodeUUID, routineServerUUID, routineServerOS)
 	if routineError != nil {
 		_ = client.RC.WriteServerAction(
 			routineServerUUID,
