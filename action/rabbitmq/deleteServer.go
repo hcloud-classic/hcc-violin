@@ -166,6 +166,7 @@ func DoDeleteServerRoutineQueue(routineServerUUID string, token string) {
 				UUID:           subnet.UUID,
 				ServerUUID:     "-",
 				LeaderNodeUUID: "-",
+				OS:             "-",
 			},
 		})
 		if routineError != nil {

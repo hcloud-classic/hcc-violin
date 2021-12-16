@@ -313,7 +313,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	logger.Logger.Println("doCreateServerRoutine(): Getting IP address range")
 	firstIP, lastIP := daoext.DoGetIPRange(serverSubnet, nodes)
 
-	err = rabbitmq.QueueCreateServer(server.UUID, subnet, nodes, celloParams, firstIP, lastIP, token)
+	err = rabbitmq.QueueCreateServer(server.UUID, server.OS, subnet, nodes, celloParams, firstIP, lastIP, token)
 	if err != nil {
 		return err
 	}

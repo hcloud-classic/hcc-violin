@@ -116,7 +116,7 @@ func ConsumeCreateServer() error {
 			switch data.Action {
 			case "create":
 				logger.Logger.Println("QueueCreateServer: Creating server for " + data.RoutineServerUUID)
-				DoCreateServerRoutineQueue(data.RoutineServerUUID, &data.RoutineSubnet, data.RoutineNodes,
+				DoCreateServerRoutineQueue(data.RoutineServerUUID, data.RoutineServerOS, &data.RoutineSubnet, data.RoutineNodes,
 					data.CelloParams, data.RoutineFirstIP, data.RoutineLastIP, data.Token)
 
 				break

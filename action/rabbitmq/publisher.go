@@ -57,7 +57,7 @@ func ViolinToViola(action model.Control) error {
 }
 
 // QueueCreateServer : Publish server creating queues to RabbitMQ channel
-func QueueCreateServer(routineServerUUID string, routineSubnet *pb.Subnet, routineNodes []pb.Node,
+func QueueCreateServer(routineServerUUID string, routineOS string, routineSubnet *pb.Subnet, routineNodes []pb.Node,
 	celloParams map[string]interface{}, routineFirstIP net.IP, routineLastIP net.IP, token string) error {
 	qCreate, err := Channel.QueueDeclare(
 		"create_server",
@@ -74,6 +74,7 @@ func QueueCreateServer(routineServerUUID string, routineSubnet *pb.Subnet, routi
 	body, _ := json.Marshal(
 		createServerDataStruct{
 			RoutineServerUUID: routineServerUUID,
+			RoutineServerOS:   routineOS,
 			RoutineSubnet: pb.Subnet{
 				UUID:           routineSubnet.UUID,
 				NetworkIP:      routineSubnet.NetworkIP,
@@ -83,7 +84,7 @@ func QueueCreateServer(routineServerUUID string, routineSubnet *pb.Subnet, routi
 				NameServer:     routineSubnet.NameServer,
 				DomainName:     routineSubnet.DomainName,
 				LeaderNodeUUID: routineSubnet.LeaderNodeUUID,
-				OS:             routineSubnet.OS,
+				OS:             routineOS,
 				SubnetName:     routineSubnet.SubnetName,
 				CreatedAt:      routineSubnet.CreatedAt,
 			},
