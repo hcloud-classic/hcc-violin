@@ -441,6 +441,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 		ServerDesc: reqServer.GetServerDesc(),
 		Status:     "Creating",
 		UserUUID:   reqServer.GetUserUUID(),
+		DiskSize:   reqServer.GetDiskSize(),
 	}
 
 	sql = "insert into server_list(uuid, group_id,subnet_uuid, os, server_name, server_desc, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, now())"
