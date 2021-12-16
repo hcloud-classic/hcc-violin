@@ -166,6 +166,7 @@ func DoDeleteServerRoutineQueue(routineServerUUID string, token string) {
 				UUID:           subnet.UUID,
 				ServerUUID:     "-",
 				LeaderNodeUUID: "-",
+				OS:             "-",
 			},
 		})
 		if routineError != nil {
@@ -312,6 +313,8 @@ func DoDeleteServerRoutineQueue(routineServerUUID string, token string) {
 		"Success",
 		"",
 		token)
+
+	_ = client.RC.WriteServerAlarm(routineServerUUID, "Delete Server", "Server has been successfully deleted.!ViolinToken!"+token)
 
 	return
 

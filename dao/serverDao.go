@@ -313,7 +313,7 @@ func doCreateServerRoutine(server *pb.Server, nodes []pb.Node, token string) err
 	logger.Logger.Println("doCreateServerRoutine(): Getting IP address range")
 	firstIP, lastIP := daoext.DoGetIPRange(serverSubnet, nodes)
 
-	err = rabbitmq.QueueCreateServer(server.UUID, subnet, nodes, celloParams, firstIP, lastIP, token)
+	err = rabbitmq.QueueCreateServer(server.UUID, server.OS, subnet, nodes, celloParams, firstIP, lastIP, token)
 	if err != nil {
 		return err
 	}
@@ -445,6 +445,7 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 		ServerDesc: reqServer.GetServerDesc(),
 		Status:     "Creating",
 		UserUUID:   reqServer.GetUserUUID(),
+		DiskSize:   reqServer.GetDiskSize(),
 	}
 
 	sql = "insert into server_list(uuid, group_id,subnet_uuid, os, server_name, server_desc, status, user_uuid, created_at) values (?, ?, ?, ?, ?, ?, ?, ?, now())"

@@ -408,13 +408,14 @@ func DoCreateVolume(serverUUID string, celloParams map[string]interface{}, useTy
 	return nil
 }
 
-// DoUpdateSubnet : Update the subnet's leader node UUID and server UUID infos
-func DoUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string) error {
+// DoUpdateSubnet : Update the subnet's leader node UUID and server UUID, OS infos
+func DoUpdateSubnet(subnetUUID string, leaderNodeUUID string, serverUUID string, os string) error {
 	err := client.RC.UpdateSubnet(&pb.ReqUpdateSubnet{
 		Subnet: &pb.Subnet{
 			UUID:           subnetUUID,
 			LeaderNodeUUID: leaderNodeUUID,
 			ServerUUID:     serverUUID,
+			OS:             os,
 		},
 	})
 	if err != nil {
