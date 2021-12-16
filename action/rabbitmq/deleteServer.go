@@ -314,6 +314,8 @@ func DoDeleteServerRoutineQueue(routineServerUUID string, token string) {
 		"",
 		token)
 
+	_ = client.RC.WriteServerAlarm(routineServerUUID, "Delete Server", "Server has been successfully deleted.")
+
 	return
 
 ERROR:
