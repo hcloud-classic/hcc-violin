@@ -359,18 +359,34 @@ func checkGroupIDExist(groupID int64) error {
 	return errors.New("given group ID is not in the database")
 }
 
+func checkCreateServerAlgorithmArgs(reqServer *pb.Server, nrNodes int32) bool {
+	cpuOk := reqServer.GetCPU() != 0
+	memoryOk := reqServer.GetMemory() != 0
+	nrNodesOk := nrNodes != 0
+
+	cpuAndMemoryOk := cpuOk && memoryOk
+
+	// Right methods
+	if (cpuAndMemoryOk && nrNodesOk) ||
+		cpuAndMemoryOk ||
+		!cpuAndMemoryOk && nrNodesOk {
+		return false
+	}
+
+	// Wrong methods
+	return true
+}
+
 func checkCreateServerArgs(reqServer *pb.Server) bool {
 	groupIDOk := reqServer.GroupID != 0
 	subnetUUIDOk := len(reqServer.GetSubnetUUID()) != 0
 	osOk := len(reqServer.GetOS()) != 0
 	serverNameOk := len(reqServer.GetServerName()) != 0
 	serverDescOk := len(reqServer.GetServerDesc()) != 0
-	cpuOk := reqServer.GetCPU() != 0
-	memoryOk := reqServer.GetMemory() != 0
 	diskSizeOk := reqServer.GetDiskSize() != 0
 	userUUIDOk := len(reqServer.GetUserUUID()) != 0
 
-	return !(groupIDOk && subnetUUIDOk && osOk && serverNameOk && serverDescOk && cpuOk && memoryOk && diskSizeOk && userUUIDOk)
+	return !(groupIDOk && subnetUUIDOk && osOk && serverNameOk && serverDescOk && diskSizeOk && userUUIDOk)
 }
 
 // CreateServer : Create a server
@@ -410,6 +426,13 @@ func CreateServer(in *pb.ReqCreateServer) (*pb.Server, *hcc_errors.HccErrorStack
 	if checkCreateServerArgs(reqServer) {
 		errCode = hcc_errors.ViolinGrpcArgumentError
 		errStr = "CreateServer(): some of arguments are missing"
+
+		goto ERROR
+	}
+
+	if checkCreateServerAlgorithmArgs(reqServer, in.GetNrNode()) {
+		errCode = hcc_errors.ViolinGrpcArgumentError
+		errStr = "CreateServer(): Wrong algorithm method"
 
 		goto ERROR
 	}
