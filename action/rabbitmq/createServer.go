@@ -67,7 +67,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string
 			routineError.Error(),
 			token)
 
-		goto ERROR
+		goto ErrorCreateVolumeOs
 	}
 	_ = client.RC.WriteServerAction(
 		routineServerUUID,
@@ -86,7 +86,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string
 			routineError.Error(),
 			token)
 
-		goto ERROR
+		goto ErrorCreateVolumeData
 	}
 	_ = client.RC.WriteServerAction(
 		routineServerUUID,
@@ -105,7 +105,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string
 			routineError.Error(),
 			token)
 
-		goto ERROR
+		goto ErrorUpdateSubnet
 	}
 	_ = client.RC.WriteServerAction(
 		routineServerUUID,
@@ -124,7 +124,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string
 			routineError.Error(),
 			token)
 
-		goto ERROR
+		goto ErrorCreateDhcpConfig
 	}
 	_ = client.RC.WriteServerAction(
 		routineServerUUID,
@@ -143,7 +143,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string
 			routineError.Error(),
 			token)
 
-		goto ERROR
+		goto ErrorOffNode
 	}
 	_ = client.RC.WriteServerAction(
 		routineServerUUID,
@@ -181,7 +181,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string
 			routineError.Error(),
 			token)
 
-		goto ERROR
+		goto ErrorOnNode
 	}
 	_ = client.RC.WriteServerAction(
 		routineServerUUID,
@@ -207,7 +207,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string
 			routineError.Error(),
 			token)
 
-		goto ERROR
+		goto ErrorHCCCLI
 	}
 	_ = client.RC.WriteServerAction(
 		routineServerUUID,
@@ -218,7 +218,41 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string
 
 	return
 
-ERROR:
+ErrorOnNode:
+	_ = daoext.DoTurnOffNodes(routineServerUUID, routineNodes)
+ErrorOffNode:
+	_ = client.RC.DeleteDHCPDConfig(routineSubnet.UUID)
+ErrorCreateDhcpConfig:
+	_ = client.RC.UpdateSubnet(&pb.ReqUpdateSubnet{
+		Subnet: &pb.Subnet{
+			UUID:           routineSubnet.UUID,
+			ServerUUID:     "-",
+			LeaderNodeUUID: "-",
+			OS:             "-",
+		},
+	})
+ErrorUpdateSubnet:
+ErrorCreateVolumeData:
+	_ = daoext.DoDeleteVolume(routineServerUUID)
+ErrorCreateVolumeOs:
+	for i := range routineNodes {
+		_, _ = client.RC.UpdateNode(&pb.ReqUpdateNode{
+			Node: &pb.Node{
+				UUID:       routineNodes[i].UUID,
+				ServerUUID: "-",
+				// gRPC use 0 value for unset. So I will use -1 for unset node_num. - ish
+				NodeNum: -1,
+				// gRPC use 0 value for unset. So I will use 9 value for inactive. - ish
+				Active: 9,
+				NodeIP: "-",
+			},
+		})
+	}
+
+	_, _, _ = daoext.DeleteServerNodeByServerUUID(&pb.ReqDeleteServerNodeByServerUUID{
+		ServerUUID: routineServerUUID,
+	})
+ErrorHCCCLI:
 	printLogDoCreateServerRoutineQueue(routineServerUUID, routineError.Error())
 	err := updateServerStatus(routineServerUUID, "Failed")
 	if err != nil {

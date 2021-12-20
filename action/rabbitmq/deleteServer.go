@@ -159,32 +159,6 @@ func DoDeleteServerRoutineQueue(routineServerUUID string, token string) {
 			"Success",
 			"",
 			token)
-
-		printLogDoDeleteServerRoutineQueue(routineServerUUID, "Re-setting subnet info")
-		routineError = client.RC.UpdateSubnet(&pb.ReqUpdateSubnet{
-			Subnet: &pb.Subnet{
-				UUID:           subnet.UUID,
-				ServerUUID:     "-",
-				LeaderNodeUUID: "-",
-				OS:             "-",
-			},
-		})
-		if routineError != nil {
-			_ = client.RC.WriteServerAction(
-				routineServerUUID,
-				"harp / update_subnet",
-				"Failed",
-				routineError.Error(),
-				token)
-
-			goto ERROR
-		}
-		_ = client.RC.WriteServerAction(
-			routineServerUUID,
-			"harp / update_subnet",
-			"Success",
-			"",
-			token)
 	}
 
 	printLogDoDeleteServerRoutineQueue(routineServerUUID, "Deleting AdaptiveIP")
@@ -251,6 +225,34 @@ func DoDeleteServerRoutineQueue(routineServerUUID string, token string) {
 		_ = client.RC.WriteServerAction(
 			routineServerUUID,
 			"flute / update_node",
+			"Success",
+			"",
+			token)
+	}
+
+	if !subnetIsInactive && subnet != nil {
+		printLogDoDeleteServerRoutineQueue(routineServerUUID, "Re-setting subnet info")
+		routineError = client.RC.UpdateSubnet(&pb.ReqUpdateSubnet{
+			Subnet: &pb.Subnet{
+				UUID:           subnet.UUID,
+				ServerUUID:     "-",
+				LeaderNodeUUID: "-",
+				OS:             "-",
+			},
+		})
+		if routineError != nil {
+			_ = client.RC.WriteServerAction(
+				routineServerUUID,
+				"harp / update_subnet",
+				"Failed",
+				routineError.Error(),
+				token)
+
+			goto ERROR
+		}
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"harp / update_subnet",
 			"Success",
 			"",
 			token)
