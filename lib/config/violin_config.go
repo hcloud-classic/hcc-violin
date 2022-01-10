@@ -5,10 +5,12 @@ import "github.com/Terry-Mao/goconf"
 var configLocation = "/etc/hcc/violin/violin.conf"
 
 type violinConfig struct {
+	RsakeyConfig    *goconf.Section
 	MysqlConfig     *goconf.Section
 	GrpcConfig      *goconf.Section
 	HTTPConfig      *goconf.Section
 	RabbitMQConfig  *goconf.Section
+	HornConfig      *goconf.Section
 	FluteConfig     *goconf.Section
 	CelloConfig     *goconf.Section
 	HarpConfig      *goconf.Section
@@ -22,9 +24,11 @@ type violinConfig struct {
          Config File Example
 
 ##### CONFIG START #####
+[rsakey]
+private_key_file privkey.rsa
+
 [mysql]
 id user
-password pass
 address 111.111.111.111
 port 9999
 database db_name
@@ -45,6 +49,13 @@ rabbitmq_password pass
 rabbitmq_address 555.555.555.555
 rabbitmq_port 15672
 
+[horn]
+horn_server_address 222.222.222.222
+horn_server_port 2222
+horn_connection_timeout_ms 5000
+horn_connection_retry_count 10
+horn_request_timeout_ms 5000
+
 [flute]
 flute_server_address 222.222.222.222
 flute_server_port 3333
@@ -56,12 +67,12 @@ flute_wait_for_leader_node_timeout_sec 30
 
 [cello]
 cello_server_address 222.222.222.222
-cello_server_port 3333
+cello_server_port 4444
 cello_request_timeout_ms 5000
 
 [harp]
 harp_server_address 222.222.222.222
-harp_server_port 3333
+harp_server_port 5555
 harp_request_timeout_ms 5000
 harp_wait_for_leader_node_timeout_sec 30
 

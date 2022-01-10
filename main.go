@@ -44,6 +44,12 @@ func init() {
 
 	config.Init()
 
+	err = client.Init()
+	if err != nil {
+		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "client.Init(): "+err.Error()).Fatal()
+		_ = pid.DeleteViolinPID()
+	}
+
 	err = mysql.Init()
 	if err != nil {
 		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "mysql.Init(): "+err.Error()).Fatal()
@@ -56,20 +62,14 @@ func init() {
 		_ = pid.DeleteViolinPID()
 	}
 
-	err = client.Init()
-	if err != nil {
-		hcc_errors.NewHccError(hcc_errors.ViolinInternalInitFail, "client.Init(): "+err.Error()).Fatal()
-		_ = pid.DeleteViolinPID()
-	}
-
 	logger.Logger.Println("Starting autoscale.CheckServerResource() Interval is " + strconv.Itoa(int(config.AutoScale.CheckServerResourceIntervalMs)) + "ms")
 	autoscale.CheckServerResource()
 }
 
 func end() {
-	client.End()
 	rabbitmq.End()
 	mysql.End()
+	client.End()
 	logger.End()
 	_ = pid.DeleteViolinPID()
 }
