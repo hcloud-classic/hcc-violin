@@ -5,11 +5,12 @@ import (
 	"hcc/violin/daoext"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
-	"innogrid.com/hcloud-classic/pb"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"innogrid.com/hcloud-classic/pb"
 )
 
 func printLogDoUpdateServerRoutineQueue(serverUUID string, msg string) {
@@ -78,7 +79,7 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 	}
 
 	for i := range routineNodes {
-		var skipUpdate = false
+		skipUpdate := false
 
 		newNodesDetailStr += "NodeName: " + routineNodes[i].NodeName + ", " +
 			"UUID: " + routineNodes[i].UUID + "\\n"
@@ -131,7 +132,7 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 	}
 
 	for i := range previousNodes {
-		var duplicated = false
+		duplicated := false
 
 		previousNodesDetailStr += "NodeName: " + previousNodes[i].NodeName + ", " +
 			"UUID: " + previousNodes[i].UUID + "\\n"
@@ -197,7 +198,7 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 		token)
 
 	for i := config.Flute.TurnOffNodesWaitTimeSec; i >= 1; i-- {
-		var isAllNodesTurnedOff = true
+		isAllNodesTurnedOff := true
 
 		printLogDoUpdateServerRoutineQueue(routineServerUUID, "Waiting for turning off nodes... (Remained time: "+strconv.FormatInt(i, 10)+"sec)")
 		for i := range routineNodes {
@@ -242,7 +243,7 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 	printLogDoUpdateServerRoutineQueue(routineServerUUID, "Preparing controlAction")
 
 	printLogDoUpdateServerRoutineQueue(routineServerUUID, "Running Hcc CLI")
-	routineError = HccCLI(routineServerUUID, routineFirstIP, routineLastIP)
+	routineError = HccCLI(routineServerUUID, routineFirstIP, routineLastIP, token, routineSubnet.Gateway)
 	if routineError != nil {
 		_ = client.RC.WriteServerAction(
 			routineServerUUID,

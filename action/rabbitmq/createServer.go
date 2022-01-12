@@ -6,11 +6,12 @@ import (
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
-	"innogrid.com/hcloud-classic/pb"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"innogrid.com/hcloud-classic/pb"
 )
 
 type createServerDataStruct struct {
@@ -153,7 +154,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string
 		token)
 
 	for i := config.Flute.TurnOffNodesWaitTimeSec; i >= 1; i-- {
-		var isAllNodesTurnedOff = true
+		isAllNodesTurnedOff := true
 
 		printLogDoCreateServerRoutineQueue(routineServerUUID, "Waiting for turning off nodes... (Remained time: "+strconv.FormatInt(i, 10)+"sec)")
 		for i := range routineNodes {
@@ -198,7 +199,7 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string
 	printLogDoCreateServerRoutineQueue(routineServerUUID, "Preparing controlAction")
 
 	printLogDoCreateServerRoutineQueue(routineServerUUID, "Running Hcc CLI")
-	routineError = HccCLI(routineServerUUID, routineFirstIP, routineLastIP)
+	routineError = HccCLI(routineServerUUID, routineFirstIP, routineLastIP, token, routineSubnet.Gateway)
 	if routineError != nil {
 		_ = client.RC.WriteServerAction(
 			routineServerUUID,

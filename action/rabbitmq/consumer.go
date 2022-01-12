@@ -2,6 +2,7 @@ package rabbitmq
 
 import (
 	"encoding/json"
+	"hcc/violin/action/grpc/client"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
 )
@@ -51,14 +52,20 @@ func violaToViolin() error {
 			//
 			uuid := control.Control.HccType.ServerUUID
 			status := control.Control.ActionResult // Running, Failed
-			//TODO: queue get_nodes to flute module
+			// TODO: queue get_nodes to flute module
 			err = updateServerStatus(uuid, status)
 			if err != nil {
 				logger.Logger.Println("ViolaToViolin: " + err.Error())
 			}
 
 			logger.Logger.Println("ViolaToViolin: UUID = " + control.Control.HccType.ServerUUID + ": " + control.Control.ActionResult)
-
+			printLogDoCreateServerRoutineQueue(uuid, "Server Created")
+			_ = client.RC.WriteServerAction(
+				uuid,
+				"violin / server_running ",
+				"Success",
+				"",
+				control.Token)
 			// vntOpt := model.Vnc{
 			// 	ServerUUID=args["uuid"].(string)
 			// }

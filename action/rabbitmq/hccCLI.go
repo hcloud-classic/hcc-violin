@@ -7,7 +7,7 @@ import (
 )
 
 // HccCLI : Send nodes add action to viola
-func HccCLI(serverUUID string, firstIP net.IP, lastIP net.IP) error {
+func HccCLI(serverUUID string, firstIP net.IP, lastIP net.IP, token string, gateway string) error {
 	logger.Logger.Println("doHccCLI: server_uuid=" + serverUUID + ": " + "Preparing controlAction")
 
 	hccaction := model.HccAction{
@@ -28,9 +28,10 @@ func HccCLI(serverUUID string, firstIP net.IP, lastIP net.IP) error {
 		Publisher: "violin",
 		Receiver:  "violin",
 		Control:   hcctype,
+		Token:     token,
 	}
 
-	err := ViolinToViola(controlAction)
+	err := ViolinToViola(controlAction, gateway)
 	if err != nil {
 		logger.Logger.Println("doHccCLI: server_uuid=" + serverUUID + ": " + err.Error())
 		return err
