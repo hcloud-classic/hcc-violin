@@ -6,6 +6,7 @@ import (
 	"hcc/violin/dao"
 	"hcc/violin/daoext"
 	"hcc/violin/lib/logger"
+
 	"innogrid.com/hcloud-classic/hcc_errors"
 	"innogrid.com/hcloud-classic/pb"
 )
@@ -202,4 +203,50 @@ func (s *violinServer) DeleteServerNodeByServerUUID(_ context.Context, in *pb.Re
 	}
 
 	return &pb.ResDeleteServerNodeByServerUUID{ServerUUID: serverUUID}, nil
+}
+
+// Viola
+func (s *violinServer) RecvPemKey(_ context.Context, in *pb.ReqRecvPemKey) (*pb.ResRecvPemKey, error) {
+	// logger.Logger.Println("Request received: RecvPemKey()")
+	serverUUID, _, errCode, errStr := dao.DoReadPemKey(&pb.ReqGetPemKey{ServerUUID: in.GetServerUUID()})
+	if errCode != 0 {
+		logger.Logger.Println(errStr)
+		// errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResRecvPemKey{Result: "false"}, nil
+	}
+	if len(serverUUID) == 0 {
+		errCode, errStr = dao.DoInsertPemKey(in)
+	} else {
+		serverUUID, _, errCode, errStr = dao.DoUpdatePemKey(in)
+	}
+	if errCode != 0 {
+		logger.Logger.Println(errStr)
+		// errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResRecvPemKey{Result: "false"}, nil
+	}
+	return &pb.ResRecvPemKey{Result: "ture"}, nil
+}
+
+func (s *violinServer) GetPemKey(_ context.Context, in *pb.ReqGetPemKey) (*pb.ResGetPemKey, error) {
+	// logger.Logger.Println("Request received: GetPemKey()")
+
+	serverUUID, pemKey, errCode, errStr := dao.DoReadPemKey(in)
+	if errCode != 0 {
+		logger.Logger.Println(errStr)
+		// errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResGetPemKey{ServerUUID: serverUUID, PemKey: ""}, nil
+	}
+	return &pb.ResGetPemKey{ServerUUID: serverUUID, PemKey: pemKey}, nil
+}
+
+func (s *violinServer) CreatePemKey(_ context.Context, in *pb.ReqCreatePemKey) (*pb.ResCreatePemKey, error) {
+	// logger.Logger.Println("Request received: CreatePemKey()")
+
+	errCode, errStr := dao.DoCreatePemKey(in)
+	if errCode != 0 {
+		logger.Logger.Println(errStr)
+		// errStack := hcc_errors.NewHccErrorStack(hcc_errors.NewHccError(errCode, errStr))
+		return &pb.ResCreatePemKey{ServerUUID: in.GetServerUUID(), Result: "false"}, nil
+	}
+	return &pb.ResCreatePemKey{ServerUUID: in.GetServerUUID(), Result: "true"}, nil
 }
