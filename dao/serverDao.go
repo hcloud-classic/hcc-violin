@@ -858,18 +858,17 @@ ERROR:
 
 func DoReadPemKey(in *pb.ReqGetPemKey) (string, string, uint64, string) {
 	var (
-		sql     string
-		err     error
-		ErrCode uint64
-		ErrStr  string
-
-		keys      string
-		createdAt time.Time
+		sql        string
+		err        error
+		ErrCode    uint64
+		ErrStr     string
+		serverUUID string
+		keys       string
+		createdAt  time.Time
 	)
-	serverUUID := in.GetServerUUID()
 	// sql += " select * from group_pool where group_id = '" + group_id + "'"
 	sql += " select * from auth_key where server_uuid = ?"
-	stmt, err := mysql.Db.Query(sql, serverUUID)
+	stmt, err := mysql.Db.Query(sql, in.GetServerUUID())
 	if err != nil {
 		ErrStr = "[SQL-Query] DoReadPemKey(): " + err.Error()
 		ErrCode = hcc_errors.ViolinSQLArgumentError
@@ -895,7 +894,7 @@ func DoReadPemKey(in *pb.ReqGetPemKey) (string, string, uint64, string) {
 	return serverUUID, keys, 0, ""
 ERROR:
 	logger.Logger.Println(ErrStr)
-	return serverUUID, keys, ErrCode, ErrStr
+	return "", keys, ErrCode, ErrStr
 }
 
 func DoInsertPemKey(in *pb.ReqRecvPemKey) (uint64, string) {
