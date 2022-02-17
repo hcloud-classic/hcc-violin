@@ -4,9 +4,12 @@ import (
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/daoext"
 	"hcc/violin/lib/config"
+	"hcc/violin/lib/harpUtil"
+	"hcc/violin/lib/iputil"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"net"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -57,6 +60,9 @@ func updateServerStatus(serverUUID string, status string) error {
 func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string, routineSubnet *pb.Subnet, routineNodes []pb.Node,
 	celloParams map[string]interface{}, routineFirstIP net.IP, routineLastIP net.IP, token string) {
 	var routineError error
+	var cmd *exec.Cmd
+	var harpVNUM int
+	var leaderNodeIP net.IP
 
 	printLogDoCreateServerRoutineQueue(routineServerUUID, "Creating os volume")
 	routineError = daoext.DoCreateVolume(routineServerUUID, celloParams, "os", routineFirstIP, routineSubnet.Gateway)
@@ -216,6 +222,38 @@ func DoCreateServerRoutineQueue(routineServerUUID string, routineServerOS string
 		"Success",
 		"",
 		token)
+
+	printLogDoCreateServerRoutineQueue(routineServerUUID, "Running HCC Bench docker container")
+	harpVNUM = harpUtil.GetHarpVNUM(routineSubnet.Gateway)
+	leaderNodeIP, _, routineError = iputil.GetFirstAndLastIPs(routineSubnet.NetworkIP, routineSubnet.Netmask)
+	if routineError != nil {
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"docker / HCC Bench",
+			"Failed",
+			routineError.Error(),
+			token)
+	}
+	cmd = exec.Command("docker", "run", "-d",
+		"--name", "hccweb_"+strconv.Itoa(harpVNUM), "hccweb", "-i", leaderNodeIP.String())
+	printLogDoCreateServerRoutineQueue(routineServerUUID, "Running docker command: "+cmd.String())
+	routineError = cmd.Run()
+	if routineError != nil {
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"docker / HCC Bench",
+			"Failed",
+			routineError.Error(),
+			token)
+	}
+	if routineError == nil {
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"docker / HCC Bench",
+			"Success",
+			"",
+			token)
+	}
 
 	return
 
