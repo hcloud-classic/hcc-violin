@@ -5,9 +5,11 @@ import (
 	"hcc/violin/action/grpc/client"
 	"hcc/violin/daoext"
 	"hcc/violin/lib/config"
+	"hcc/violin/lib/harpUtil"
 	"hcc/violin/lib/logger"
 	"hcc/violin/lib/mysql"
 	"innogrid.com/hcloud-classic/pb"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +35,9 @@ func DoDeleteServerRoutineQueue(routineServerUUID string, token string) {
 
 	var errCode uint64
 	var errText string
+
+	var cmd *exec.Cmd
+	var harpVNUM int
 
 	routineError = updateServerStatus(routineServerUUID, "Deleting")
 	if routineError != nil {
@@ -96,6 +101,36 @@ func DoDeleteServerRoutineQueue(routineServerUUID string, token string) {
 		"Success",
 		"",
 		token)
+
+	printLogDoDeleteServerRoutineQueue(routineServerUUID, "Deleting HCC Bench docker container")
+	harpVNUM = harpUtil.GetHarpVNUM(subnet.Gateway)
+	if routineError != nil {
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"docker / HCC Bench",
+			"Failed",
+			routineError.Error(),
+			token)
+	}
+	cmd = exec.Command("docker", "rm", "-f", "hccweb_"+strconv.Itoa(harpVNUM))
+	printLogDoDeleteServerRoutineQueue(routineServerUUID, "Running docker command: "+cmd.String())
+	routineError = cmd.Run()
+	if routineError != nil {
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"docker / HCC Bench",
+			"Failed",
+			routineError.Error(),
+			token)
+	}
+	if routineError == nil {
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"docker / HCC Bench",
+			"Success",
+			"",
+			token)
+	}
 
 	if len(nodes) != 0 {
 		printLogDoDeleteServerRoutineQueue(routineServerUUID, "Turning off nodes")
