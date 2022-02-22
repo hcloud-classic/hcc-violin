@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"hcc/violin/action/grpc/client"
 	"hcc/violin/lib/config"
 	"hcc/violin/lib/logger"
 	"innogrid.com/hcloud-classic/hcc_errors"
@@ -22,6 +23,11 @@ func Test_DB_Prepare(t *testing.T) {
 	}()
 
 	config.Init()
+
+	err = client.Init()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = Init()
 	if err != nil {

@@ -815,3 +815,156 @@ ERROR:
 
 	return nil, errStack
 }
+
+func DoCreatePemKey(in *pb.ReqCreatePemKey) (uint64, string) {
+	var (
+		err        error
+		ErrCode    uint64
+		ErrStr     string
+		serverUUID string
+		subnet     *pb.Subnet
+		token      string
+		server     *pb.Server
+	)
+	serverUUID = in.GetServerUUID()
+	token = in.GetToken()
+	server, ErrCode, ErrStr = ReadServer(serverUUID)
+	if ErrCode != 0 {
+		ErrStr = "DoCreatePemKey(): " + ErrStr
+		goto ERROR
+	}
+	subnet, err = client.RC.GetSubnet(server.GetSubnetUUID())
+	if err != nil {
+		ErrCode = hcc_errors.ViolinGrpcRequestError
+		ErrStr = "DoCreatePemKey(): client.RC.GetSubnet - " + err.Error()
+		goto ERROR
+	}
+	err = rabbitmq.AuthKey(serverUUID, token, subnet.GetGateway(), "create")
+	if err != nil {
+		ErrCode = hcc_errors.ViolinRabbitmqAuthKeyFail
+		ErrStr = "DoCreatePemKey(): rabbitmq.AuthKey - " + err.Error()
+		goto ERROR
+	}
+
+	// ErrCode, ErrStr = DoInsertPemKey(&pb.ReqRecvPemKey{ServerUUID: serverUUID})
+
+	if ErrCode > 0 {
+		goto ERROR
+	}
+
+ERROR:
+	return ErrCode, ErrStr
+}
+
+func DoReadPemKey(in *pb.ReqGetPemKey) (string, string, uint64, string) {
+	var (
+		sql        string
+		err        error
+		ErrCode    uint64
+		ErrStr     string
+		serverUUID string
+		keys       string
+		createdAt  time.Time
+	)
+	// sql += " select * from group_pool where group_id = '" + group_id + "'"
+	sql += " select * from auth_key where server_uuid = ?"
+	stmt, err := mysql.Db.Query(sql, in.GetServerUUID())
+	if err != nil {
+		ErrStr = "[SQL-Query] DoReadPemKey(): " + err.Error()
+		ErrCode = hcc_errors.ViolinSQLArgumentError
+		goto ERROR
+	}
+
+	defer func() {
+		_ = stmt.Close()
+	}()
+	for stmt.Next() {
+		err = stmt.Scan(&serverUUID, &keys, &createdAt)
+		if err != nil {
+			ErrStr = "[SQL-Scan] DoReadPemKey(): " + err.Error()
+			ErrCode = hcc_errors.ViolinSQLArgumentError
+			if strings.Contains(err.Error(), "no rows in result set") {
+				ErrStr = "[SQL-Scan] DoReadPemKey(): " + err.Error()
+				goto ERROR
+			}
+			goto ERROR
+		}
+
+	}
+	return serverUUID, keys, 0, ""
+ERROR:
+	logger.Logger.Println(ErrStr)
+	return "", keys, ErrCode, ErrStr
+}
+
+func DoInsertPemKey(in *pb.ReqRecvPemKey) (uint64, string) {
+	var (
+		sql        string
+		err        error
+		ErrCode    uint64
+		ErrStr     string
+		serverUUID string
+		authkey    string
+	)
+	serverUUID = in.GetServerUUID()
+	authkey = in.GetPemKey()
+	sql += " insert into auth_key (server_uuid, pem_key, created_at) values (?, ?, now())"
+	stmt, err := mysql.Db.Prepare(sql)
+	if err != nil {
+		ErrStr = "[SQL-Scan] DoInsertPemKey(): " + err.Error()
+		ErrCode = hcc_errors.ViolinSQLArgumentError
+		goto ERROR
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+	_, err = stmt.Exec(
+		serverUUID, authkey)
+	if err != nil {
+		ErrStr = "[SQL-Scan] DoInsertPemKey(): Can't DoInsertPemKey DB " + err.Error()
+		ErrCode = hcc_errors.ViolinSQLArgumentError
+		goto ERROR
+	}
+	return 0, ""
+ERROR:
+	logger.Logger.Println(ErrStr)
+	return ErrCode, ErrStr
+}
+
+func DoUpdatePemKey(in *pb.ReqRecvPemKey) (string, string, uint64, string) {
+	var (
+		sql        string
+		err        error
+		ErrCode    uint64
+		ErrStr     string
+		serverUUID string
+		authkey    string
+	)
+	serverUUID = in.GetServerUUID()
+	authkey = in.GetPemKey()
+	sql += "update auth_key set server_uuid = '" + serverUUID + "', pem_key = ? " + ", created_at = now() where server_uuid = ?"
+	stmt, err := mysql.Db.Prepare(sql)
+	if err != nil {
+		ErrStr = "[SQL-Scan] DoUpdatePemKey(): " + err.Error()
+		ErrCode = hcc_errors.ViolinSQLArgumentError
+		goto ERROR
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+	_, err = stmt.Exec(
+		authkey, serverUUID)
+	if err != nil {
+		ErrStr = "[SQL-Scan] DoUpdatePemKey(): Can't DoInsertPemKey DB " + err.Error()
+		ErrCode = hcc_errors.ViolinSQLArgumentError
+		goto ERROR
+	}
+	serverUUID, authkey, ErrCode, ErrStr = DoReadPemKey(&pb.ReqGetPemKey{ServerUUID: serverUUID})
+	if ErrCode > 0 {
+		goto ERROR
+	}
+	return serverUUID, authkey, 0, ""
+ERROR:
+	logger.Logger.Println(ErrStr)
+	return serverUUID, authkey, ErrCode, ErrStr
+}

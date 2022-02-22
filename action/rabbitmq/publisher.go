@@ -4,24 +4,25 @@ import (
 	"encoding/json"
 	"hcc/violin/lib/logger"
 	"hcc/violin/model"
-	"innogrid.com/hcloud-classic/pb"
 	"net"
+
+	"innogrid.com/hcloud-classic/pb"
 
 	"github.com/TylerBrock/colorjson"
 	"github.com/streadway/amqp"
 )
 
 // ViolinToViola : Publish 'run_hcc_cli' queues to RabbitMQ channel
-func ViolinToViola(action model.Control) error {
+func ViolinToViola(action model.Control, gateway string) error {
 	qCreate, err := Channel.QueueDeclare(
-		"to_viola",
+		gateway+"_to_viola",
 		false,
 		false,
 		false,
 		false,
 		nil)
 	if err != nil {
-		logger.Logger.Println("ViolinToViola: Failed to declare a create queue")
+		logger.Logger.Println("ViolinToViola(" + gateway + "_to_viola) : Failed to declare a create queue")
 		return err
 	}
 
@@ -49,7 +50,7 @@ func ViolinToViola(action model.Control) error {
 	logger.Logger.Println("doHcc Action [", string(s), "]")
 
 	if err != nil {
-		logger.Logger.Println("ViolinToViola: Failed to register publisher")
+		logger.Logger.Println("ViolinToViola(" + gateway + "_to_viola) : Failed to register publisher")
 		return err
 	}
 

@@ -10,6 +10,18 @@ var conf = goconf.New()
 var config = violinConfig{}
 var err error
 
+func parseRsakey() {
+	config.RsakeyConfig = conf.Get("rsakey")
+	if config.RsakeyConfig == nil {
+		logger.Logger.Panicln("no rsakey section")
+	}
+
+	Rsakey.PrivateKeyFile, err = config.RsakeyConfig.String("private_key_file")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+}
+
 func parseMysql() {
 	config.MysqlConfig = conf.Get("mysql")
 	if config.MysqlConfig == nil {
@@ -18,11 +30,6 @@ func parseMysql() {
 
 	Mysql = mysql{}
 	Mysql.ID, err = config.MysqlConfig.String("id")
-	if err != nil {
-		logger.Logger.Panicln(err)
-	}
-
-	Mysql.Password, err = config.MysqlConfig.String("password")
 	if err != nil {
 		logger.Logger.Panicln(err)
 	}
@@ -116,6 +123,39 @@ func parseRabbitMQ() {
 	}
 
 	RabbitMQ.Port, err = config.RabbitMQConfig.Int("rabbitmq_port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+}
+
+func parseHorn() {
+	config.HornConfig = conf.Get("horn")
+	if config.HornConfig == nil {
+		logger.Logger.Panicln("no horn section")
+	}
+
+	Horn = horn{}
+	Horn.ServerAddress, err = config.HornConfig.String("horn_server_address")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Horn.ServerPort, err = config.HornConfig.Int("horn_server_port")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Horn.ConnectionTimeOutMs, err = config.HornConfig.Int("horn_connection_timeout_ms")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Horn.ConnectionRetryCount, err = config.HornConfig.Int("horn_connection_retry_count")
+	if err != nil {
+		logger.Logger.Panicln(err)
+	}
+
+	Horn.RequestTimeoutMs, err = config.HornConfig.Int("horn_request_timeout_ms")
 	if err != nil {
 		logger.Logger.Panicln(err)
 	}
@@ -313,10 +353,12 @@ func Init() {
 		logger.Logger.Panicln(err)
 	}
 
+	parseRsakey()
 	parseMysql()
 	parseGrpc()
 	parseHTTP()
 	parseRabbitMQ()
+	parseHorn()
 	parseFlute()
 	parseCello()
 	parseHarp()
