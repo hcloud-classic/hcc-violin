@@ -28,44 +28,6 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 	var previousNodesDetailStr string
 	var newNodesDetailStr string
 
-	printLogDoUpdateServerRoutineQueue(routineServerUUID, "Updating subnet info")
-	routineError = daoext.DoUpdateSubnet(routineSubnet.UUID, routineSubnet.LeaderNodeUUID, routineServerUUID, routineSubnet.OS)
-	if routineError != nil {
-		_ = client.RC.WriteServerAction(
-			routineServerUUID,
-			"harp / update_subnet",
-			"Failed",
-			routineError.Error(),
-			token)
-
-		goto ERROR
-	}
-	_ = client.RC.WriteServerAction(
-		routineServerUUID,
-		"harp / update_subnet",
-		"Success",
-		"",
-		token)
-
-	printLogDoUpdateServerRoutineQueue(routineServerUUID, "Creating DHCPD config file")
-	routineError = daoext.DoCreateDHCPDConfig(routineSubnet.UUID, routineServerUUID)
-	if routineError != nil {
-		_ = client.RC.WriteServerAction(
-			routineServerUUID,
-			"harp / create_dhcpd_conf",
-			"Failed",
-			routineError.Error(),
-			token)
-
-		goto ERROR
-	}
-	_ = client.RC.WriteServerAction(
-		routineServerUUID,
-		"harp / create_dhcpd_conf",
-		"Success",
-		"",
-		token)
-
 	previousNodes, routineError = client.RC.GetNodeList(routineServerUUID)
 	if routineError != nil {
 		_ = client.RC.WriteServerAction(
@@ -177,6 +139,44 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 			goto ERROR
 		}
 	}
+
+	printLogDoUpdateServerRoutineQueue(routineServerUUID, "Updating subnet info")
+	routineError = daoext.DoUpdateSubnet(routineSubnet.UUID, routineSubnet.LeaderNodeUUID, routineServerUUID, routineSubnet.OS)
+	if routineError != nil {
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"harp / update_subnet",
+			"Failed",
+			routineError.Error(),
+			token)
+
+		goto ERROR
+	}
+	_ = client.RC.WriteServerAction(
+		routineServerUUID,
+		"harp / update_subnet",
+		"Success",
+		"",
+		token)
+
+	printLogDoUpdateServerRoutineQueue(routineServerUUID, "Creating DHCPD config file")
+	routineError = daoext.DoCreateDHCPDConfig(routineSubnet.UUID, routineServerUUID)
+	if routineError != nil {
+		_ = client.RC.WriteServerAction(
+			routineServerUUID,
+			"harp / create_dhcpd_conf",
+			"Failed",
+			routineError.Error(),
+			token)
+
+		goto ERROR
+	}
+	_ = client.RC.WriteServerAction(
+		routineServerUUID,
+		"harp / create_dhcpd_conf",
+		"Success",
+		"",
+		token)
 
 	printLogDoUpdateServerRoutineQueue(routineServerUUID, "Turning off nodes")
 	routineError = daoext.DoTurnOffNodes(routineServerUUID, previousNodes)
