@@ -60,8 +60,9 @@ func DoUpdateServerNodesRoutineQueue(routineServerUUID string, routineSubnet *pb
 
 		_, routineError = client.RC.UpdateNode(&pb.ReqUpdateNode{
 			Node: &pb.Node{
-				UUID:    routineNodes[i].UUID,
-				GroupID: routineSubnet.GroupID,
+				UUID:       routineNodes[i].UUID,
+				GroupID:    routineSubnet.GroupID,
+				ServerUUID: routineServerUUID,
 			},
 		})
 		if routineError != nil {
